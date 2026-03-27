@@ -1,0 +1,3 @@
+# firebase envs
+
+Placeholder document.

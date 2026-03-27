@@ -1,0 +1,3 @@
+# responsive rules
+
+Placeholder document.

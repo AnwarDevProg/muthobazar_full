@@ -1,0 +1,46 @@
+name: staff_app
+description: MuthoBazar staff application
+publish_to: 'none'
+version: 0.1.0+1
+
+resolution: workspace
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  get: ^4.6.6
+  firebase_core: ^3.15.2
+  flutter_localizations:
+    sdk: flutter
+  shared_core:
+      path: ../../packages/shared_core
+  shared_models:
+      path: ../../packages/shared_models
+  shared_contracts:
+      path: ../../packages/shared_contracts
+  shared_repositories:
+      path: ../../packages/shared_repositories
+  shared_services:
+      path: ../../packages/shared_services
+  shared_workflows:
+      path: ../../packages/shared_workflows
+  shared_ui:
+      path: ../../packages/shared_ui
+  shared_usecases:
+      path: ../../packages/shared_usecases
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/images/
+    - assets/placeholders/
+

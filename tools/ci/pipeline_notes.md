@@ -1,0 +1,3 @@
+# Pipeline notes
+
+Placeholder document.

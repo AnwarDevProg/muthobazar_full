@@ -1,0 +1,31 @@
+name: muthobazar_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+workspace:
+  - apps/admin_web
+  - apps/customer_app
+  - apps/staff_app
+  - packages/shared_contracts
+  - packages/shared_core
+  - packages/shared_models
+  - packages/shared_repositories
+  - packages/shared_services
+  - packages/shared_testkit
+  - packages/shared_ui
+  - packages/shared_usecases
+  - packages/shared_workflows
+
+dev_dependencies:
+  melos: ^7.5.0
+
+melos:
+  useRootAsPackage: false
+
+  scripts:
+    pub_get: dart pub get
+    analyze: dart analyze
+    format: dart format .
+    clean: dart pub get

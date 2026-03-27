@@ -1,0 +1,3 @@
+# Firebase emulators
+
+Placeholder document.

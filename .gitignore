@@ -1,0 +1,50 @@
+﻿# General
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.melos_tool/
+coverage/
+pubspec_overrides.yaml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Android / iOS
+**/android/.gradle/
+**/android/local.properties
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+
+# Firebase
+firebase-debug.log
+.firestore/
+.storage/
+
+# Generated
+**/generated_plugin_registrant.dart
+**/flutter_export_environment.sh
+
+
+# Flutter Metadata
+.metadata
+
+# Lock file (monorepo rule)
+pubspec.lock
+
+# Melos (optional safety)
+.melos_tool/

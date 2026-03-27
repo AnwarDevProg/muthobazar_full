@@ -1,0 +1,46 @@
+name: muthobazar
+
+packages:
+  - apps/**
+  - packages/**
+
+command:
+  bootstrap:
+    usePubspecOverrides: true
+
+scripts:
+  bootstrap:
+    run: melos bootstrap
+    description: Bootstrap all workspace packages.
+
+  pub_get:
+    run: melos exec -- "flutter pub get"
+    description: Run flutter pub get in all Flutter packages.
+
+  analyze:
+    run: melos exec --fail-fast -- "flutter analyze"
+    description: Analyze all packages.
+
+  test:
+    run: melos exec --fail-fast -- "flutter test"
+    description: Run tests across the workspace.
+
+  format:
+    run: melos exec -- "dart format ."
+    description: Format all Dart code.
+
+  clean:
+    run: melos exec -- "flutter clean"
+    description: Clean all Flutter packages.
+
+  customer:
+    run: melos exec --scope=customer_app -- "flutter run"
+    description: Run customer app.
+
+  staff:
+    run: melos exec --scope=staff_app -- "flutter run"
+    description: Run staff app.
+
+  admin_web:
+    run: melos exec --scope=admin_web -- "flutter run -d chrome"
+    description: Run admin web.

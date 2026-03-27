@@ -1,0 +1,21 @@
+name: shared_repositories
+description: Shared repositories for MuthoBazar
+publish_to: 'none'
+version: 0.1.0
+
+resolution: workspace
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  shared_models:
+      path: ../shared_models
+  shared_contracts:
+      path: ../shared_contracts
+  shared_core:
+      path: ../shared_core
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.25.8
+
