@@ -1,0 +1,48 @@
+
+==================================================
+Import Rewrite - Production Safe
+==================================================
+WorkspaceRoot : C:\Users\1\AndroidStudioProjects\MuthoBazar
+DryRun        : False
+CreateBackup  : True
+BackupRoot    : C:\Users\1\AndroidStudioProjects\MuthoBazar\.backup_import_rewrite_20260327_230859
+LogFile       : C:\Users\1\AndroidStudioProjects\MuthoBazar\import_rewrite_log_20260327_230859.txt
+Backup folder ready: C:\Users\1\AndroidStudioProjects\MuthoBazar\.backup_import_rewrite_20260327_230859
+
+==================================================
+Processing customer_app
+==================================================
+
+==================================================
+Processing admin_web
+==================================================
+
+==================================================
+Processing shared_core
+==================================================
+
+==================================================
+Processing shared_ui
+==================================================
+
+==================================================
+Processing shared_models
+==================================================
+
+==================================================
+Processing shared_repositories
+==================================================
+
+==================================================
+Processing shared_services
+==================================================
+
+==================================================
+Summary
+==================================================
+Total files scanned : 210
+Files changed       : 0
+Files failed        : 0
+Rewrite completed successfully.
+Backup saved at: C:\Users\1\AndroidStudioProjects\MuthoBazar\.backup_import_rewrite_20260327_230859
+Log saved at: C:\Users\1\AndroidStudioProjects\MuthoBazar\import_rewrite_log_20260327_230859.txt
