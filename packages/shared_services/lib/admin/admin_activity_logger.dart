@@ -1,5 +1,6 @@
-import '../../../models/admin/mb_admin_activity_log.dart';
-import '../repositories/admin_activity_log_repository.dart';
+import 'package:shared_models/shared_models.dart';
+import 'package:shared_repositories/shared_repositories.dart';
+import 'package:shared_models/admin/mb_admin_activity_log.dart';
 
 class AdminActivityLogger {
   AdminActivityLogger._();
@@ -31,8 +32,8 @@ class AdminActivityLogger {
       beforeData: beforeData,
       afterData: afterData,
     );
-
     await AdminActivityLogRepository.instance.writeLog(log);
+
   }
 }
 

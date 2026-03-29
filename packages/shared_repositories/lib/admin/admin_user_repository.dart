@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_models/customer/mb_user_profile.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_models/shared_models.dart';
 
 class AdminUserRepository {
   AdminUserRepository._();
@@ -8,30 +8,73 @@ class AdminUserRepository {
   static final AdminUserRepository instance = AdminUserRepository._();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   CollectionReference<Map<String, dynamic>> get usersCollection =>
       _firestore.collection('users');
 
+  String get currentUid => _auth.currentUser?.uid ?? '';
+
+  User? get currentUser => _auth.currentUser;
+
+  // =========================================================
+  // READ: ALL USERS
+  // =========================================================
+
   Stream<List<UserModel>> watchUsers() {
     return usersCollection
-        .orderBy('UpdatedAt', descending: true)
+        .orderBy('CreatedAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return UserModel.fromSnapshot(doc);
-      }).toList();
-    });
+        .map(
+          (snapshot) => snapshot.docs
+          .map(UserModel.fromSnapshot)
+          .map(UserModel.normalized)
+          .toList(),
+    );
   }
 
   Future<List<UserModel>> fetchUsersOnce() async {
     final snapshot = await usersCollection
-        .orderBy('UpdatedAt', descending: true)
+        .orderBy('CreatedAt', descending: true)
         .get();
 
-    return snapshot.docs.map((doc) {
-      return UserModel.fromSnapshot(doc);
-    }).toList();
+    return snapshot.docs
+        .map(UserModel.fromSnapshot)
+        .map(UserModel.normalized)
+        .toList();
   }
+
+  // =========================================================
+  // READ: SINGLE USER
+  // =========================================================
+
+  Stream<UserModel?> watchUserById(String uid) {
+    return usersCollection.doc(uid).snapshots().map((snapshot) {
+      if (!snapshot.exists || snapshot.data() == null) {
+        return null;
+      }
+
+      return UserModel.normalized(
+        UserModel.fromSnapshot(snapshot),
+      );
+    });
+  }
+
+  Future<UserModel?> fetchUserById(String uid) async {
+    final snapshot = await usersCollection.doc(uid).get();
+
+    if (!snapshot.exists || snapshot.data() == null) {
+      return null;
+    }
+
+    return UserModel.normalized(
+      UserModel.fromSnapshot(snapshot),
+    );
+  }
+
+  // =========================================================
+  // UPDATE: BASIC INFO
+  // =========================================================
 
   Future<void> updateUserBasicInfo({
     required String uid,
@@ -45,75 +88,78 @@ class AdminUserRepository {
     required String accountStatus,
     required bool isGuest,
   }) async {
-    await usersCollection.doc(uid).set({
-      'FirstName': firstName,
-      'LastName': lastName,
-      'Email': email,
-      'PhoneNumber': phoneNumber,
-      'Gender': gender,
-      'DOB': dateOfBirth,
-      'Role': role,
-      'AccountStatus': accountStatus,
+    await usersCollection.doc(uid).update({
+      'FirstName': firstName.trim(),
+      'LastName': lastName.trim(),
+      'Email': email.trim(),
+      'PhoneNumber': phoneNumber.trim(),
+      'Gender': gender.trim(),
+      'DOB': dateOfBirth.trim(),
+      'Role': role.trim().toLowerCase(),
+      'AccountStatus': accountStatus.trim().toLowerCase(),
       'IsGuest': isGuest,
       'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
+  }
+
+  Future<void> updateUserProfilePicture({
+    required String uid,
+    required String profilePicture,
+  }) async {
+    await usersCollection.doc(uid).update({
+      'ProfilePicture': profilePicture.trim(),
+      'UpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // =========================================================
+  // UPDATE: ROLE / STATUS
+  // =========================================================
+
+  Future<void> setUserRole({
+    required String uid,
+    required String role,
+  }) async {
+    await usersCollection.doc(uid).update({
+      'Role': role.trim().toLowerCase(),
+      'UpdatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> setUserStatus({
     required String uid,
     required String accountStatus,
   }) async {
-    await usersCollection.doc(uid).set({
-      'AccountStatus': accountStatus,
+    await usersCollection.doc(uid).update({
+      'AccountStatus': accountStatus.trim().toLowerCase(),
       'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  Future<void> setUserRole({
-    required String uid,
-    required String role,
-  }) async {
-    await usersCollection.doc(uid).set({
-      'Role': role,
-      'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
   }
 
   Future<void> softBlockUser({
     required String uid,
   }) async {
-    await usersCollection.doc(uid).set({
-      'AccountStatus': 'blocked',
-      'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await setUserStatus(
+      uid: uid,
+      accountStatus: 'blocked',
+    );
   }
 
   Future<void> softDeactivateUser({
     required String uid,
   }) async {
-    await usersCollection.doc(uid).set({
-      'AccountStatus': 'inactive',
-      'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await setUserStatus(
+      uid: uid,
+      accountStatus: 'inactive',
+    );
   }
 
   Future<void> reactivateUser({
     required String uid,
   }) async {
-    await usersCollection.doc(uid).set({
-      'AccountStatus': 'active',
-      'UpdatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await setUserStatus(
+      uid: uid,
+      accountStatus: 'active',
+    );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

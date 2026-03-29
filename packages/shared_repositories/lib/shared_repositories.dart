@@ -20,6 +20,9 @@ export 'admin/admin_invite_repository.dart';
 export 'admin/admin_product_repository.dart';
 export 'admin/admin_setup_repository.dart';
 export 'admin/admin_user_repository.dart';
+export 'admin/admin_promo_repository.dart';
+export 'admin/admin_offer_repository.dart';
+
 export 'admin/purchases/mobile_admin_purchase_repository.dart';
 
 

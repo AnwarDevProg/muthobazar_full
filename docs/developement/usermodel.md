@@ -1,22 +1,33 @@
+this model used in customer app, working fine.
+during web admin dev, the model changes a lot.a
+
+
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_models/shared_models.dart';
 
-class UserRoles {
-  static const String customer = 'customer';
-  static const String admin = 'admin';
-  static const String superAdmin = 'super_admin';
-  static const String guest = 'guest';
-}
-
-class UserStatuses {
-  static const String active = 'active';
-  static const String inactive = 'inactive';
-  static const String blocked = 'blocked';
-  static const String guest = 'guest';
-}
-
 class UserModel {
-  const UserModel({
+  final String id;
+
+  String firstName;
+  String lastName;
+  String email;
+  String phoneNumber;
+  String profilePicture;
+  String gender;
+  String dateOfBirth;
+  String role;
+  String accountStatus;
+
+  bool isGuest;
+  String defaultAddressId;
+  List<UserAddressModel> addresses;
+
+  Timestamp? createdAt;
+  Timestamp? updatedAt;
+  Timestamp? lastLoginAt;
+
+  UserModel({
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -25,8 +36,8 @@ class UserModel {
     this.profilePicture = '',
     this.gender = '',
     this.dateOfBirth = '',
-    this.role = UserRoles.customer,
-    this.accountStatus = UserStatuses.active,
+    this.role = 'customer',
+    this.accountStatus = 'active',
     this.isGuest = false,
     this.defaultAddressId = '',
     this.addresses = const [],
@@ -35,55 +46,14 @@ class UserModel {
     this.lastLoginAt,
   });
 
-  final String id;
-  final String firstName;
-  final String lastName;
-  final String email;
-  final String phoneNumber;
-  final String profilePicture;
-  final String gender;
-  final String dateOfBirth;
-  final String role;
-  final String accountStatus;
-  final bool isGuest;
-  final String defaultAddressId;
-  final List<UserAddressModel> addresses;
-  final Timestamp? createdAt;
-  final Timestamp? updatedAt;
-  final Timestamp? lastLoginAt;
-
   String get fullName {
     final name = '$firstName $lastName'.trim();
     return name.replaceAll(RegExp(r'\s+'), ' ');
   }
 
-  String get displayNameForAdmin {
-    if (fullName.trim().isNotEmpty) return fullName;
-    if (email.trim().isNotEmpty) return email.trim();
-    if (phoneNumber.trim().isNotEmpty) return phoneNumber.trim();
-    return 'Unnamed User';
-  }
-
-  String get initials {
-    final name = displayNameForAdmin.trim();
-    if (name.isEmpty) return '?';
-    return name.substring(0, 1).toUpperCase();
-  }
-
   bool get hasProfilePhoto => profilePicture.trim().isNotEmpty;
+
   bool get isLoggedInGuest => isGuest;
-
-  bool get isActive => accountStatus == UserStatuses.active;
-  bool get isInactive => accountStatus == UserStatuses.inactive;
-  bool get isBlocked => accountStatus == UserStatuses.blocked;
-
-  bool get isCustomer => role == UserRoles.customer;
-  bool get isAdmin => role == UserRoles.admin;
-  bool get isSuperAdmin => role == UserRoles.superAdmin;
-  bool get isAdminLike => isAdmin || isSuperAdmin;
-
-  String get prettyRole => _prettyValue(role);
-  String get prettyStatus => _prettyValue(accountStatus);
 
   UserAddressModel? get defaultAddress {
     if (addresses.isEmpty) return null;
@@ -101,36 +71,6 @@ class UserModel {
     }
 
     return addresses.first;
-  }
-
-  static UserModel empty() => const UserModel(
-    id: '',
-    firstName: '',
-    lastName: '',
-  );
-
-  static UserModel guest() => const UserModel(
-    id: '',
-    firstName: 'Guest',
-    lastName: 'User',
-    role: UserRoles.guest,
-    accountStatus: UserStatuses.guest,
-    isGuest: true,
-  );
-
-  static UserModel normalized(UserModel user) {
-    return user.copyWith(
-      firstName: user.firstName.trim(),
-      lastName: user.lastName.trim(),
-      email: user.email.trim(),
-      phoneNumber: user.phoneNumber.trim(),
-      profilePicture: user.profilePicture.trim(),
-      gender: user.gender.trim(),
-      dateOfBirth: user.dateOfBirth.trim(),
-      role: normalizeRole(user.role),
-      accountStatus: normalizeStatus(user.accountStatus),
-      defaultAddressId: user.defaultAddressId.trim(),
-    );
   }
 
   static List<String> splitFullName(String fullName) {
@@ -160,8 +100,8 @@ class UserModel {
     String profilePicture = '',
     String gender = '',
     String dateOfBirth = '',
-    String role = UserRoles.customer,
-    String accountStatus = UserStatuses.active,
+    String role = 'customer',
+    String accountStatus = 'active',
     bool isGuest = false,
     String defaultAddressId = '',
     List<UserAddressModel> addresses = const [],
@@ -180,8 +120,8 @@ class UserModel {
       profilePicture: profilePicture,
       gender: gender,
       dateOfBirth: dateOfBirth,
-      role: normalizeRole(role),
-      accountStatus: normalizeStatus(accountStatus),
+      role: role,
+      accountStatus: accountStatus,
       isGuest: isGuest,
       defaultAddressId: defaultAddressId,
       addresses: addresses,
@@ -190,6 +130,21 @@ class UserModel {
       lastLoginAt: lastLoginAt,
     );
   }
+
+  static UserModel empty() => UserModel(
+    id: '',
+    firstName: '',
+    lastName: '',
+  );
+
+  static UserModel guest() => UserModel(
+    id: '',
+    firstName: 'Guest',
+    lastName: 'User',
+    role: 'guest',
+    accountStatus: 'guest',
+    isGuest: true,
+  );
 
   Map<String, dynamic> toJson() {
     return {
@@ -200,8 +155,8 @@ class UserModel {
       'ProfilePicture': profilePicture.trim(),
       'Gender': gender.trim(),
       'DOB': dateOfBirth.trim(),
-      'Role': normalizeRole(role),
-      'AccountStatus': normalizeStatus(accountStatus),
+      'Role': role.trim().toLowerCase(),
+      'AccountStatus': accountStatus.trim().toLowerCase(),
       'IsGuest': isGuest,
       'DefaultAddressId': defaultAddressId.trim(),
       'Addresses': addresses.map((e) => e.toJson()).toList(),
@@ -215,6 +170,7 @@ class UserModel {
       DocumentSnapshot<Map<String, dynamic>> document,
       ) {
     final data = document.data();
+
     if (data == null) {
       return UserModel.guest();
     }
@@ -226,7 +182,7 @@ class UserModel {
     final rawAddresses = (data['Addresses'] as List<dynamic>? ?? []);
 
     return UserModel(
-      id: id.trim(),
+      id: id,
       firstName: (data['FirstName'] ?? '').toString().trim(),
       lastName: (data['LastName'] ?? '').toString().trim(),
       email: (data['Email'] ?? '').toString().trim(),
@@ -234,10 +190,11 @@ class UserModel {
       profilePicture: (data['ProfilePicture'] ?? '').toString().trim(),
       gender: (data['Gender'] ?? '').toString().trim(),
       dateOfBirth: (data['DOB'] ?? '').toString().trim(),
-      role: normalizeRole((data['Role'] ?? UserRoles.customer).toString()),
-      accountStatus: normalizeStatus(
-        (data['AccountStatus'] ?? UserStatuses.active).toString(),
-      ),
+      role: (data['Role'] ?? 'customer').toString().trim().toLowerCase(),
+      accountStatus: (data['AccountStatus'] ?? 'active')
+          .toString()
+          .trim()
+          .toLowerCase(),
       isGuest: data['IsGuest'] == true,
       defaultAddressId: (data['DefaultAddressId'] ?? '').toString().trim(),
       addresses: rawAddresses
@@ -285,65 +242,5 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
-  }
-
-  static String normalizeRole(String value) {
-    final normalized = value.trim().toLowerCase();
-
-    switch (normalized) {
-      case 'super admin':
-      case 'super_admin':
-        return UserRoles.superAdmin;
-      case 'admin':
-        return UserRoles.admin;
-      case 'guest':
-        return UserRoles.guest;
-      default:
-        return UserRoles.customer;
-    }
-  }
-
-  static String normalizeStatus(String value) {
-    final normalized = value.trim().toLowerCase();
-
-    switch (normalized) {
-      case 'blocked':
-        return UserStatuses.blocked;
-      case 'inactive':
-        return UserStatuses.inactive;
-      case 'guest':
-        return UserStatuses.guest;
-      default:
-        return UserStatuses.active;
-    }
-  }
-
-  static String formatTimestamp(dynamic value) {
-    if (value == null) return '-';
-
-    try {
-      final dateTime = value.toDate();
-      final year = dateTime.year.toString().padLeft(4, '0');
-      final month = dateTime.month.toString().padLeft(2, '0');
-      final day = dateTime.day.toString().padLeft(2, '0');
-      final hour = dateTime.hour.toString().padLeft(2, '0');
-      final minute = dateTime.minute.toString().padLeft(2, '0');
-      return '$year-$month-$day $hour:$minute';
-    } catch (_) {
-      return '-';
-    }
-  }
-
-  static String _prettyValue(String value) {
-    final cleaned = value.trim().replaceAll('_', ' ');
-    if (cleaned.isEmpty) return '-';
-
-    return cleaned
-        .split(' ')
-        .map((e) {
-      if (e.isEmpty) return e;
-      return '${e[0].toUpperCase()}${e.substring(1)}';
-    })
-        .join(' ');
   }
 }

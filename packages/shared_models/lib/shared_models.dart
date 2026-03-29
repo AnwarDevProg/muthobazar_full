@@ -2,6 +2,7 @@ export 'customer/mb_customer_address.dart';
 export 'customer/mb_user_profile.dart';
 
 export 'admin/mb_admin_activity_log.dart';
+
 export 'admin/mb_admin_invite.dart';
 export 'admin/mb_admin_permission.dart';
 export 'admin/purchases/admin_purchase_model.dart';

@@ -1,21 +1,23 @@
 import 'dart:async';
 
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:get/get.dart';
-
-import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_models/shared_models.dart';
-import '../../../models/user_model.dart';
-import '../../profile/controllers/profile_controller.dart';
-
 import 'package:shared_repositories/shared_repositories.dart';
 import 'package:shared_services/shared_services.dart';
-import 'admin_access_controller.dart';
-
-
+import 'package:shared_ui/shared_ui.dart';
 
 class AdminInviteController extends GetxController {
-  final AdminInviteRepository _repository = AdminInviteRepository.instance;
-  final ProfileController _profileController = Get.find<ProfileController>();
+  AdminInviteController({
+    AdminInviteRepository? repository,
+  }) : _repository = repository ?? AdminInviteRepository.instance;
+
+  final AdminInviteRepository _repository;
+
+  final AdminProfileController _profileController =
+  Get.find<AdminProfileController>();
+
   final AdminAccessController _accessController =
   Get.find<AdminAccessController>();
 
@@ -32,6 +34,14 @@ class AdminInviteController extends GetxController {
 
   StreamSubscription<List<MBAdminInvite>>? _allInvitesSub;
   StreamSubscription<List<MBAdminInvite>>? _myInvitesSub;
+
+  String get currentUid => _profileController.currentUid;
+  String get currentAdminName => _profileController.fullName;
+  String get currentAdminEmail => _profileController.email;
+  String get currentAdminRole =>
+      _accessController.permission.value?.role ?? 'customer';
+
+  UserModel? get currentUser => _profileController.currentUser.value;
 
   bool get canManageInvites =>
       _accessController.isSuperAdmin &&
@@ -69,7 +79,7 @@ class AdminInviteController extends GetxController {
   void _listenMyPendingInvites() {
     _myInvitesSub?.cancel();
 
-    final uid = _profileController.user.value.id;
+    final uid = currentUid;
     if (uid.trim().isEmpty) {
       myPendingInvites.clear();
       return;
@@ -138,22 +148,30 @@ class AdminInviteController extends GetxController {
       return;
     }
 
+    if (currentUid.trim().isEmpty) {
+      MBNotification.error(
+        title: 'Error',
+        message: 'Current admin profile not loaded.',
+      );
+      return;
+    }
+
     try {
       isSendingInvite.value = true;
 
       final invite = await _repository.createInvite(
         targetUser: user,
         role: 'admin',
-        invitedByUid: _profileController.user.value.id,
-        invitedByName: _profileController.fullName,
+        invitedByUid: currentUid,
+        invitedByName: currentAdminName,
       );
 
       searchedUserPendingInvite.value = invite;
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: currentUid,
+        adminName: currentAdminName,
+        adminEmail: currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'create_admin_invite',
         targetType: 'admin_invite',
@@ -190,9 +208,9 @@ class AdminInviteController extends GetxController {
       await _repository.revokeInvite(invite.id);
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: currentUid,
+        adminName: currentAdminName,
+        adminEmail: currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'revoke_admin_invite',
         targetType: 'admin_invite',
@@ -219,8 +237,8 @@ class AdminInviteController extends GetxController {
   }
 
   Future<void> acceptInvite(MBAdminInvite invite) async {
-    final user = _profileController.user.value;
-    if (user.id.trim().isEmpty) return;
+    final user = currentUser;
+    if (user == null || user.id.trim().isEmpty) return;
 
     try {
       isDecisionBusy.value = true;
@@ -260,7 +278,7 @@ class AdminInviteController extends GetxController {
   }
 
   Future<void> rejectInvite(MBAdminInvite invite) async {
-    final uid = _profileController.user.value.id;
+    final uid = currentUid;
     if (uid.trim().isEmpty) return;
 
     try {
@@ -273,8 +291,8 @@ class AdminInviteController extends GetxController {
 
       await AdminActivityLogger.log(
         adminUid: uid,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminName: currentAdminName,
+        adminEmail: currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? 'customer',
         action: 'reject_admin_invite',
         targetType: 'admin_invite',
@@ -305,15 +323,3 @@ class AdminInviteController extends GetxController {
     super.onClose();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

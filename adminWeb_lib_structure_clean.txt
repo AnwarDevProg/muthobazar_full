@@ -4,6 +4,7 @@ C.
 +---app
 |   +---bindings
 |   |   +---admin_access_binding.dart
+|   |   +---admin_user_binding.dart
 |   |   +---admin_web_binding.dart
 |   |   +---audit_logs_binding.dart
 |   |   +---brands_binding.dart
@@ -24,6 +25,7 @@ C.
 |   |   +---packing_binding.dart
 |   |   +---picking_binding.dart
 |   |   +---products_binding.dart
+|   |   +---profile_binding.dart
 |   |   +---purchase_receiving_binding.dart
 |   |   +---purchases_binding.dart
 |   |   +---refunds_binding.dart
@@ -83,9 +85,13 @@ C.
 |   |       \---admin_activity_logs_page.dart
 |   +---auth
 |   |   +---controllers
+|   |   |   \---admin_auth_controller.dart
 |   |   +---pages
+|   |   |   +---admin_login_page.dart
+|   |   |   \---admin_register_page.dart
 |   |   +---repositories
 |   |   \---widgets
+|   |       \---admin_auth_shell.dart
 |   +---banners
 |   |   +---controllers
 |   |   |   \---admin_banner_controller.dart
@@ -130,6 +136,15 @@ C.
 |   |       \---admin_invite_accept_dialog.dart
 |   +---manual_orders
 |   +---marketing
+|   |   +---controllers
+|   |   |   +---admin_offer_controller.dart
+|   |   |   \---admin_promo_controller.dart
+|   |   +---pages
+|   |   |   +---admin_offers_page.dart
+|   |   |   \---admin_promos_page.dart
+|   |   \---widgets
+|   |       +---admin_offer_form_dialog.dart
+|   |       \---admin_promo_form_dialog.dart
 |   +---orders
 |   +---packing
 |   +---picking
@@ -141,6 +156,12 @@ C.
 |   |   |   \---admin_quarantine_products_page.dart
 |   |   \---widgets
 |   |       \---admin_product_form_dialog.dart
+|   +---profile
+|   |   +---controllers
+|   |   |   \---admin_profile_controller.dart
+|   |   +---pages
+|   |   |   \---admin_profile_page.dart
+|   |   \---widgets
 |   +---purchase_receiving
 |   +---purchases
 |   |   +---bindings
@@ -158,9 +179,15 @@ C.
 |   +---service_categories
 |   +---services
 |   +---settings
-|   +---setup
-|   |   \---pages
-|   |       \---setup_super_admin_page.dart
+|   +---setup_super_admin
+|   |   +---controllers
+|   |   |   \---setup_super_admin_controller.dart
+|   |   +---helpers
+|   |   |   \---super_admin_bootstrap_guard.dart
+|   |   +---pages
+|   |   |   \---setup_super_admin_page.dart
+|   |   \---services
+|   |       \---setup_super_admin_service.dart
 |   +---slots_capacity
 |   +---stock_ledger
 |   +---substitutions

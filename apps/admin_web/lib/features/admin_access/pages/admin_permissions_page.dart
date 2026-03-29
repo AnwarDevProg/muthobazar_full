@@ -1,11 +1,12 @@
+import 'package:admin_web/features/dashboard/controllers/admin_management_controller.dart';
+import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_models/shared_models.dart';
-import '../../profile/controllers/profile_controller.dart';
+
 import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import '../controllers/admin_management_controller.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 
 class AdminPermissionsPage extends StatelessWidget {
@@ -314,7 +315,7 @@ class _AdminPermissionEditorDialogState
 
   @override
   Widget build(BuildContext context) {
-    final ProfileController profileController = Get.find<ProfileController>();
+    final AdminProfileController profileController = Get.find<AdminProfileController>();
     final AdminManagementController managementController =
     Get.find<AdminManagementController>();
 
@@ -583,7 +584,7 @@ class _AdminPermissionEditorDialogState
                         name: widget.name,
                         email: widget.email,
                         permission: _permission!,
-                        actorUid: profileController.user.value.id,
+                        actorUid: profileController.currentUser.value!.id.trim(),
                       );
 
                       if (mounted) {

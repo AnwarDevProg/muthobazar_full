@@ -1,6 +1,6 @@
 import 'package:admin_web/app/routes/admin_web_routes.dart';
 import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import 'package:admin_web/features/setup/controllers/setup_super_admin_controller.dart';
+import 'package:admin_web/features/setup_super_admin/controllers/setup_super_admin_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

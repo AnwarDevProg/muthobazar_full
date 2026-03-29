@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import'package:shared_models/shared_models.dart';
+import 'package:shared_models/shared_models.dart';
 
 class AdminInviteRepository {
   AdminInviteRepository._();
@@ -10,123 +10,128 @@ class AdminInviteRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  CollectionReference<Map<String, dynamic>> get _inviteCol =>
+  CollectionReference<Map<String, dynamic>> get invitesCollection =>
       _firestore.collection('admin_invites');
 
-  CollectionReference<Map<String, dynamic>> get _permissionCol =>
-      _firestore.collection('admin_permissions');
-
-  CollectionReference<Map<String, dynamic>> get _adminCol =>
+  CollectionReference<Map<String, dynamic>> get adminsCollection =>
       _firestore.collection('admins');
 
-  CollectionReference<Map<String, dynamic>> get _userCol =>
+  CollectionReference<Map<String, dynamic>> get adminPermissionsCollection =>
+      _firestore.collection('admin_permissions');
+
+  CollectionReference<Map<String, dynamic>> get usersCollection =>
       _firestore.collection('users');
 
   String get currentUid => _auth.currentUser?.uid ?? '';
 
+  User? get currentUser => _auth.currentUser;
+
+  // =========================================================
+  // WATCH ALL INVITES
+  // =========================================================
+
   Stream<List<MBAdminInvite>> watchAllInvites() {
-    return _inviteCol
+    return invitesCollection
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => MBAdminInvite.fromMap({
-        ...doc.data(),
-        'id': doc.id,
-      }))
-          .toList();
-    });
+        .map(
+          (snapshot) => snapshot.docs
+          .map((doc) => MBAdminInvite.fromMap(doc.data()))
+          .toList(),
+    );
   }
+
+  // =========================================================
+  // WATCH MY PENDING INVITES
+  // =========================================================
 
   Stream<List<MBAdminInvite>> watchPendingInvitesForUid(String uid) {
-    return _inviteCol
+    return invitesCollection
         .where('uid', isEqualTo: uid)
         .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => MBAdminInvite.fromMap({
-        ...doc.data(),
-        'id': doc.id,
-      }))
-          .toList();
-    });
+        .map(
+          (snapshot) => snapshot.docs
+          .map((doc) => MBAdminInvite.fromMap(doc.data()))
+          .where((invite) => !invite.isExpired)
+          .toList(),
+    );
   }
+
+  // =========================================================
+  // FIND USER BY PHONE
+  // =========================================================
 
   Future<UserModel?> findUserByPhone(String phone) async {
-    final cleaned = phone.trim();
-    if (cleaned.isEmpty) return null;
+    final input = phone.trim();
+    if (input.isEmpty) return null;
 
-    QuerySnapshot<Map<String, dynamic>> snapshot = await _userCol
-        .where('PhoneNumber', isEqualTo: cleaned)
+    final query = await usersCollection
+        .where('PhoneNumber', isEqualTo: input)
         .limit(1)
         .get();
 
-    if (snapshot.docs.isEmpty) {
-      snapshot = await _userCol
-          .where('phone', isEqualTo: cleaned)
-          .limit(1)
-          .get();
-    }
+    if (query.docs.isEmpty) return null;
 
-    if (snapshot.docs.isEmpty) {
-      snapshot = await _userCol
-          .where('phoneNumber', isEqualTo: cleaned)
-          .limit(1)
-          .get();
-    }
-
-    if (snapshot.docs.isEmpty) return null;
-
-    final doc = snapshot.docs.first;
-    final data = doc.data();
-
-    return UserModel.fromMap(doc.id, data);
+    return UserModel.fromSnapshot(query.docs.first);
   }
+
+  // =========================================================
+  // GET ONE PENDING INVITE FOR USER
+  // =========================================================
 
   Future<MBAdminInvite?> getPendingInviteByUid(String uid) async {
-    final snapshot = await _inviteCol
+    final query = await invitesCollection
         .where('uid', isEqualTo: uid)
         .where('status', isEqualTo: 'pending')
-        .limit(1)
+        .limit(5)
         .get();
 
-    if (snapshot.docs.isEmpty) return null;
+    if (query.docs.isEmpty) return null;
 
-    final doc = snapshot.docs.first;
-    return MBAdminInvite.fromMap({
-      ...doc.data(),
-      'id': doc.id,
-    });
+    final invites = query.docs
+        .map((doc) => MBAdminInvite.fromMap(doc.data()))
+        .where((invite) => !invite.isExpired)
+        .toList();
+
+    if (invites.isEmpty) return null;
+
+    invites.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return invites.first;
   }
+
+  // =========================================================
+  // CREATE INVITE
+  // =========================================================
 
   Future<MBAdminInvite> createInvite({
     required UserModel targetUser,
     required String role,
     required String invitedByUid,
     required String invitedByName,
-    int validDays = 7,
   }) async {
     final existing = await getPendingInviteByUid(targetUser.id);
     if (existing != null) {
-      throw Exception('A pending invite already exists for this user.');
+      throw Exception('This user already has a pending admin invite.');
     }
 
-    final doc = _inviteCol.doc();
+    final doc = invitesCollection.doc();
     final now = DateTime.now();
+    final expiresAt = now.add(const Duration(days: 7));
 
     final invite = MBAdminInvite(
       id: doc.id,
       uid: targetUser.id,
       phone: targetUser.phoneNumber.trim(),
-      email: targetUser.email.trim().toLowerCase(),
+      email: targetUser.email.trim(),
       name: targetUser.fullName.trim(),
-      role: role,
+      role: role.trim().toLowerCase(),
       status: 'pending',
       invitedBy: invitedByUid,
-      invitedByName: invitedByName,
+      invitedByName: invitedByName.trim(),
       createdAt: now,
-      expiresAt: now.add(Duration(days: validDays)),
+      expiresAt: expiresAt,
     );
 
     await doc.set(invite.toMap());
@@ -134,99 +139,135 @@ class AdminInviteRepository {
     return invite;
   }
 
+  // =========================================================
+  // REVOKE INVITE
+  // =========================================================
+
   Future<void> revokeInvite(String inviteId) async {
-    await _inviteCol.doc(inviteId).set(
-      {
-        'status': 'revoked',
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    final now = DateTime.now();
+
+    await invitesCollection.doc(inviteId).update({
+      'status': 'revoked',
+      'revokedAt': now.toIso8601String(),
+    });
   }
+
+  // =========================================================
+  // ACCEPT INVITE
+  // =========================================================
 
   Future<void> acceptInvite({
     required MBAdminInvite invite,
     required UserModel user,
   }) async {
-    final batch = _firestore.batch();
+    if (invite.isExpired) {
+      throw Exception('This invite has expired.');
+    }
 
-    final permission = invite.role == 'super_admin'
+    if (!invite.isPending) {
+      throw Exception('This invite is no longer pending.');
+    }
+
+    if (invite.uid.trim() != user.id.trim()) {
+      throw Exception('This invite does not belong to the current user.');
+    }
+
+    final batch = _firestore.batch();
+    final now = DateTime.now();
+
+    final inviteRef = invitesCollection.doc(invite.id);
+    final adminRef = adminsCollection.doc(user.id);
+    final permissionRef = adminPermissionsCollection.doc(user.id);
+
+    final permission = invite.role.trim().toLowerCase() == 'super_admin'
         ? MBAdminPermission.superAdmin(
       uid: user.id,
       actorUid: invite.invitedBy,
-    ).copyWith(
-      updatedByUid: user.id,
     )
         : MBAdminPermission.standardAdmin(
       uid: user.id,
       actorUid: invite.invitedBy,
-    ).copyWith(
-      role: invite.role,
-      updatedByUid: user.id,
     );
 
-    batch.set(
-      _permissionCol.doc(user.id),
-      {
-        ...permission.toMap(),
-        'uid': user.id,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
+    final adminData = <String, dynamic>{
+      'uid': user.id,
+      'name': user.fullName.trim(),
+      'email': user.email.trim(),
+      'phone': user.phoneNumber.trim(),
+      'role': invite.role.trim().toLowerCase(),
+      'isActive': true,
+      'createdAt': now.toIso8601String(),
+      'updatedAt': now.toIso8601String(),
+      'createdByUid': invite.invitedBy,
+      'updatedByUid': user.id,
+    };
+
+    final acceptedInvite = invite.copyWith(
+      status: 'accepted',
+      acceptedAt: now,
+      clearRejectedAt: true,
+      clearRevokedAt: true,
     );
 
-    batch.set(
-      _adminCol.doc(user.id),
-      {
-        'uid': user.id,
-        'name': user.fullName.trim(),
-        'email': user.email.trim().toLowerCase(),
-        'role': invite.role,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'createdByUid': invite.invitedBy,
-        'updatedByUid': user.id,
-      },
-      SetOptions(merge: true),
-    );
-
-    batch.set(
-      _inviteCol.doc(invite.id),
-      {
-        'status': 'accepted',
-        'acceptedAt': FieldValue.serverTimestamp(),
-        'acceptedByUid': user.id,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    batch.set(inviteRef, acceptedInvite.toMap(), SetOptions(merge: true));
+    batch.set(adminRef, adminData, SetOptions(merge: true));
+    batch.set(permissionRef, permission.toMap(), SetOptions(merge: true));
 
     await batch.commit();
   }
+
+  // =========================================================
+  // REJECT INVITE
+  // =========================================================
 
   Future<void> rejectInvite({
     required String inviteId,
     required String uid,
   }) async {
-    await _inviteCol.doc(inviteId).set(
-      {
-        'status': 'rejected',
-        'rejectedByUid': uid,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
+    final inviteDoc = await invitesCollection.doc(inviteId).get();
+    if (!inviteDoc.exists || inviteDoc.data() == null) {
+      throw Exception('Invite not found.');
+    }
+
+    final invite = MBAdminInvite.fromMap(inviteDoc.data());
+
+    if (invite.uid.trim() != uid.trim()) {
+      throw Exception('This invite does not belong to the current user.');
+    }
+
+    if (invite.isExpired) {
+      throw Exception('This invite has expired.');
+    }
+
+    if (!invite.isPending) {
+      throw Exception('This invite is no longer pending.');
+    }
+
+    final now = DateTime.now();
+
+    final rejectedInvite = invite.copyWith(
+      status: 'rejected',
+      rejectedAt: now,
+      clearAcceptedAt: true,
+      clearRevokedAt: true,
+    );
+
+    await invitesCollection.doc(inviteId).set(
+      rejectedInvite.toMap(),
       SetOptions(merge: true),
     );
   }
+
+  // =========================================================
+  // OPTIONAL: EXPIRE OLD INVITES LOCALLY ON READ
+  // =========================================================
+
+  Future<void> markInviteExpiredIfNeeded(MBAdminInvite invite) async {
+    if (!invite.isPending) return;
+    if (!invite.isExpired) return;
+
+    await invitesCollection.doc(invite.id).update({
+      'status': 'expired',
+    });
+  }
 }
-
-
-
-
-
-
-
-
-
-
-

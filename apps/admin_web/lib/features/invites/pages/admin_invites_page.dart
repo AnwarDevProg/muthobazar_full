@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import '../../../core/layout/mb_app_layout.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../controllers/admin_invite_controller.dart';
 

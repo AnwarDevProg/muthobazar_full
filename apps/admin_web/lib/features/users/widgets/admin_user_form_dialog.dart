@@ -1,24 +1,24 @@
+import 'package:admin_web/features/users/controllers/admin_user_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:shared_models/customer/mb_user_profile.dart';
 import 'package:shared_ui/shared_ui.dart';
-import '../../../../models/user_model.dart';
-import '../../controllers/admin_user_controller.dart';
+import '../../admin_access/controllers/admin_access_controller.dart';
 
 class AdminUserFormDialog extends StatefulWidget {
-  final UserModel user;
-
   const AdminUserFormDialog({
     super.key,
     required this.user,
   });
+
+  final UserModel user;
 
   @override
   State<AdminUserFormDialog> createState() => _AdminUserFormDialogState();
 }
 
 class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
@@ -31,22 +31,28 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
   late String _accountStatus;
   late bool _isGuest;
 
+  late final AdminUserController _controller;
+  late final AdminAccessController _accessController;
+
   @override
   void initState() {
     super.initState();
 
-    _firstNameController =
-        TextEditingController(text: widget.user.firstName);
-    _lastNameController =
-        TextEditingController(text: widget.user.lastName);
-    _emailController = TextEditingController(text: widget.user.email);
-    _phoneController = TextEditingController(text: widget.user.phoneNumber);
-    _genderController = TextEditingController(text: widget.user.gender);
-    _dobController = TextEditingController(text: widget.user.dateOfBirth);
+    _controller = Get.find<AdminUserController>();
+    _accessController = Get.find<AdminAccessController>();
 
-    _role = widget.user.role;
-    _accountStatus = widget.user.accountStatus;
-    _isGuest = widget.user.isGuest;
+    final UserModel normalized = UserModel.normalized(widget.user);
+
+    _firstNameController = TextEditingController(text: normalized.firstName);
+    _lastNameController = TextEditingController(text: normalized.lastName);
+    _emailController = TextEditingController(text: normalized.email);
+    _phoneController = TextEditingController(text: normalized.phoneNumber);
+    _genderController = TextEditingController(text: normalized.gender);
+    _dobController = TextEditingController(text: normalized.dateOfBirth);
+
+    _role = normalized.role;
+    _accountStatus = normalized.accountStatus;
+    _isGuest = normalized.isGuest;
   }
 
   @override
@@ -62,7 +68,7 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminUserController>();
+    final bool canAssignAdminRoles = _accessController.isSuperAdmin;
 
     return Dialog(
       insetPadding: const EdgeInsets.all(32),
@@ -78,7 +84,14 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                 'Edit User',
                 style: MBTextStyles.sectionTitle,
               ),
-              MBSpacing.h(MBSpacing.md),
+              MBSpacing.h(MBSpacing.xxs),
+              Text(
+                'Update user profile details, role, and account status.',
+                style: MBTextStyles.body.copyWith(
+                  color: MBColors.textSecondary,
+                ),
+              ),
+              MBSpacing.h(MBSpacing.lg),
               Flexible(
                 child: SingleChildScrollView(
                   child: Form(
@@ -116,6 +129,20 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                                 controller: _emailController,
                                 labelText: 'Email',
                                 keyboardType: TextInputType.emailAddress,
+                                validator: (value) {
+                                  final email = (value ?? '').trim();
+                                  if (email.isEmpty) return null;
+
+                                  final isValid = RegExp(
+                                    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                                  ).hasMatch(email);
+
+                                  if (!isValid) {
+                                    return 'Enter a valid email';
+                                  }
+
+                                  return null;
+                                },
                               ),
                             ),
                             MBSpacing.w(MBSpacing.md),
@@ -155,27 +182,32 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                                 decoration: const InputDecoration(
                                   labelText: 'Role',
                                 ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'customer',
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: UserRoles.customer,
                                     child: Text('Customer'),
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'admin',
-                                    child: Text('Admin'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'super_admin',
-                                    child: Text('Super Admin'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'guest',
+                                  if (canAssignAdminRoles)
+                                    const DropdownMenuItem(
+                                      value: UserRoles.admin,
+                                      child: Text('Admin'),
+                                    ),
+                                  if (canAssignAdminRoles)
+                                    const DropdownMenuItem(
+                                      value: UserRoles.superAdmin,
+                                      child: Text('Super Admin'),
+                                    ),
+                                  const DropdownMenuItem(
+                                    value: UserRoles.guest,
                                     child: Text('Guest'),
                                   ),
                                 ],
-                                onChanged: (value) {
+                                onChanged: _controller.isSaving.value
+                                    ? null
+                                    : (value) {
+                                  if (value == null) return;
                                   setState(() {
-                                    _role = value ?? 'customer';
+                                    _role = value;
                                   });
                                 },
                               ),
@@ -189,25 +221,28 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                                 ),
                                 items: const [
                                   DropdownMenuItem(
-                                    value: 'active',
+                                    value: UserStatuses.active,
                                     child: Text('Active'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'inactive',
+                                    value: UserStatuses.inactive,
                                     child: Text('Inactive'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'blocked',
+                                    value: UserStatuses.blocked,
                                     child: Text('Blocked'),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'guest',
+                                    value: UserStatuses.guest,
                                     child: Text('Guest'),
                                   ),
                                 ],
-                                onChanged: (value) {
+                                onChanged: _controller.isSaving.value
+                                    ? null
+                                    : (value) {
+                                  if (value == null) return;
                                   setState(() {
-                                    _accountStatus = value ?? 'active';
+                                    _accountStatus = value;
                                   });
                                 },
                               ),
@@ -217,9 +252,15 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                         MBSpacing.h(MBSpacing.md),
                         SwitchListTile(
                           value: _isGuest,
-                          onChanged: (value) {
+                          onChanged: _controller.isSaving.value
+                              ? null
+                              : (value) {
                             setState(() {
                               _isGuest = value;
+                              if (_isGuest) {
+                                _role = UserRoles.guest;
+                                _accountStatus = UserStatuses.guest;
+                              }
                             });
                           },
                           title: const Text('Is Guest'),
@@ -236,15 +277,16 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
                   Expanded(
                     child: MBSecondaryButton(
                       text: 'Cancel',
-                      isLoading: controller.isSaving.value,
-                      onPressed: () => Get.back(),
+                      isLoading: _controller.isSaving.value,
+                      onPressed:
+                      _controller.isSaving.value ? null : () => Get.back(),
                     ),
                   ),
                   MBSpacing.w(MBSpacing.md),
                   Expanded(
                     child: MBPrimaryButton(
                       text: 'Update User',
-                      isLoading: controller.isSaving.value,
+                      isLoading: _controller.isSaving.value,
                       onPressed: _submit,
                     ),
                   ),
@@ -260,8 +302,6 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final controller = Get.find<AdminUserController>();
-
     final updated = widget.user.copyWith(
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
@@ -269,27 +309,15 @@ class _AdminUserFormDialogState extends State<AdminUserFormDialog> {
       phoneNumber: _phoneController.text.trim(),
       gender: _genderController.text.trim(),
       dateOfBirth: _dobController.text.trim(),
-      role: _role,
-      accountStatus: _accountStatus,
+      role: UserModel.normalizeRole(_role),
+      accountStatus: UserModel.normalizeStatus(_accountStatus),
       isGuest: _isGuest,
     );
 
-    await controller.updateUser(updatedUser: updated);
+    await _controller.updateUser(updated);
 
-    if (mounted) {
+    if (mounted && !_controller.isSaving.value) {
       Get.back();
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
