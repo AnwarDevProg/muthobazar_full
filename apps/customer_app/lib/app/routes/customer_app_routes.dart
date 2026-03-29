@@ -1,8 +1,10 @@
 class AppRoutes {
   AppRoutes._();
 
-  static const splash = '/';
+  static const appLaunchRoute = '/';
   static const forceUpdate = '/force-update';
+  static const String accountBlocked = '/account-blocked';
+  static const String completeProfile = '/complete-profile';
   static const onboarding = '/onboarding';
   static const shell = '/shell';
 
@@ -22,22 +24,10 @@ class AppRoutes {
   static const appSettings = '/profile/app-settings';
   static const helpCenter = '/profile/help-center';
   static const wishlist = '/profile/wishlist';
-  static const mobileAdminPurchases = '/profile/admin/purchases';
+
 
   static const orderDetails = '/order-details';
   static const checkout = '/checkout';
 
-  static const adminShell = '/admin';
-  static const adminDashboard = '/admin/dashboard';
-  static const adminInvites = '/admin/invites';
-  static const adminPermissions = '/admin/permissions';
-  static const adminCategories = '/admin/categories';
-  static const adminBrands = '/admin/brands';
-  static const adminBanners = '/admin/banners';
-  static const adminProducts = '/admin/products';
-  static const adminQuarantineProducts = '/admin/products-quarantine';
-  static const adminActivityLogs = '/admin/activity-logs';
-  static const adminUsers = '/admin/users';
-  static const setupSuperAdmin = '/setup-super-admin';
 }
 

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_models/admin/mb_admin_activity_log.dart';
 
-import '../../../models/admin/mb_admin_activity_log.dart';
+
 
 class AdminActivityLogRepository {
   AdminActivityLogRepository._();

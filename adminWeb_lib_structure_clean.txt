@@ -1,0 +1,180 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib
+C.
++---app
+|   +---bindings
+|   |   +---admin_access_binding.dart
+|   |   +---admin_web_binding.dart
+|   |   +---audit_logs_binding.dart
+|   |   +---brands_binding.dart
+|   |   +---categories_binding.dart
+|   |   +---complaints_binding.dart
+|   |   +---customer_segments_binding.dart
+|   |   +---customers_binding.dart
+|   |   +---daily_closing_binding.dart
+|   |   +---dashboard_binding.dart
+|   |   +---delivery_binding.dart
+|   |   +---delivery_settlements_binding.dart
+|   |   +---expenses_binding.dart
+|   |   +---finance_binding.dart
+|   |   +---inventory_binding.dart
+|   |   +---manual_orders_binding.dart
+|   |   +---marketing_binding.dart
+|   |   +---orders_binding.dart
+|   |   +---packing_binding.dart
+|   |   +---picking_binding.dart
+|   |   +---products_binding.dart
+|   |   +---purchase_receiving_binding.dart
+|   |   +---purchases_binding.dart
+|   |   +---refunds_binding.dart
+|   |   +---reports_binding.dart
+|   |   +---returns_binding.dart
+|   |   +---riders_binding.dart
+|   |   +---service_categories_binding.dart
+|   |   +---services_binding.dart
+|   |   +---settings_binding.dart
+|   |   +---slots_capacity_binding.dart
+|   |   +---stock_ledger_binding.dart
+|   |   +---substitutions_binding.dart
+|   |   +---suppliers_binding.dart
+|   |   +---technicians_binding.dart
+|   |   \---zones_binding.dart
+|   +---core
+|   |   +---constants
+|   |   +---extensions
+|   |   +---utils
+|   |   \---web_table
+|   +---middleware
+|   |   +---admin_auth_middleware.dart
+|   |   +---admin_guest_only_middleware.dart
+|   |   +---permission_guard_middleware.dart
+|   |   \---super_admin_only_middleware.dart
+|   +---routes
+|   |   +---admin_web_pages.dart
+|   |   \---admin_web_routes.dart
+|   +---services
+|   |   +---admin_permission_gate_service.dart
+|   |   +---admin_web_bootstrap_service.dart
+|   |   \---admin_web_session_service.dart
+|   +---shell
+|   |   +---admin_shell_state_controller.dart
+|   |   +---admin_sidebar.dart
+|   |   +---admin_topbar.dart
+|   |   \---admin_web_shell.dart
+|   +---startup
+|   |   +---admin_launch_router_page.dart
+|   |   \---admin_startup_redirect_controller.dart
+|   +---widgets
+|   |   +---common
+|   |   +---form
+|   |   +---layout
+|   |   \---table
+|   \---app.dart
++---features
+|   +---admin_access
+|   |   +---controllers
+|   |   |   \---admin_access_controller.dart
+|   |   \---pages
+|   |       \---admin_permissions_page.dart
+|   +---audit_logs
+|   |   +---controllers
+|   |   |   \---admin_activity_log_controller.dart
+|   |   \---pages
+|   |       \---admin_activity_logs_page.dart
+|   +---auth
+|   |   +---controllers
+|   |   +---pages
+|   |   +---repositories
+|   |   \---widgets
+|   +---banners
+|   |   +---controllers
+|   |   |   \---admin_banner_controller.dart
+|   |   +---pages
+|   |   |   \---admin_banners_page.dart
+|   |   \---widgets
+|   |       \---admin_banner_form_dialog.dart
+|   +---brands
+|   |   +---controllers
+|   |   |   \---admin_brand_controller.dart
+|   |   +---pages
+|   |   |   \---admin_brands_page.dart
+|   |   \---widgets
+|   |       \---admin_brand_form_dialog.dart
+|   +---categories
+|   |   +---controllers
+|   |   |   \---admin_category_controller.dart
+|   |   +---pages
+|   |   |   \---admin_categories_page.dart
+|   |   \---widgets
+|   |       \---admin_category_form_dialog.dart
+|   +---complaints
+|   +---customer_segments
+|   +---customers
+|   +---daily_closing
+|   +---dashboard
+|   |   +---controllers
+|   |   |   \---admin_management_controller.dart
+|   |   \---pages
+|   |       \---admin_dashboard_page.dart
+|   +---delivery
+|   +---delivery_settlements
+|   +---expenses
+|   +---finance
+|   +---inventory
+|   +---invites
+|   |   +---controllers
+|   |   |   \---admin_invite_controller.dart
+|   |   +---pages
+|   |   |   \---admin_invites_page.dart
+|   |   \---widgets
+|   |       \---admin_invite_accept_dialog.dart
+|   +---manual_orders
+|   +---marketing
+|   +---orders
+|   +---packing
+|   +---picking
+|   +---products
+|   |   +---controllers
+|   |   |   \---admin_product_controller.dart
+|   |   +---pages
+|   |   |   +---admin_products_page.dart
+|   |   |   \---admin_quarantine_products_page.dart
+|   |   \---widgets
+|   |       \---admin_product_form_dialog.dart
+|   +---purchase_receiving
+|   +---purchases
+|   |   +---bindings
+|   |   |   \---mobile_admin_purchase_binding.dart
+|   |   +---controllers
+|   |   |   \---mobile_admin_purchase_controller.dart
+|   |   +---models
+|   |   |   \---mobile_admin_purchase_model.dart
+|   |   \---pages
+|   |       \---mobile_admin_purchase_list_page.dart
+|   +---refunds
+|   +---reports
+|   +---returns
+|   +---riders
+|   +---service_categories
+|   +---services
+|   +---settings
+|   +---setup
+|   |   \---pages
+|   |       \---setup_super_admin_page.dart
+|   +---slots_capacity
+|   +---stock_ledger
+|   +---substitutions
+|   +---suppliers
+|   +---technicians
+|   +---users
+|   |   +---controllers
+|   |   |   \---admin_user_controller.dart
+|   |   +---pages
+|   |   |   \---admin_users_page.dart
+|   |   \---widgets
+|   |       \---admin_user_form_dialog.dart
+|   \---zones
++---l10n
+|   \---app_en.arb
++---firebase_options.dart
+\---main.dart

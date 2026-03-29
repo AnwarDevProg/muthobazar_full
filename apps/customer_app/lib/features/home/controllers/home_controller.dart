@@ -1,38 +1,36 @@
+import 'package:customer_app/features/home/controllers/offer_overlay_manager.dart';
+import 'package:customer_app/features/home/data/dummy_catalog_data.dart';
+import 'package:customer_app/features/home/data/home_dummy_data.dart';
 import 'package:flutter/foundation.dart';
-
-import '../../../models/catalog/mb_brand.dart';
-import '../../../models/catalog/mb_category.dart';
-import '../../../models/catalog/mb_product.dart';
-import '../../../models/home/mb_home_config.dart';
-import '../../../models/home/mb_offer.dart';
-import '../data/datasources/mb_home_local_data_source.dart';
-import '../data/datasources/mb_home_remote_data_source.dart';
-import '../data/models/mb_cache_policy.dart';
-import '../data/models/mb_cache_state.dart';
-import '../data/models/mb_home_cache_bundle.dart';
-import '../repositories/mb_home_repository.dart';
-import 'mb_offer_overlay_manager.dart';
+import 'package:shared_core/helpers/mb_cache_policy.dart';
+import 'package:shared_core/helpers/mb_cache_state.dart';
+import 'package:shared_models/shared_models.dart';
+import 'package:shared_repositories/home/datasources/mb_home_local_data_source.dart';
+import 'package:shared_repositories/home/datasources/mb_home_remote_data_source.dart';
+import 'package:shared_repositories/home/mb_home_repository.dart';
 
 class MBHomeController extends ChangeNotifier {
   MBHomeController({
     MBHomeRepository? repository,
     MBOfferOverlayManager? overlayManager,
-  })  : _repository = repository ??
-      MBHomeRepository(
-        localDataSource: MBHiveHomeLocalDataSource(),
-        remoteDataSource: MBDummyHomeRemoteDataSource(),
-        cachePolicy: MBCachePolicy.homeDefault,
-      ),
+  })  : _repository = repository ?? _buildDefaultRepository(),
         _overlayManager = overlayManager ?? MBOfferOverlayManager();
 
   final MBHomeRepository _repository;
   final MBOfferOverlayManager _overlayManager;
 
   MBHomeConfig _config = MBHomeConfig.empty();
-  List<MBCategory> _categories = const [];
-  List<MBBrand> _brands = const [];
-  List<MBProduct> _products = const [];
+  List<MBCategory> _categories = const <MBCategory>[];
+  List<MBBrand> _brands = const <MBBrand>[];
+  List<MBProduct> _products = const <MBProduct>[];
   MBOffer? _floatingOffer;
+
+  bool _isLoading = false;
+  bool _isRefreshing = false;
+  bool _isUsingCachedData = false;
+  String? _errorMessage;
+  DateTime? _lastSyncedAt;
+  MBCacheState _cacheState = MBCacheState.noCache();
 
   MBHomeConfig get config => _config;
   List<MBCategory> get categories => _categories;
@@ -40,31 +38,41 @@ class MBHomeController extends ChangeNotifier {
   List<MBProduct> get products => _products;
   MBOffer? get floatingOffer => _floatingOffer;
 
-  bool _isLoading = false;
   bool get isLoading => _isLoading;
-
-  bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
-
-  bool _isUsingCachedData = false;
   bool get isUsingCachedData => _isUsingCachedData;
-
-  String? _errorMessage;
   String? get errorMessage => _errorMessage;
-
-  DateTime? _lastSyncedAt;
   DateTime? get lastSyncedAt => _lastSyncedAt;
-
-  MBCacheState _cacheState = MBCacheState.noCache();
   MBCacheState get cacheState => _cacheState;
+
+  static MBHomeRepository _buildDefaultRepository() {
+    return MBHomeRepository(
+      localDataSource: MBHiveHomeLocalDataSource(),
+      remoteDataSource: MBDummyHomeRemoteDataSource(
+        bundleBuilder: _buildDummyBundle,
+      ),
+      cachePolicy: MBCachePolicy.homeDefault,
+    );
+  }
+
+  static MBHomeCacheBundle _buildDummyBundle() {
+    return MBHomeCacheBundle(
+      config: HomeDummyData.config,
+      categories: DummyCatalogData.categories,
+      brands: DummyCatalogData.brands,
+      products: DummyCatalogData.products,
+      cachedAt: DateTime.now(),
+    );
+  }
 
   Future<void> load() async {
     _setLoading(true);
     _errorMessage = null;
+    notifyListeners();
 
     try {
       final result = await _repository.loadCacheFirstThenRefresh(
-        onFreshData: (freshBundle) async {
+        onFreshData: (MBHomeCacheBundle freshBundle) async {
           _applyBundle(
             freshBundle,
             isCached: false,
@@ -84,8 +92,10 @@ class MBHomeController extends ChangeNotifier {
         isCached: result.fromCache,
         cacheState: result.cacheState,
       );
-    } catch (e) {
+    } catch (e, st) {
       _errorMessage = e.toString();
+      debugPrint('MBHomeController.load error: $e');
+      debugPrint('$st');
     } finally {
       _setLoading(false);
       notifyListeners();
@@ -99,7 +109,7 @@ class MBHomeController extends ChangeNotifier {
 
     try {
       final result = await _repository.refreshNow(
-        onFreshData: (freshBundle) async {
+        onFreshData: (MBHomeCacheBundle freshBundle) async {
           _applyBundle(
             freshBundle,
             isCached: false,
@@ -110,6 +120,7 @@ class MBHomeController extends ChangeNotifier {
               age: Duration.zero,
             ),
           );
+          notifyListeners();
         },
       );
 
@@ -118,8 +129,10 @@ class MBHomeController extends ChangeNotifier {
         isCached: result.fromCache,
         cacheState: result.cacheState,
       );
-    } catch (e) {
+    } catch (e, st) {
       _errorMessage = e.toString();
+      debugPrint('MBHomeController.refresh error: $e');
+      debugPrint('$st');
     } finally {
       _isRefreshing = false;
       notifyListeners();
@@ -127,7 +140,8 @@ class MBHomeController extends ChangeNotifier {
   }
 
   void closeFloatingOffer({bool showNext = false}) {
-    final current = _floatingOffer;
+    final MBOffer? current = _floatingOffer;
+
     if (current != null) {
       _overlayManager.markClosed(current.id);
     }
@@ -198,4 +212,3 @@ class MBHomeController extends ChangeNotifier {
     _isLoading = value;
   }
 }
-

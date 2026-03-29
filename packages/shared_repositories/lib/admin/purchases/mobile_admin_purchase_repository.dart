@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import '../models/mobile_admin_purchase_model.dart';
+import 'package:shared_models/shared_models.dart';
 
 class MobileAdminPurchaseRepository {
   MobileAdminPurchaseRepository._();

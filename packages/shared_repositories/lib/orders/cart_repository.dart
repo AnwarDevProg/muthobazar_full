@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
+import 'package:shared_models/orders/mb_cart_item.dart';
 
-import '../../../models/catalog/mb_cart_item.dart';
 
 
 class CartRepository {

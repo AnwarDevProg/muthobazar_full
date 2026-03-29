@@ -1,0 +1,1181 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar
+C.
++---.backup_import_rewrite_20260327_230859
++---apps
+|   +---admin_web
+|   |   +---android
+|   |   |   +---app
+|   |   |   |   +---src
+|   |   |   |   |   +---debug
+|   |   |   |   |   |   \---AndroidManifest.xml
+|   |   |   |   |   +---main
+|   |   |   |   |   |   +---java
+|   |   |   |   |   |   |   \---io
+|   |   |   |   |   |   |       \---flutter
+|   |   |   |   |   |   |           \---plugins
+|   |   |   |   |   |   +---kotlin
+|   |   |   |   |   |   |   \---com
+|   |   |   |   |   |   |       \---example
+|   |   |   |   |   |   |           \---admin_web
+|   |   |   |   |   |   |               \---MainActivity.kt
+|   |   |   |   |   |   +---res
+|   |   |   |   |   |   |   +---drawable
+|   |   |   |   |   |   |   |   \---launch_background.xml
+|   |   |   |   |   |   |   +---drawable-v21
+|   |   |   |   |   |   |   |   \---launch_background.xml
+|   |   |   |   |   |   |   +---mipmap-hdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-mdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xxhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xxxhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---values
+|   |   |   |   |   |   |   |   \---styles.xml
+|   |   |   |   |   |   |   \---values-night
+|   |   |   |   |   |   |       \---styles.xml
+|   |   |   |   |   |   \---AndroidManifest.xml
+|   |   |   |   |   \---profile
+|   |   |   |   |       \---AndroidManifest.xml
+|   |   |   |   \---build.gradle.kts
+|   |   |   +---gradle
+|   |   |   |   \---wrapper
+|   |   |   |       +---gradle-wrapper.jar
+|   |   |   |       \---gradle-wrapper.properties
+|   |   |   +---.gitignore
+|   |   |   +---build.gradle.kts
+|   |   |   +---gradle.properties
+|   |   |   +---gradlew
+|   |   |   +---gradlew.bat
+|   |   |   +---local.properties
+|   |   |   \---settings.gradle.kts
+|   |   +---assets
+|   |   |   +---icons
+|   |   |   |   \---.gitkeep
+|   |   |   +---illustrations
+|   |   |   |   \---.gitkeep
+|   |   |   \---images
+|   |   |       \---.gitkeep
+|   |   +---ios
+|   |   |   +---Flutter
+|   |   |   |   +---AppFrameworkInfo.plist
+|   |   |   |   +---Debug.xcconfig
+|   |   |   |   \---Release.xcconfig
+|   |   |   +---Runner
+|   |   |   |   +---Assets.xcassets
+|   |   |   |   |   +---AppIcon.appiconset
+|   |   |   |   |   |   +---Contents.json
+|   |   |   |   |   |   +---Icon-App-1024x1024@1x.png
+|   |   |   |   |   |   +---Icon-App-20x20@1x.png
+|   |   |   |   |   |   +---Icon-App-20x20@2x.png
+|   |   |   |   |   |   +---Icon-App-20x20@3x.png
+|   |   |   |   |   |   +---Icon-App-29x29@1x.png
+|   |   |   |   |   |   +---Icon-App-29x29@2x.png
+|   |   |   |   |   |   +---Icon-App-29x29@3x.png
+|   |   |   |   |   |   +---Icon-App-40x40@1x.png
+|   |   |   |   |   |   +---Icon-App-40x40@2x.png
+|   |   |   |   |   |   +---Icon-App-40x40@3x.png
+|   |   |   |   |   |   +---Icon-App-60x60@2x.png
+|   |   |   |   |   |   +---Icon-App-60x60@3x.png
+|   |   |   |   |   |   +---Icon-App-76x76@1x.png
+|   |   |   |   |   |   +---Icon-App-76x76@2x.png
+|   |   |   |   |   |   \---Icon-App-83.5x83.5@2x.png
+|   |   |   |   |   \---LaunchImage.imageset
+|   |   |   |   |       +---Contents.json
+|   |   |   |   |       +---LaunchImage.png
+|   |   |   |   |       +---LaunchImage@2x.png
+|   |   |   |   |       +---LaunchImage@3x.png
+|   |   |   |   |       \---README.md
+|   |   |   |   +---Base.lproj
+|   |   |   |   |   +---LaunchScreen.storyboard
+|   |   |   |   |   \---Main.storyboard
+|   |   |   |   +---AppDelegate.swift
+|   |   |   |   +---Info.plist
+|   |   |   |   +---Runner-Bridging-Header.h
+|   |   |   |   \---SceneDelegate.swift
+|   |   |   +---Runner.xcodeproj
+|   |   |   |   +---project.xcworkspace
+|   |   |   |   |   +---xcshareddata
+|   |   |   |   |   |   +---IDEWorkspaceChecks.plist
+|   |   |   |   |   |   \---WorkspaceSettings.xcsettings
+|   |   |   |   |   \---contents.xcworkspacedata
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---xcschemes
+|   |   |   |   |       \---Runner.xcscheme
+|   |   |   |   \---project.pbxproj
+|   |   |   +---Runner.xcworkspace
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   +---IDEWorkspaceChecks.plist
+|   |   |   |   |   \---WorkspaceSettings.xcsettings
+|   |   |   |   \---contents.xcworkspacedata
+|   |   |   +---RunnerTests
+|   |   |   |   \---RunnerTests.swift
+|   |   |   \---.gitignore
+|   |   +---lib
+|   |   +---linux
+|   |   |   +---flutter
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---generated_plugin_registrant.cc
+|   |   |   |   +---generated_plugin_registrant.h
+|   |   |   |   \---generated_plugins.cmake
+|   |   |   +---runner
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---main.cc
+|   |   |   |   +---my_application.cc
+|   |   |   |   \---my_application.h
+|   |   |   +---.gitignore
+|   |   |   \---CMakeLists.txt
+|   |   +---macos
+|   |   |   +---Flutter
+|   |   |   |   +---Flutter-Debug.xcconfig
+|   |   |   |   \---Flutter-Release.xcconfig
+|   |   |   +---Runner
+|   |   |   |   +---Assets.xcassets
+|   |   |   |   |   \---AppIcon.appiconset
+|   |   |   |   |       +---app_icon_1024.png
+|   |   |   |   |       +---app_icon_128.png
+|   |   |   |   |       +---app_icon_16.png
+|   |   |   |   |       +---app_icon_256.png
+|   |   |   |   |       +---app_icon_32.png
+|   |   |   |   |       +---app_icon_512.png
+|   |   |   |   |       +---app_icon_64.png
+|   |   |   |   |       \---Contents.json
+|   |   |   |   +---Base.lproj
+|   |   |   |   |   \---MainMenu.xib
+|   |   |   |   +---Configs
+|   |   |   |   |   +---AppInfo.xcconfig
+|   |   |   |   |   +---Debug.xcconfig
+|   |   |   |   |   +---Release.xcconfig
+|   |   |   |   |   \---Warnings.xcconfig
+|   |   |   |   +---AppDelegate.swift
+|   |   |   |   +---DebugProfile.entitlements
+|   |   |   |   +---Info.plist
+|   |   |   |   +---MainFlutterWindow.swift
+|   |   |   |   \---Release.entitlements
+|   |   |   +---Runner.xcodeproj
+|   |   |   |   +---project.xcworkspace
+|   |   |   |   |   \---xcshareddata
+|   |   |   |   |       \---IDEWorkspaceChecks.plist
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---xcschemes
+|   |   |   |   |       \---Runner.xcscheme
+|   |   |   |   \---project.pbxproj
+|   |   |   +---Runner.xcworkspace
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---IDEWorkspaceChecks.plist
+|   |   |   |   \---contents.xcworkspacedata
+|   |   |   +---RunnerTests
+|   |   |   |   \---RunnerTests.swift
+|   |   |   \---.gitignore
+|   |   +---web
+|   |   |   +---icons
+|   |   |   |   +---Icon-192.png
+|   |   |   |   +---Icon-512.png
+|   |   |   |   +---Icon-maskable-192.png
+|   |   |   |   \---Icon-maskable-512.png
+|   |   |   +---favicon.png
+|   |   |   +---index.html
+|   |   |   \---manifest.json
+|   |   +---windows
+|   |   |   +---flutter
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---generated_plugin_registrant.cc
+|   |   |   |   +---generated_plugin_registrant.h
+|   |   |   |   \---generated_plugins.cmake
+|   |   |   +---runner
+|   |   |   |   +---resources
+|   |   |   |   |   \---app_icon.ico
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---flutter_window.cpp
+|   |   |   |   +---flutter_window.h
+|   |   |   |   +---main.cpp
+|   |   |   |   +---resource.h
+|   |   |   |   +---runner.exe.manifest
+|   |   |   |   +---Runner.rc
+|   |   |   |   +---utils.cpp
+|   |   |   |   +---utils.h
+|   |   |   |   +---win32_window.cpp
+|   |   |   |   \---win32_window.h
+|   |   |   +---.gitignore
+|   |   |   \---CMakeLists.txt
+|   |   +---.gitignore
+|   |   +---.metadata
+|   |   +---analysis_options.yaml
+|   |   +---lib.zip
+|   |   +---pubspec.yaml
+|   |   \---README.md
+|   +---customer_app
+|   |   +---android
+|   |   |   +---.kotlin
+|   |   |   |   \---sessions
+|   |   |   +---app
+|   |   |   |   +---src
+|   |   |   |   |   +---debug
+|   |   |   |   |   |   \---AndroidManifest.xml
+|   |   |   |   |   +---main
+|   |   |   |   |   |   +---java
+|   |   |   |   |   |   |   \---io
+|   |   |   |   |   |   |       \---flutter
+|   |   |   |   |   |   |           \---plugins
+|   |   |   |   |   |   +---kotlin
+|   |   |   |   |   |   |   \---com
+|   |   |   |   |   |   |       \---example
+|   |   |   |   |   |   |           \---muthobazar
+|   |   |   |   |   |   |               \---MainActivity.kt
+|   |   |   |   |   |   +---res
+|   |   |   |   |   |   |   +---drawable
+|   |   |   |   |   |   |   |   \---launch_background.xml
+|   |   |   |   |   |   |   +---drawable-v21
+|   |   |   |   |   |   |   |   \---launch_background.xml
+|   |   |   |   |   |   |   +---mipmap-hdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-mdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xxhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---mipmap-xxxhdpi
+|   |   |   |   |   |   |   |   \---ic_launcher.png
+|   |   |   |   |   |   |   +---values
+|   |   |   |   |   |   |   |   \---styles.xml
+|   |   |   |   |   |   |   \---values-night
+|   |   |   |   |   |   |       \---styles.xml
+|   |   |   |   |   |   \---AndroidManifest.xml
+|   |   |   |   |   \---profile
+|   |   |   |   |       \---AndroidManifest.xml
+|   |   |   |   +---build.gradle.kts
+|   |   |   |   \---google-services.json
+|   |   |   +---gradle
+|   |   |   |   \---wrapper
+|   |   |   |       +---gradle-wrapper.jar
+|   |   |   |       \---gradle-wrapper.properties
+|   |   |   +---.gitignore
+|   |   |   +---build.gradle.kts
+|   |   |   +---gradle.properties
+|   |   |   +---gradlew
+|   |   |   +---gradlew.bat
+|   |   |   +---key.properties
+|   |   |   +---local.properties
+|   |   |   +---my-release-key.jks
+|   |   |   \---settings.gradle.kts
+|   |   +---assets
+|   |   |   +---animations
+|   |   |   |   \---.gitkeep
+|   |   |   +---icons
+|   |   |   |   \---.gitkeep
+|   |   |   +---images
+|   |   |   |   +---logos
+|   |   |   |   |   \---.gitkeep
+|   |   |   |   +---onboarding
+|   |   |   |   |   \---.gitkeep
+|   |   |   |   \---placeholders
+|   |   |   |       \---.gitkeep
+|   |   |   +---lottie
+|   |   |   |   +---BuyOnline.json
+|   |   |   |   +---Delivery.json
+|   |   |   |   +---ItemsInCart.json
+|   |   |   |   +---Payment.json
+|   |   |   |   +---SaveTime.json
+|   |   |   |   \---update.json
+|   |   |   \---placeholders
+|   |   |       \---.gitkeep
+|   |   +---ios
+|   |   |   +---Flutter
+|   |   |   |   +---AppFrameworkInfo.plist
+|   |   |   |   +---Debug.xcconfig
+|   |   |   |   \---Release.xcconfig
+|   |   |   +---Runner
+|   |   |   |   +---Assets.xcassets
+|   |   |   |   |   +---AppIcon.appiconset
+|   |   |   |   |   |   +---Contents.json
+|   |   |   |   |   |   +---Icon-App-1024x1024@1x.png
+|   |   |   |   |   |   +---Icon-App-20x20@1x.png
+|   |   |   |   |   |   +---Icon-App-20x20@2x.png
+|   |   |   |   |   |   +---Icon-App-20x20@3x.png
+|   |   |   |   |   |   +---Icon-App-29x29@1x.png
+|   |   |   |   |   |   +---Icon-App-29x29@2x.png
+|   |   |   |   |   |   +---Icon-App-29x29@3x.png
+|   |   |   |   |   |   +---Icon-App-40x40@1x.png
+|   |   |   |   |   |   +---Icon-App-40x40@2x.png
+|   |   |   |   |   |   +---Icon-App-40x40@3x.png
+|   |   |   |   |   |   +---Icon-App-60x60@2x.png
+|   |   |   |   |   |   +---Icon-App-60x60@3x.png
+|   |   |   |   |   |   +---Icon-App-76x76@1x.png
+|   |   |   |   |   |   +---Icon-App-76x76@2x.png
+|   |   |   |   |   |   \---Icon-App-83.5x83.5@2x.png
+|   |   |   |   |   \---LaunchImage.imageset
+|   |   |   |   |       +---Contents.json
+|   |   |   |   |       +---LaunchImage.png
+|   |   |   |   |       +---LaunchImage@2x.png
+|   |   |   |   |       +---LaunchImage@3x.png
+|   |   |   |   |       \---README.md
+|   |   |   |   +---Base.lproj
+|   |   |   |   |   +---LaunchScreen.storyboard
+|   |   |   |   |   \---Main.storyboard
+|   |   |   |   +---AppDelegate.swift
+|   |   |   |   +---Info.plist
+|   |   |   |   +---Runner-Bridging-Header.h
+|   |   |   |   \---SceneDelegate.swift
+|   |   |   +---Runner.xcodeproj
+|   |   |   |   +---project.xcworkspace
+|   |   |   |   |   +---xcshareddata
+|   |   |   |   |   |   +---IDEWorkspaceChecks.plist
+|   |   |   |   |   |   \---WorkspaceSettings.xcsettings
+|   |   |   |   |   \---contents.xcworkspacedata
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---xcschemes
+|   |   |   |   |       \---Runner.xcscheme
+|   |   |   |   \---project.pbxproj
+|   |   |   +---Runner.xcworkspace
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   +---IDEWorkspaceChecks.plist
+|   |   |   |   |   \---WorkspaceSettings.xcsettings
+|   |   |   |   \---contents.xcworkspacedata
+|   |   |   +---RunnerTests
+|   |   |   |   \---RunnerTests.swift
+|   |   |   \---.gitignore
+|   |   +---lib
+|   |   |   +---app
+|   |   |   |   +---bindings
+|   |   |   |   |   +---address_binding.dart
+|   |   |   |   |   \---customer_app_binding.dart
+|   |   |   |   +---constant
+|   |   |   |   +---middleware
+|   |   |   |   |   \---customer_auth_middleware.dart
+|   |   |   |   +---routes
+|   |   |   |   |   +---customer_app_pages.dart
+|   |   |   |   |   \---customer_app_routes.dart
+|   |   |   |   +---shell
+|   |   |   |   |   \---customer_app_shell.dart
+|   |   |   |   \---startup
+|   |   |   |       +---account_blocked.dart
+|   |   |   |       +---complete_profile_page.dart
+|   |   |   |       +---customer_auth_redirect_service.dart
+|   |   |   |       +---customer_launch_router_page.dart
+|   |   |   |       +---force_update_page.dart
+|   |   |   |       +---onboarding_controller.dart
+|   |   |   |       \---onboarding_page.dart
+|   |   |   +---data
+|   |   |   |   \---dummy
+|   |   |   +---features
+|   |   |   |   +---address
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---address_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       +---address_form_page.dart
+|   |   |   |   |       \---addresses_page.dart
+|   |   |   |   +---auth
+|   |   |   |   |   +---constant
+|   |   |   |   |   |   \---auth_legal_text.dart
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   +---base_phone_auth_controller.dart
+|   |   |   |   |   |   +---login_controller.dart
+|   |   |   |   |   |   \---register_controller.dart
+|   |   |   |   |   +---helpers
+|   |   |   |   |   |   +---firestore_auth_debug_helper.dart
+|   |   |   |   |   |   \---firestore_phone_update_debug_helper.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---login_page.dart
+|   |   |   |   |   |   +---register_page.dart
+|   |   |   |   |   |   \---welcome_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       +---auth_card.dart
+|   |   |   |   |       +---auth_form_intro.dart
+|   |   |   |   |       +---auth_get_otp_button.dart
+|   |   |   |   |       +---auth_header.dart
+|   |   |   |   |       +---auth_layout.dart
+|   |   |   |   |       +---auth_otp_section.dart
+|   |   |   |   |       +---auth_resend_section.dart
+|   |   |   |   |       +---auth_switch_link.dart
+|   |   |   |   |       +---auth_terms_checkbox.dart
+|   |   |   |   |       +---legal_document_sheet.dart
+|   |   |   |   |       +---login_form.dart
+|   |   |   |   |       +---otp_input.dart
+|   |   |   |   |       +---phone_input_with_prefix.dart
+|   |   |   |   |       \---register_form.dart
+|   |   |   |   +---cart
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---cart_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---cart_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       +---cart_item_tile.dart
+|   |   |   |   |       \---cart_section_card.dart
+|   |   |   |   +---categories
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---categories_page.dart
+|   |   |   |   +---chat
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---chat_page.dart
+|   |   |   |   +---checkout
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---checkout_page.dart
+|   |   |   |   +---home
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   +---home_controller.dart
+|   |   |   |   |   |   +---home_overlay_controller.dart
+|   |   |   |   |   |   \---offer_overlay_manager.dart
+|   |   |   |   |   +---data
+|   |   |   |   |   |   +---dummy_catalog_data.dart
+|   |   |   |   |   |   \---home_dummy_data.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---home_page.dart
+|   |   |   |   |   |   \---offer_details_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       +---sections
+|   |   |   |   |       |   +---mb_home_category_grid_section.dart
+|   |   |   |   |       |   +---mb_home_hero_banner_section.dart
+|   |   |   |   |       |   +---mb_home_offer_strip_section.dart
+|   |   |   |   |       |   +---mb_home_product_grid_section.dart
+|   |   |   |   |       |   +---mb_home_product_horizontal_section.dart
+|   |   |   |   |       |   \---mb_home_unknown_section.dart
+|   |   |   |   |       +---floating_offer_card.dart
+|   |   |   |   |       +---home_cache_debug_section.dart
+|   |   |   |   |       +---home_renderer.dart
+|   |   |   |   |       \---mb_offer_details_page.dart
+|   |   |   |   +---orders
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---order_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---my_orders_page.dart
+|   |   |   |   |   |   \---order_details_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       +---order_card.dart
+|   |   |   |   |       \---order_item_tile.dart
+|   |   |   |   +---profile
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   +---delete_account_verify_controller.dart
+|   |   |   |   |   |   +---profile_controller.dart
+|   |   |   |   |   |   \---update_phone_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       +---app_settings_page.dart
+|   |   |   |   |       +---delete_account_verify_page.dart
+|   |   |   |   |       +---edit_profile_page.dart
+|   |   |   |   |       +---help_center_page.dart
+|   |   |   |   |       +---my_coupons_page.dart
+|   |   |   |   |       +---profile_page.dart
+|   |   |   |   |       \---update_phone_page.dart
+|   |   |   |   \---wishlist
+|   |   |   |       \---pages
+|   |   |   |           \---wishlist_page.dart
+|   |   |   +---l10n
+|   |   |   +---firebase_options.dart
+|   |   |   \---main.dart
+|   |   +---linux
+|   |   |   +---flutter
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---generated_plugin_registrant.cc
+|   |   |   |   +---generated_plugin_registrant.h
+|   |   |   |   \---generated_plugins.cmake
+|   |   |   +---runner
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---main.cc
+|   |   |   |   +---my_application.cc
+|   |   |   |   \---my_application.h
+|   |   |   +---.gitignore
+|   |   |   \---CMakeLists.txt
+|   |   +---macos
+|   |   |   +---Flutter
+|   |   |   |   +---Flutter-Debug.xcconfig
+|   |   |   |   \---Flutter-Release.xcconfig
+|   |   |   +---Runner
+|   |   |   |   +---Assets.xcassets
+|   |   |   |   |   \---AppIcon.appiconset
+|   |   |   |   |       +---app_icon_1024.png
+|   |   |   |   |       +---app_icon_128.png
+|   |   |   |   |       +---app_icon_16.png
+|   |   |   |   |       +---app_icon_256.png
+|   |   |   |   |       +---app_icon_32.png
+|   |   |   |   |       +---app_icon_512.png
+|   |   |   |   |       +---app_icon_64.png
+|   |   |   |   |       \---Contents.json
+|   |   |   |   +---Base.lproj
+|   |   |   |   |   \---MainMenu.xib
+|   |   |   |   +---Configs
+|   |   |   |   |   +---AppInfo.xcconfig
+|   |   |   |   |   +---Debug.xcconfig
+|   |   |   |   |   +---Release.xcconfig
+|   |   |   |   |   \---Warnings.xcconfig
+|   |   |   |   +---AppDelegate.swift
+|   |   |   |   +---DebugProfile.entitlements
+|   |   |   |   +---Info.plist
+|   |   |   |   +---MainFlutterWindow.swift
+|   |   |   |   \---Release.entitlements
+|   |   |   +---Runner.xcodeproj
+|   |   |   |   +---project.xcworkspace
+|   |   |   |   |   \---xcshareddata
+|   |   |   |   |       \---IDEWorkspaceChecks.plist
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---xcschemes
+|   |   |   |   |       \---Runner.xcscheme
+|   |   |   |   \---project.pbxproj
+|   |   |   +---Runner.xcworkspace
+|   |   |   |   +---xcshareddata
+|   |   |   |   |   \---IDEWorkspaceChecks.plist
+|   |   |   |   \---contents.xcworkspacedata
+|   |   |   +---RunnerTests
+|   |   |   |   \---RunnerTests.swift
+|   |   |   \---.gitignore
+|   |   +---web
+|   |   |   +---icons
+|   |   |   |   +---Icon-192.png
+|   |   |   |   +---Icon-512.png
+|   |   |   |   +---Icon-maskable-192.png
+|   |   |   |   \---Icon-maskable-512.png
+|   |   |   +---favicon.png
+|   |   |   +---index.html
+|   |   |   \---manifest.json
+|   |   +---windows
+|   |   |   +---flutter
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---generated_plugin_registrant.cc
+|   |   |   |   +---generated_plugin_registrant.h
+|   |   |   |   \---generated_plugins.cmake
+|   |   |   +---runner
+|   |   |   |   +---resources
+|   |   |   |   |   \---app_icon.ico
+|   |   |   |   +---CMakeLists.txt
+|   |   |   |   +---flutter_window.cpp
+|   |   |   |   +---flutter_window.h
+|   |   |   |   +---main.cpp
+|   |   |   |   +---resource.h
+|   |   |   |   +---runner.exe.manifest
+|   |   |   |   +---Runner.rc
+|   |   |   |   +---utils.cpp
+|   |   |   |   +---utils.h
+|   |   |   |   +---win32_window.cpp
+|   |   |   |   \---win32_window.h
+|   |   |   +---.gitignore
+|   |   |   \---CMakeLists.txt
+|   |   +---.gitignore
+|   |   +---.metadata
+|   |   +---analysis_options.yaml
+|   |   +---pubspec.yaml
+|   |   \---README.md
+|   \---staff_app
+|       +---android
+|       |   +---app
+|       |   |   +---src
+|       |   |   |   +---debug
+|       |   |   |   |   \---AndroidManifest.xml
+|       |   |   |   +---main
+|       |   |   |   |   +---java
+|       |   |   |   |   |   \---io
+|       |   |   |   |   |       \---flutter
+|       |   |   |   |   |           \---plugins
+|       |   |   |   |   +---kotlin
+|       |   |   |   |   |   \---com
+|       |   |   |   |   |       \---example
+|       |   |   |   |   |           \---staff_app
+|       |   |   |   |   |               \---MainActivity.kt
+|       |   |   |   |   +---res
+|       |   |   |   |   |   +---drawable
+|       |   |   |   |   |   |   \---launch_background.xml
+|       |   |   |   |   |   +---drawable-v21
+|       |   |   |   |   |   |   \---launch_background.xml
+|       |   |   |   |   |   +---mipmap-hdpi
+|       |   |   |   |   |   |   \---ic_launcher.png
+|       |   |   |   |   |   +---mipmap-mdpi
+|       |   |   |   |   |   |   \---ic_launcher.png
+|       |   |   |   |   |   +---mipmap-xhdpi
+|       |   |   |   |   |   |   \---ic_launcher.png
+|       |   |   |   |   |   +---mipmap-xxhdpi
+|       |   |   |   |   |   |   \---ic_launcher.png
+|       |   |   |   |   |   +---mipmap-xxxhdpi
+|       |   |   |   |   |   |   \---ic_launcher.png
+|       |   |   |   |   |   +---values
+|       |   |   |   |   |   |   \---styles.xml
+|       |   |   |   |   |   \---values-night
+|       |   |   |   |   |       \---styles.xml
+|       |   |   |   |   \---AndroidManifest.xml
+|       |   |   |   \---profile
+|       |   |   |       \---AndroidManifest.xml
+|       |   |   \---build.gradle.kts
+|       |   +---gradle
+|       |   |   \---wrapper
+|       |   |       +---gradle-wrapper.jar
+|       |   |       \---gradle-wrapper.properties
+|       |   +---.gitignore
+|       |   +---build.gradle.kts
+|       |   +---gradle.properties
+|       |   +---gradlew
+|       |   +---gradlew.bat
+|       |   +---local.properties
+|       |   \---settings.gradle.kts
+|       +---assets
+|       |   +---icons
+|       |   |   \---.gitkeep
+|       |   +---images
+|       |   |   \---.gitkeep
+|       |   \---placeholders
+|       |       \---.gitkeep
+|       +---ios
+|       |   +---Flutter
+|       |   |   +---AppFrameworkInfo.plist
+|       |   |   +---Debug.xcconfig
+|       |   |   \---Release.xcconfig
+|       |   +---Runner
+|       |   |   +---Assets.xcassets
+|       |   |   |   +---AppIcon.appiconset
+|       |   |   |   |   +---Contents.json
+|       |   |   |   |   +---Icon-App-1024x1024@1x.png
+|       |   |   |   |   +---Icon-App-20x20@1x.png
+|       |   |   |   |   +---Icon-App-20x20@2x.png
+|       |   |   |   |   +---Icon-App-20x20@3x.png
+|       |   |   |   |   +---Icon-App-29x29@1x.png
+|       |   |   |   |   +---Icon-App-29x29@2x.png
+|       |   |   |   |   +---Icon-App-29x29@3x.png
+|       |   |   |   |   +---Icon-App-40x40@1x.png
+|       |   |   |   |   +---Icon-App-40x40@2x.png
+|       |   |   |   |   +---Icon-App-40x40@3x.png
+|       |   |   |   |   +---Icon-App-60x60@2x.png
+|       |   |   |   |   +---Icon-App-60x60@3x.png
+|       |   |   |   |   +---Icon-App-76x76@1x.png
+|       |   |   |   |   +---Icon-App-76x76@2x.png
+|       |   |   |   |   \---Icon-App-83.5x83.5@2x.png
+|       |   |   |   \---LaunchImage.imageset
+|       |   |   |       +---Contents.json
+|       |   |   |       +---LaunchImage.png
+|       |   |   |       +---LaunchImage@2x.png
+|       |   |   |       +---LaunchImage@3x.png
+|       |   |   |       \---README.md
+|       |   |   +---Base.lproj
+|       |   |   |   +---LaunchScreen.storyboard
+|       |   |   |   \---Main.storyboard
+|       |   |   +---AppDelegate.swift
+|       |   |   +---Info.plist
+|       |   |   +---Runner-Bridging-Header.h
+|       |   |   \---SceneDelegate.swift
+|       |   +---Runner.xcodeproj
+|       |   |   +---project.xcworkspace
+|       |   |   |   +---xcshareddata
+|       |   |   |   |   +---IDEWorkspaceChecks.plist
+|       |   |   |   |   \---WorkspaceSettings.xcsettings
+|       |   |   |   \---contents.xcworkspacedata
+|       |   |   +---xcshareddata
+|       |   |   |   \---xcschemes
+|       |   |   |       \---Runner.xcscheme
+|       |   |   \---project.pbxproj
+|       |   +---Runner.xcworkspace
+|       |   |   +---xcshareddata
+|       |   |   |   +---IDEWorkspaceChecks.plist
+|       |   |   |   \---WorkspaceSettings.xcsettings
+|       |   |   \---contents.xcworkspacedata
+|       |   +---RunnerTests
+|       |   |   \---RunnerTests.swift
+|       |   \---.gitignore
+|       +---lib
+|       |   +---app
+|       |   |   +---bindings
+|       |   |   |   +---auth_binding.dart
+|       |   |   |   +---earnings_binding.dart
+|       |   |   |   +---notifications_binding.dart
+|       |   |   |   +---profile_binding.dart
+|       |   |   |   +---purchase_agent_binding.dart
+|       |   |   |   +---rider_binding.dart
+|       |   |   |   +---settlements_binding.dart
+|       |   |   |   +---staff_app_binding.dart
+|       |   |   |   +---support_staff_binding.dart
+|       |   |   |   \---technician_binding.dart
+|       |   |   +---middleware
+|       |   |   |   +---purchase_agent_only_middleware.dart
+|       |   |   |   +---rider_only_middleware.dart
+|       |   |   |   +---staff_auth_middleware.dart
+|       |   |   |   +---staff_guest_only_middleware.dart
+|       |   |   |   +---support_staff_only_middleware.dart
+|       |   |   |   \---technician_only_middleware.dart
+|       |   |   +---routes
+|       |   |   |   +---staff_app_pages.dart
+|       |   |   |   \---staff_app_routes.dart
+|       |   |   +---services
+|       |   |   |   +---staff_app_bootstrap_service.dart
+|       |   |   |   \---staff_app_session_service.dart
+|       |   |   +---shell
+|       |   |   |   +---staff_app_shell.dart
+|       |   |   |   \---staff_bottom_nav_shell.dart
+|       |   |   +---startup
+|       |   |   |   +---staff_launch_router_page.dart
+|       |   |   |   \---staff_startup_redirect_controller.dart
+|       |   |   +---widgets
+|       |   |   |   +---common
+|       |   |   |   +---state
+|       |   |   |   \---task_cards
+|       |   |   \---app.dart
+|       |   +---features
+|       |   |   +---auth
+|       |   |   |   +---controllers
+|       |   |   |   +---pages
+|       |   |   |   \---widgets
+|       |   |   +---deliveries
+|       |   |   +---earnings
+|       |   |   +---notifications
+|       |   |   +---profile
+|       |   |   +---purchase_dashboard
+|       |   |   +---purchase_tasks
+|       |   |   +---rider_dashboard
+|       |   |   +---settlements
+|       |   |   +---support_dashboard
+|       |   |   +---support_tasks
+|       |   |   +---technician_dashboard
+|       |   |   \---technician_jobs
+|       |   +---l10n
+|       |   |   +---app_bn.arb
+|       |   |   \---app_en.arb
+|       |   +---firebase_options.dart
+|       |   \---main.dart
+|       +---linux
+|       |   +---flutter
+|       |   |   +---CMakeLists.txt
+|       |   |   +---generated_plugin_registrant.cc
+|       |   |   +---generated_plugin_registrant.h
+|       |   |   \---generated_plugins.cmake
+|       |   +---runner
+|       |   |   +---CMakeLists.txt
+|       |   |   +---main.cc
+|       |   |   +---my_application.cc
+|       |   |   \---my_application.h
+|       |   +---.gitignore
+|       |   \---CMakeLists.txt
+|       +---macos
+|       |   +---Flutter
+|       |   |   +---Flutter-Debug.xcconfig
+|       |   |   \---Flutter-Release.xcconfig
+|       |   +---Runner
+|       |   |   +---Assets.xcassets
+|       |   |   |   \---AppIcon.appiconset
+|       |   |   |       +---app_icon_1024.png
+|       |   |   |       +---app_icon_128.png
+|       |   |   |       +---app_icon_16.png
+|       |   |   |       +---app_icon_256.png
+|       |   |   |       +---app_icon_32.png
+|       |   |   |       +---app_icon_512.png
+|       |   |   |       +---app_icon_64.png
+|       |   |   |       \---Contents.json
+|       |   |   +---Base.lproj
+|       |   |   |   \---MainMenu.xib
+|       |   |   +---Configs
+|       |   |   |   +---AppInfo.xcconfig
+|       |   |   |   +---Debug.xcconfig
+|       |   |   |   +---Release.xcconfig
+|       |   |   |   \---Warnings.xcconfig
+|       |   |   +---AppDelegate.swift
+|       |   |   +---DebugProfile.entitlements
+|       |   |   +---Info.plist
+|       |   |   +---MainFlutterWindow.swift
+|       |   |   \---Release.entitlements
+|       |   +---Runner.xcodeproj
+|       |   |   +---project.xcworkspace
+|       |   |   |   \---xcshareddata
+|       |   |   |       \---IDEWorkspaceChecks.plist
+|       |   |   +---xcshareddata
+|       |   |   |   \---xcschemes
+|       |   |   |       \---Runner.xcscheme
+|       |   |   \---project.pbxproj
+|       |   +---Runner.xcworkspace
+|       |   |   +---xcshareddata
+|       |   |   |   \---IDEWorkspaceChecks.plist
+|       |   |   \---contents.xcworkspacedata
+|       |   +---RunnerTests
+|       |   |   \---RunnerTests.swift
+|       |   \---.gitignore
+|       +---web
+|       |   +---icons
+|       |   |   +---Icon-192.png
+|       |   |   +---Icon-512.png
+|       |   |   +---Icon-maskable-192.png
+|       |   |   \---Icon-maskable-512.png
+|       |   +---favicon.png
+|       |   +---index.html
+|       |   \---manifest.json
+|       +---windows
+|       |   +---flutter
+|       |   |   +---CMakeLists.txt
+|       |   |   +---generated_plugin_registrant.cc
+|       |   |   +---generated_plugin_registrant.h
+|       |   |   \---generated_plugins.cmake
+|       |   +---runner
+|       |   |   +---resources
+|       |   |   |   \---app_icon.ico
+|       |   |   +---CMakeLists.txt
+|       |   |   +---flutter_window.cpp
+|       |   |   +---flutter_window.h
+|       |   |   +---main.cpp
+|       |   |   +---resource.h
+|       |   |   +---runner.exe.manifest
+|       |   |   +---Runner.rc
+|       |   |   +---utils.cpp
+|       |   |   +---utils.h
+|       |   |   +---win32_window.cpp
+|       |   |   \---win32_window.h
+|       |   +---.gitignore
+|       |   \---CMakeLists.txt
+|       +---.gitignore
+|       +---.metadata
+|       +---analysis_options.yaml
+|       +---pubspec.yaml
+|       \---README.md
++---docs
+|   +---architecture
+|   |   +---app_split_strategy.md
+|   |   +---dependency_rules.md
+|   |   +---feature_module_rules.md
+|   |   +---monorepo_overview.md
+|   |   +---naming_conventions.md
+|   |   +---package_boundaries.md
+|   |   +---routing_strategy.md
+|   |   \---state_management_strategy.md
+|   +---business
+|   |   +---admin_system_flow.md
+|   |   +---customer_app_flow.md
+|   |   +---customer_support_flow.md
+|   |   +---delivery_flow.md
+|   |   +---finance_flow.md
+|   |   +---marketing_flow.md
+|   |   +---order_lifecycle.md
+|   |   +---purchase_inventory_flow.md
+|   |   +---services_flow.md
+|   |   \---staff_app_flow.md
+|   +---deployment
+|   |   +---admin_web_deploy.md
+|   |   +---customer_android_release.md
+|   |   +---customer_ios_release.md
+|   |   +---firebase_envs.md
+|   |   +---staff_android_release.md
+|   |   \---staff_ios_release.md
+|   +---developement
+|   |   \---Final polished MuthoBazar project structure.md
+|   +---development
+|   |   +---branch_strategy.md
+|   |   +---code_style.md
+|   |   +---feature_generation_guide.md
+|   |   +---getting_started.md
+|   |   +---git_workflow.md
+|   |   \---testing_strategy.md
+|   +---firestore
+|   |   +---collections.md
+|   |   +---counters_and_aggregates.md
+|   |   +---data_model.md
+|   |   +---indexes.md
+|   |   +---rules_strategy.md
+|   |   \---sample_documents.md
+|   +---git
+|   |   \---command.md
+|   \---ui
+|       +---admin_web_layout_rules.md
+|       +---customer_design_rules.md
+|       +---responsive_rules.md
+|       +---shared_ui_tokens.md
+|       \---staff_app_layout_rules.md
++---firebase
+|   +---emulators
+|   |   \---README.md
+|   +---functions
+|   |   +---src
+|   |   |   +---admin
+|   |   |   +---auth
+|   |   |   +---delivery
+|   |   |   +---finance
+|   |   |   +---inventory
+|   |   |   +---marketing
+|   |   |   +---orders
+|   |   |   +---purchases
+|   |   |   +---services
+|   |   |   +---support
+|   |   |   +---utils
+|   |   |   +---workflows
+|   |   |   \---index.ts
+|   |   +---.eslintrc.js
+|   |   +---package.json
+|   |   \---tsconfig.json
+|   +---tests
+|   |   +---firestore
+|   |   |   \---.gitkeep
+|   |   +---functions
+|   |   |   \---.gitkeep
+|   |   \---storage
+|   |       \---.gitkeep
+|   +---.firebaserc
+|   +---firebase.json
+|   +---firestore.indexes.json
+|   +---firestore.rules
+|   \---storage.rules
++---packages
+|   +---shared_contracts
+|   |   +---lib
+|   |   |   +---auth
+|   |   |   +---delivery
+|   |   |   +---finance
+|   |   |   +---inventory
+|   |   |   +---orders
+|   |   |   +---purchases
+|   |   |   +---services
+|   |   |   +---support
+|   |   |   \---shared_contracts.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_core
+|   |   +---lib
+|   |   |   +---auth
+|   |   |   |   +---constants
+|   |   |   |   +---guards
+|   |   |   |   |   \---mb_auth_guard_service.dart
+|   |   |   |   +---middleware_helpers
+|   |   |   |   +---models
+|   |   |   |   \---services
+|   |   |   |       +---auth_profile_redirect_decision.dart
+|   |   |   |       +---auth_profile_redirect_resolver.dart
+|   |   |   |       +---auth_profile_redirect_result.dart
+|   |   |   |       +---core_auth_service.dart
+|   |   |   |       \---permission_service.dart
+|   |   |   +---config
+|   |   |   +---constants
+|   |   |   +---enums
+|   |   |   +---firestore
+|   |   |   +---helpers
+|   |   |   |   +---image_helper.dart
+|   |   |   |   +---mb_cache_policy.dart
+|   |   |   |   \---mb_cache_state.dart
+|   |   |   +---services
+|   |   |   |   +---app_initializer.dart
+|   |   |   |   +---auth_rate_limit_storage.dart
+|   |   |   |   +---firebase_service.dart
+|   |   |   |   +---notification_service.dart
+|   |   |   |   +---storage_service.dart
+|   |   |   |   \---update_service.dart
+|   |   |   +---utils
+|   |   |   |   \---mb_repository_load_result.dart
+|   |   |   +---validators
+|   |   |   \---shared_core.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_models
+|   |   +---lib
+|   |   |   +---admin
+|   |   |   |   +---purchases
+|   |   |   |   |   \---admin_purchase_model.dart
+|   |   |   |   +---mb_admin_activity_log.dart
+|   |   |   |   +---mb_admin_invite.dart
+|   |   |   |   \---mb_admin_permission.dart
+|   |   |   +---analytics
+|   |   |   +---catalog
+|   |   |   |   +---mb_brand.dart
+|   |   |   |   +---mb_category.dart
+|   |   |   |   +---mb_product.dart
+|   |   |   |   +---mb_product_attribute.dart
+|   |   |   |   +---mb_product_purchase_option.dart
+|   |   |   |   \---mb_product_variation.dart
+|   |   |   +---customer
+|   |   |   |   +---mb_customer_address.dart
+|   |   |   |   \---mb_user_profile.dart
+|   |   |   +---delivery
+|   |   |   +---finance
+|   |   |   +---home
+|   |   |   |   +---mb_home_cache_bundle.dart
+|   |   |   |   +---mb_home_config.dart
+|   |   |   |   \---mb_home_section.dart
+|   |   |   +---inventory
+|   |   |   +---loyalty
+|   |   |   +---marketing
+|   |   |   |   +---mb_banner.dart
+|   |   |   |   +---mb_offer.dart
+|   |   |   |   +---mb_promo_code.dart
+|   |   |   |   \---mb_user_promo_code.dart
+|   |   |   +---orders
+|   |   |   |   +---mb_cart_item.dart
+|   |   |   |   +---mb_order.dart
+|   |   |   |   \---mb_order_item.dart
+|   |   |   +---referrals
+|   |   |   +---reviews
+|   |   |   |   +---mb_review.dart
+|   |   |   |   \---mb_review_reply.dart
+|   |   |   +---search
+|   |   |   +---services
+|   |   |   +---staff
+|   |   |   +---support
+|   |   |   \---shared_models.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_repositories
+|   |   +---lib
+|   |   |   +---admin
+|   |   |   |   +---purchases
+|   |   |   |   |   \---mobile_admin_purchase_repository.dart
+|   |   |   |   +---admin_access_repository.dart
+|   |   |   |   +---admin_activity_log_repository.dart
+|   |   |   |   +---admin_banner_repository.dart
+|   |   |   |   +---admin_brand_repository.dart
+|   |   |   |   +---admin_category_repository.dart
+|   |   |   |   +---admin_invite_repository.dart
+|   |   |   |   +---admin_product_repository.dart
+|   |   |   |   +---admin_setup_repository.dart
+|   |   |   |   \---admin_user_repository.dart
+|   |   |   +---analytics
+|   |   |   +---base
+|   |   |   +---catalog
+|   |   |   +---customer
+|   |   |   |   +---address_repository.dart
+|   |   |   |   +---login_repository.dart
+|   |   |   |   +---phone_auth_repository.dart
+|   |   |   |   +---profile_repository.dart
+|   |   |   |   \---register_repository.dart
+|   |   |   +---delivery
+|   |   |   +---finance
+|   |   |   +---home
+|   |   |   |   +---datasources
+|   |   |   |   |   +---mb_home_local_data_source.dart
+|   |   |   |   |   \---mb_home_remote_data_source.dart
+|   |   |   |   \---mb_home_repository.dart
+|   |   |   +---inventory
+|   |   |   +---loyalty
+|   |   |   +---marketing
+|   |   |   +---orders
+|   |   |   |   +---cart_repository.dart
+|   |   |   |   \---order_repository.dart
+|   |   |   +---referrals
+|   |   |   +---reviews
+|   |   |   +---search
+|   |   |   +---services
+|   |   |   +---staff
+|   |   |   +---support
+|   |   |   \---shared_repositories.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_services
+|   |   +---lib
+|   |   |   +---admin
+|   |   |   |   \---admin_activity_logger.dart
+|   |   |   +---analytics
+|   |   |   +---export
+|   |   |   +---formatting
+|   |   |   +---media
+|   |   |   +---notifications
+|   |   |   +---pricing
+|   |   |   +---search
+|   |   |   \---shared_services.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_testkit
+|   |   +---lib
+|   |   |   +---builders
+|   |   |   +---fakes
+|   |   |   +---fixtures
+|   |   |   +---helpers
+|   |   |   +---mocks
+|   |   |   \---shared_testkit.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_ui
+|   |   +---assets
+|   |   |   +---fonts
+|   |   |   |   \---.gitkeep
+|   |   |   +---icons
+|   |   |   |   \---.gitkeep
+|   |   |   \---placeholders
+|   |   |       \---.gitkeep
+|   |   +---lib
+|   |   |   +---extensions
+|   |   |   +---layout
+|   |   |   |   +---mb_app_layout.dart
+|   |   |   |   \---mb_screen_padding.dart
+|   |   |   +---responsive
+|   |   |   |   +---mb_breakpoints.dart
+|   |   |   |   +---mb_layout_grid.dart
+|   |   |   |   +---mb_responsive.dart
+|   |   |   |   +---mb_responsive_container.dart
+|   |   |   |   +---mb_size_tokens.dart
+|   |   |   |   +---mb_spacing.dart
+|   |   |   |   \---mb_text_scale.dart
+|   |   |   +---scroll
+|   |   |   |   \---mb_scroll_behavior.dart
+|   |   |   +---theme
+|   |   |   |   +---mb_colors.dart
+|   |   |   |   +---mb_gradients.dart
+|   |   |   |   +---mb_radius.dart
+|   |   |   |   +---mb_text_styles.dart
+|   |   |   |   +---mb_text_theme.dart
+|   |   |   |   \---mb_theme.dart
+|   |   |   +---typography
+|   |   |   |   \---mb_app_text.dart
+|   |   |   +---widgets
+|   |   |   |   +---common
+|   |   |   |   |   +---mb_bottom_nav_bar.dart
+|   |   |   |   |   +---mb_card.dart
+|   |   |   |   |   +---mb_gradient_header.dart
+|   |   |   |   |   +---mb_primary_button.dart
+|   |   |   |   |   +---mb_product_card.dart
+|   |   |   |   |   +---mb_secondary_button.dart
+|   |   |   |   |   +---mb_section_header.dart
+|   |   |   |   |   +---mb_section_title.dart
+|   |   |   |   |   \---mb_text_field.dart
+|   |   |   |   +---dialogs
+|   |   |   |   |   \---mb_dialogs.dart
+|   |   |   |   +---feedback
+|   |   |   |   |   \---mb_notification.dart
+|   |   |   |   \---form
+|   |   |   \---shared_ui.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   +---shared_usecases
+|   |   +---lib
+|   |   |   +---auth
+|   |   |   +---customer
+|   |   |   +---delivery
+|   |   |   +---inventory
+|   |   |   +---marketing
+|   |   |   +---orders
+|   |   |   +---purchases
+|   |   |   +---reports
+|   |   |   +---services
+|   |   |   \---shared_usecases.dart
+|   |   +---analysis_options.yaml
+|   |   \---pubspec.yaml
+|   \---shared_workflows
+|       +---lib
+|       |   +---auth
+|       |   +---delivery
+|       |   +---inventory
+|       |   +---loyalty
+|       |   +---orders
+|       |   +---purchases
+|       |   +---referrals
+|       |   +---reviews
+|       |   +---services
+|       |   \---shared_workflows.dart
+|       +---analysis_options.yaml
+|       \---pubspec.yaml
++---tools
+|   +---ci
+|   |   +---pipeline_notes.md
+|   |   \---README.md
+|   +---generators
+|   |   +---feature_templates
+|   |   |   +---admin_feature.md
+|   |   |   +---customer_feature.md
+|   |   |   \---staff_feature.md
+|   |   \---README.md
+|   +---scripts
+|   |   +---analyze_all.sh
+|   |   +---bootstrap_all.sh
+|   |   +---format_all.sh
+|   |   +---generate_clean_tree.ps1
+|   |   +---run_admin_web.sh
+|   |   +---run_customer.sh
+|   |   +---run_staff.sh
+|   |   +---setup_workspace.ps1
+|   |   +---setup_workspace.sh
+|   |   \---test_all.sh
+|   \---generate_structure.ps1
++---.gitignore
++---.metadata
++---analysis_options.yaml
++---Lib_structure.txt
++---melos.yaml
++---pubspec.yaml
++---README.md
++---repo_structure.txt
+\---repo_structure_clean.txt

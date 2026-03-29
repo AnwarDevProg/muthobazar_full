@@ -1,25 +1,29 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
-
-import 'package:shared_ui/shared_ui.dart';
-import '../../../models/catalog/mb_brand.dart';
-import '../../profile/controllers/profile_controller.dart';
-import 'package:shared_services/shared_services.dart';
-import 'admin_access_controller.dart';
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
+import 'package:shared_services/shared_services.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+import '../../admin_access/controllers/admin_access_controller.dart';
 
 class AdminBrandController extends GetxController {
   final AdminBrandRepository _repository = AdminBrandRepository.instance;
-  final ProfileController _profileController = Get.find<ProfileController>();
   final AdminAccessController _accessController =
   Get.find<AdminAccessController>();
 
   final RxList<MBBrand> brands = <MBBrand>[].obs;
+  final RxList<MBBrand> filteredBrands = <MBBrand>[].obs;
 
   final RxBool isLoading = true.obs;
   final RxBool isSaving = false.obs;
   final RxBool isDeleting = false.obs;
+
+  final RxString searchQuery = ''.obs;
+  final RxString statusFilter = 'all'.obs;
+  final RxString featuredFilter = 'all'.obs;
+  final RxString homeFilter = 'all'.obs;
 
   StreamSubscription<List<MBBrand>>? _brandsSubscription;
 
@@ -36,6 +40,7 @@ class AdminBrandController extends GetxController {
     _brandsSubscription = _repository.watchBrands().listen(
           (items) {
         brands.assignAll(items);
+        applyFilters();
         isLoading.value = false;
       },
       onError: (_) {
@@ -53,6 +58,7 @@ class AdminBrandController extends GetxController {
       isLoading.value = true;
       final items = await _repository.fetchBrandsOnce();
       brands.assignAll(items);
+      applyFilters();
     } catch (_) {
       MBNotification.error(
         title: 'Error',
@@ -63,6 +69,75 @@ class AdminBrandController extends GetxController {
     }
   }
 
+  void setSearchQuery(String value) {
+    searchQuery.value = value.trim().toLowerCase();
+    applyFilters();
+  }
+
+  void setStatusFilter(String value) {
+    statusFilter.value = value;
+    applyFilters();
+  }
+
+  void setFeaturedFilter(String value) {
+    featuredFilter.value = value;
+    applyFilters();
+  }
+
+  void setHomeFilter(String value) {
+    homeFilter.value = value;
+    applyFilters();
+  }
+
+  void resetFilters() {
+    searchQuery.value = '';
+    statusFilter.value = 'all';
+    featuredFilter.value = 'all';
+    homeFilter.value = 'all';
+    applyFilters();
+  }
+
+  void applyFilters() {
+    final query = searchQuery.value;
+    final status = statusFilter.value;
+    final featured = featuredFilter.value;
+    final home = homeFilter.value;
+
+    final result = brands.where((brand) {
+      final matchesQuery = query.isEmpty ||
+          brand.nameEn.toLowerCase().contains(query) ||
+          brand.nameBn.toLowerCase().contains(query) ||
+          brand.slug.toLowerCase().contains(query) ||
+          brand.descriptionEn.toLowerCase().contains(query) ||
+          brand.descriptionBn.toLowerCase().contains(query);
+
+      final matchesStatus = switch (status) {
+        'active' => brand.isActive,
+        'inactive' => !brand.isActive,
+        _ => true,
+      };
+
+      final matchesFeatured = switch (featured) {
+        'featured' => brand.isFeatured,
+        'notFeatured' => !brand.isFeatured,
+        _ => true,
+      };
+
+      final matchesHome = switch (home) {
+        'showOnHome' => brand.showOnHome,
+        'hideFromHome' => !brand.showOnHome,
+        _ => true,
+      };
+
+      return matchesQuery &&
+          matchesStatus &&
+          matchesFeatured &&
+          matchesHome;
+    }).toList();
+
+    filteredBrands.assignAll(result);
+  }
+
   Future<void> createBrand(MBBrand brand) async {
     if (isSaving.value) return;
 
@@ -71,9 +146,9 @@ class AdminBrandController extends GetxController {
       await _repository.createBrand(brand);
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: _accessController.currentAdminUid,
+        adminName: _accessController.currentAdminName,
+        adminEmail: _accessController.currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'create_brand',
         targetType: 'brand',
@@ -108,9 +183,9 @@ class AdminBrandController extends GetxController {
       await _repository.updateBrand(brand);
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: _accessController.currentAdminUid,
+        adminName: _accessController.currentAdminName,
+        adminEmail: _accessController.currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'update_brand',
         targetType: 'brand',
@@ -146,9 +221,9 @@ class AdminBrandController extends GetxController {
       await _repository.deleteBrand(brandId);
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: _accessController.currentAdminUid,
+        adminName: _accessController.currentAdminName,
+        adminEmail: _accessController.currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'delete_brand',
         targetType: 'brand',
@@ -181,13 +256,13 @@ class AdminBrandController extends GetxController {
 
       await _repository.setBrandActiveState(
         brandId: brand.id,
-        isActive: !brand.isActive,
+        isActive: updated.isActive,
       );
 
       await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
+        adminUid: _accessController.currentAdminUid,
+        adminName: _accessController.currentAdminName,
+        adminEmail: _accessController.currentAdminEmail,
         adminRole: _accessController.permission.value?.role ?? '',
         action: 'toggle_brand_active',
         targetType: 'brand',
@@ -202,7 +277,9 @@ class AdminBrandController extends GetxController {
 
       MBNotification.success(
         title: 'Success',
-        message: brand.isActive ? 'Brand deactivated.' : 'Brand activated.',
+        message: updated.isActive
+            ? 'Brand activated.'
+            : 'Brand deactivated.',
       );
     } catch (_) {
       MBNotification.error(
@@ -218,15 +295,3 @@ class AdminBrandController extends GetxController {
     super.onClose();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

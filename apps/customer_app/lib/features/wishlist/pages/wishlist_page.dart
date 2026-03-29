@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:shared_ui/shared_ui.dart';
-import '../../../core/responsive/mb_layout_grid.dart';
+
 
 class WishlistPage extends StatelessWidget {
   const WishlistPage({super.key});

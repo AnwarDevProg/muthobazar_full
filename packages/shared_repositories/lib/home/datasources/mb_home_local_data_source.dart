@@ -1,18 +1,12 @@
 import 'dart:convert';
 
 import 'package:hive/hive.dart';
-
-import '../models/mb_home_cache_bundle.dart';
+import 'package:shared_models/home/mb_home_cache_bundle.dart';
 
 // MB Home Local Data Source
 // -------------------------
 // Real persistent local cache using Hive.
 // Stores full home bundle as JSON string.
-//
-// Why JSON string?
-// - no Hive adapters needed
-// - works with current model toMap/fromMap structure
-// - easy migration later
 
 abstract class MBHomeLocalDataSource {
   Future<MBHomeCacheBundle?> readHomeBundle();
@@ -28,47 +22,46 @@ class MBHiveHomeLocalDataSource implements MBHomeLocalDataSource {
     if (Hive.isBoxOpen(_boxName)) {
       return Hive.box<String>(_boxName);
     }
+
     return Hive.openBox<String>(_boxName);
   }
 
   @override
   Future<MBHomeCacheBundle?> readHomeBundle() async {
-    final box = await _openBox();
-    final rawJson = box.get(_bundleKey);
+    final Box<String> box = await _openBox();
+    final String? rawJson = box.get(_bundleKey);
 
     if (rawJson == null || rawJson.isEmpty) {
       return null;
     }
 
     try {
-      final map = json.decode(rawJson) as Map<String, dynamic>;
-      return MBHomeCacheBundle.fromMap(map);
+      final Object decoded = json.decode(rawJson);
+
+      if (decoded is! Map) {
+        await box.delete(_bundleKey);
+        return null;
+      }
+
+      return MBHomeCacheBundle.fromMap(
+        Map<String, dynamic>.from(decoded),
+      );
     } catch (_) {
+      await box.delete(_bundleKey);
       return null;
     }
   }
 
   @override
   Future<void> saveHomeBundle(MBHomeCacheBundle bundle) async {
-    final box = await _openBox();
-    final rawJson = json.encode(bundle.toMap());
+    final Box<String> box = await _openBox();
+    final String rawJson = json.encode(bundle.toMap());
     await box.put(_bundleKey, rawJson);
   }
 
   @override
   Future<void> clearHomeBundle() async {
-    final box = await _openBox();
+    final Box<String> box = await _openBox();
     await box.delete(_bundleKey);
   }
 }
-
-
-
-
-
-
-
-
-
-
-

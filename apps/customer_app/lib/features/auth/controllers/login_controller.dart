@@ -1,25 +1,25 @@
 // Login Controller
 // ----------------
 
+import 'package:customer_app/app/startup/customer_auth_redirect_service.dart';
 import 'package:customer_app/features/auth/helpers/firestore_auth_debug_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:shared_core/shared_core.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 import 'base_phone_auth_controller.dart';
 
 class LoginController extends BasePhoneAuthController {
   LoginController({
     LoginRepository? repository,
-    AuthRedirectService? authRedirectService,
+    CustomerAuthRedirectService? authRedirectService,
   })  : _repository = repository ?? LoginRepository(),
-        _authRedirectService = authRedirectService ?? AuthRedirectService();
+        _authRedirectService = authRedirectService ?? CustomerAuthRedirectService();
 
   final LoginRepository _repository;
-  final AuthRedirectService _authRedirectService;
+  final CustomerAuthRedirectService _authRedirectService;
 
   bool rememberMe = false;
 

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:customer_app/app/routes/customer_app_routes.dart';
+import 'package:customer_app/app/startup/customer_auth_redirect_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_core/shared_core.dart';
@@ -12,6 +15,8 @@ class AppLaunchRouterPage extends StatefulWidget {
 }
 
 class _AppLaunchRouterPageState extends State<AppLaunchRouterPage> {
+  bool _isRouting = false;
+
   @override
   void initState() {
     super.initState();
@@ -19,34 +24,41 @@ class _AppLaunchRouterPageState extends State<AppLaunchRouterPage> {
   }
 
   Future<void> _routeApp() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    if (_isRouting) return;
+    _isRouting = true;
 
-    final bool requiresUpdate = await _checkForceUpdate();
+    try {
+      await Future.delayed(const Duration(milliseconds: 400));
 
-    if (!mounted) return;
+      final bool requiresUpdate = await UpdateService.checkForUpdate()
+          .timeout(const Duration(seconds: 6), onTimeout: () => false);
 
-    if (requiresUpdate) {
-      Get.offAllNamed(AppRoutes.forceUpdate);
-      return;
-    }
+      if (!mounted) return;
 
-    final bool isFirstRun = StorageService.isFirstRun;
-    if (isFirstRun) {
-      Get.offAllNamed(AppRoutes.onboarding);
-      return;
-    }
+      if (requiresUpdate) {
+        Get.offAllNamed(AppRoutes.forceUpdate);
+        return;
+      }
 
-    final bool isLoggedIn = AuthService.isLoggedIn;
-    if (!isLoggedIn) {
+      final bool isFirstRun = StorageService.isFirstRun;
+      if (isFirstRun) {
+        Get.offAllNamed(AppRoutes.onboarding);
+        return;
+      }
+
+      final CustomerAuthRedirectService authUserRedirect =
+      CustomerAuthRedirectService();
+
+      await authUserRedirect.screenRedirect();
+    } catch (e, st) {
+      debugPrint('AppLaunchRouterPage._routeApp error: $e');
+      debugPrint('$st');
+
+      if (!mounted) return;
       Get.offAllNamed(AppRoutes.welcome);
-      return;
+    } finally {
+      _isRouting = false;
     }
-
-    Get.offAllNamed(AppRoutes.shell);
-  }
-
-  Future<bool> _checkForceUpdate() async {
-    return false;
   }
 
   @override
@@ -114,5 +126,3 @@ class _AppLaunchRouterPageState extends State<AppLaunchRouterPage> {
     );
   }
 }
-
-

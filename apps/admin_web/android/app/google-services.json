@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "792554914631",
+    "project_id": "mutho-bazar",
+    "storage_bucket": "mutho-bazar.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:792554914631:android:8f3e78ec43e8f1ec4dc262",
+        "android_client_info": {
+          "package_name": "com.example.admin_web"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAySDj3NOfk1qkdj8iu-pTa_b71zOd86n8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:792554914631:android:b0f5c7310325f3204dc262",
+        "android_client_info": {
+          "package_name": "com.muthobazar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAySDj3NOfk1qkdj8iu-pTa_b71zOd86n8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

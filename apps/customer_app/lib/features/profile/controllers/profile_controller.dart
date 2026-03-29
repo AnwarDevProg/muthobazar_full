@@ -28,22 +28,6 @@ class ProfileController extends GetxController {
   bool get isGuest => user.value.isGuest;
   bool get isLoggedIn => !user.value.isGuest && user.value.id.isNotEmpty;
 
-  bool get isAdmin {
-    if (isGuest) return false;
-
-    final role = user.value.role.trim().toLowerCase();
-    debugPrint(role);
-    return role == 'admin' || role == 'super_admin';
-
-  }
-
-  bool get isSuperAdmin {
-    if (isGuest) return false;
-
-    final role = user.value.role.trim().toLowerCase();
-    return role == 'super_admin';
-
-  }
 
   String get fullName {
     if (user.value.isGuest) return 'Guest User';

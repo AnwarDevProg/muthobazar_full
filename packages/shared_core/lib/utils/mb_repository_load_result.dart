@@ -1,4 +1,6 @@
-import 'mb_cache_state.dart';
+import 'package:shared_core/shared_core.dart';
+
+
 
 // MB Repository Load Result
 // -------------------------

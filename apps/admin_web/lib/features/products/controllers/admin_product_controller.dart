@@ -1,339 +1,488 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import 'package:shared_ui/shared_ui.dart';
-import '../../../models/catalog/mb_product.dart';
-import '../../profile/controllers/profile_controller.dart';
-import 'package:shared_services/shared_services.dart';
-import 'admin_access_controller.dart';
-import 'package:shared_repositories/shared_repositories.dart';
+import 'package:shared_models/shared_models.dart';
 
 class AdminProductController extends GetxController {
-  final AdminProductRepository _repository = AdminProductRepository.instance;
-  final ProfileController _profileController = Get.find<ProfileController>();
-  final AdminAccessController _accessController =
-  Get.find<AdminAccessController>();
+  AdminProductController({
+    FirebaseFirestore? firestore,
+    FirebaseStorage? storage,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _storage = storage ?? FirebaseStorage.instance;
 
-  final RxList<MBProduct> products = <MBProduct>[].obs;
-  final RxList<Map<String, dynamic>> quarantineProducts =
-      <Map<String, dynamic>>[].obs;
+  final FirebaseFirestore _firestore;
+  final FirebaseStorage _storage;
 
   final RxBool isLoading = true.obs;
   final RxBool isSaving = false.obs;
-  final RxBool isDeleting = false.obs;
-  final RxBool isQuarantineLoading = true.obs;
+  final RxBool isQuarantineLoading = false.obs;
 
-  StreamSubscription<List<MBProduct>>? _productsSubscription;
-  StreamSubscription<List<Map<String, dynamic>>>? _quarantineSubscription;
+  final RxList<MBProduct> products = <MBProduct>[].obs;
+  final RxList<MBProduct> filteredProducts = <MBProduct>[].obs;
+  final RxList<Map<String, dynamic>> quarantineProducts =
+      <Map<String, dynamic>>[].obs;
+
+  final RxList<AdminLookupOption> categories = <AdminLookupOption>[].obs;
+  final RxList<AdminLookupOption> brands = <AdminLookupOption>[].obs;
+
+  final TextEditingController searchController = TextEditingController();
+
+  final RxString searchQuery = ''.obs;
+  final RxString statusFilter = 'all'.obs;
+  final RxString categoryFilter = 'all'.obs;
+  final RxString brandFilter = 'all'.obs;
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _productsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _quarantineSub;
+
+  CollectionReference<Map<String, dynamic>> get productsCollection =>
+      _firestore.collection('products');
+
+  CollectionReference<Map<String, dynamic>> get categoriesCollection =>
+      _firestore.collection('categories');
+
+  CollectionReference<Map<String, dynamic>> get brandsCollection =>
+      _firestore.collection('brands');
+
+  CollectionReference<Map<String, dynamic>> get quarantineCollection =>
+      _firestore.collection('product_quarantine');
 
   @override
   void onInit() {
     super.onInit();
-    _listenProducts();
-    _listenQuarantine();
+    _initialize();
   }
 
-  void _listenProducts() {
-    _productsSubscription?.cancel();
-    isLoading.value = true;
-
-    _productsSubscription = _repository.watchProducts().listen(
-          (items) {
-        products.assignAll(items);
-        isLoading.value = false;
-      },
-      onError: (_) {
-        isLoading.value = false;
-        MBNotification.error(
-          title: 'Error',
-          message: 'Failed to load products.',
-        );
-      },
-    );
+  @override
+  void onClose() {
+    _productsSub?.cancel();
+    _quarantineSub?.cancel();
+    searchController.dispose();
+    super.onClose();
   }
 
-  void _listenQuarantine() {
-    _quarantineSubscription?.cancel();
-    isQuarantineLoading.value = true;
-
-    _quarantineSubscription = _repository.watchQuarantineProducts().listen(
-          (items) {
-        quarantineProducts.assignAll(items);
-        isQuarantineLoading.value = false;
-      },
-      onError: (_) {
-        isQuarantineLoading.value = false;
-        MBNotification.error(
-          title: 'Error',
-          message: 'Failed to load quarantine products.',
-        );
-      },
-    );
-  }
-
-  Future<void> refreshProducts() async {
+  Future<void> _initialize() async {
     try {
       isLoading.value = true;
-      final items = await _repository.fetchProductsOnce();
-      products.assignAll(items);
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to refresh products.',
-      );
+      await Future.wait([
+        loadCategories(),
+        loadBrands(),
+      ]);
+      _listenToProducts();
+      _listenToQuarantineProducts();
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> createProduct(MBProduct product) async {
-    if (isSaving.value) return;
+  Future<void> loadCategories() async {
+    final query = await categoriesCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('sortOrder')
+        .get();
 
-    try {
-      isSaving.value = true;
-      await _repository.createProduct(product);
-
-      await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'create_product',
-        targetType: 'product',
-        targetId: product.id,
-        targetTitle: product.titleEn,
-        summary: 'Created product "${product.titleEn}"',
-        afterData: product.toMap(),
-      );
-
-      MBNotification.success(
-        title: 'Success',
-        message: 'Product created successfully.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to create product.',
-      );
-    } finally {
-      isSaving.value = false;
-    }
+    categories.assignAll(
+      query.docs.map((doc) {
+        final data = doc.data();
+        return AdminLookupOption(
+          id: doc.id,
+          name: (data['name'] ?? data['titleEn'] ?? '').toString(),
+        );
+      }).toList(),
+    );
   }
 
-  Future<void> updateProduct(MBProduct product) async {
-    if (isSaving.value) return;
+  Future<void> loadBrands() async {
+    final query = await brandsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('sortOrder')
+        .get();
 
+    brands.assignAll(
+      query.docs.map((doc) {
+        final data = doc.data();
+        return AdminLookupOption(
+          id: doc.id,
+          name: (data['name'] ?? data['titleEn'] ?? '').toString(),
+        );
+      }).toList(),
+    );
+  }
+
+  void _listenToProducts() {
+    _productsSub?.cancel();
+
+    _productsSub = productsCollection
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      final items = snapshot.docs
+          .map((doc) => MBProduct.fromMap(doc.data()))
+          .where((e) => e.id.isNotEmpty)
+          .toList();
+
+      products.assignAll(items);
+      applyFilters();
+    });
+  }
+
+  void _listenToQuarantineProducts() {
+    isQuarantineLoading.value = true;
+    _quarantineSub?.cancel();
+
+    _quarantineSub = quarantineCollection
+        .orderBy('deletedAt', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+        quarantineProducts.assignAll(
+          snapshot.docs.map((doc) {
+            final data = Map<String, dynamic>.from(doc.data());
+            data['id'] = doc.id;
+            return data;
+          }).toList(),
+        );
+        isQuarantineLoading.value = false;
+      },
+      onError: (_) {
+        isQuarantineLoading.value = false;
+      },
+    );
+  }
+
+  void setSearchQuery(String value) {
+    searchQuery.value = value.trim().toLowerCase();
+    applyFilters();
+  }
+
+  void setStatusFilter(String value) {
+    statusFilter.value = value;
+    applyFilters();
+  }
+
+  void setCategoryFilter(String value) {
+    categoryFilter.value = value;
+    applyFilters();
+  }
+
+  void setBrandFilter(String value) {
+    brandFilter.value = value;
+    applyFilters();
+  }
+
+  void resetFilters() {
+    searchController.clear();
+    searchQuery.value = '';
+    statusFilter.value = 'all';
+    categoryFilter.value = 'all';
+    brandFilter.value = 'all';
+    applyFilters();
+  }
+
+  void applyFilters() {
+    final query = searchQuery.value;
+    final status = statusFilter.value;
+    final category = categoryFilter.value;
+    final brand = brandFilter.value;
+
+    final result = products.where((product) {
+      final matchesQuery = query.isEmpty ||
+          product.titleEn.toLowerCase().contains(query) ||
+          product.titleBn.toLowerCase().contains(query) ||
+          (product.sku ?? '').toLowerCase().contains(query) ||
+          (product.productCode ?? '').toLowerCase().contains(query) ||
+          product.tags.any((e) => e.toLowerCase().contains(query)) ||
+          product.keywords.any((e) => e.toLowerCase().contains(query));
+
+      final matchesStatus = switch (status) {
+        'enabled' => product.isEnabled,
+        'disabled' => !product.isEnabled,
+        'featured' => product.isFeatured,
+        'bestSeller' => product.isBestSeller,
+        'newArrival' => product.isNewArrival,
+        'flashSale' => product.isFlashSale,
+        'withAttributes' => product.hasAttributes,
+        'withVariations' => product.hasVariations,
+        'withPurchaseOptions' => product.hasPurchaseOptions,
+        'inStock' => product.inStock,
+        'outOfStock' => !product.inStock,
+        _ => true,
+      };
+
+      final matchesCategory =
+          category == 'all' || (product.categoryId ?? '') == category;
+
+      final matchesBrand = brand == 'all' || (product.brandId ?? '') == brand;
+
+      return matchesQuery && matchesStatus && matchesCategory && matchesBrand;
+    }).toList();
+
+    filteredProducts.assignAll(result);
+  }
+
+  Future<void> createProduct({
+    required MBProduct product,
+    AdminPickedImageFile? thumbnailFile,
+    List<AdminPickedImageFile> galleryFiles = const <AdminPickedImageFile>[],
+    Map<String, AdminPickedImageFile> variationImageFiles =
+    const <String, AdminPickedImageFile>{},
+  }) async {
     try {
       isSaving.value = true;
 
-      final before = products.firstWhereOrNull((e) => e.id == product.id);
+      final doc = productsCollection.doc();
+      final productId = doc.id;
 
-      await _repository.updateProduct(product);
-
-      await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'update_product',
-        targetType: 'product',
-        targetId: product.id,
-        targetTitle: product.titleEn,
-        summary: 'Updated product "${product.titleEn}"',
-        beforeData: before?.toMap(),
-        afterData: product.toMap(),
+      final thumbnailUrl = await _uploadOptionalImage(
+        productId: productId,
+        folder: 'thumbnail',
+        file: thumbnailFile,
       );
 
-      MBNotification.success(
-        title: 'Success',
-        message: 'Product updated successfully.',
+      final galleryUrls = await _uploadGalleryImages(
+        productId: productId,
+        files: galleryFiles,
       );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to update product.',
-      );
-    } finally {
-      isSaving.value = false;
-    }
-  }
 
-  Future<void> toggleProductEnabled(MBProduct product) async {
-    try {
-      final updated = product.copyWith(
-        isEnabled: !product.isEnabled,
+      final processedVariations = await _uploadVariationImages(
+        productId: productId,
+        variations: product.variations,
+        variationImageFiles: variationImageFiles,
+      );
+
+      final newProduct = product.copyWith(
+        id: productId,
+        thumbnailUrl: thumbnailUrl ?? product.thumbnailUrl,
+        imageUrls: galleryUrls.isEmpty ? product.imageUrls : galleryUrls,
+        variations: processedVariations,
+        createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      await _repository.setProductEnabledState(
-        productId: product.id,
-        isEnabled: !product.isEnabled,
-      );
-
-      await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'toggle_product_enabled',
-        targetType: 'product',
-        targetId: product.id,
-        targetTitle: product.titleEn,
-        summary: updated.isEnabled
-            ? 'Enabled product "${product.titleEn}"'
-            : 'Disabled product "${product.titleEn}"',
-        beforeData: product.toMap(),
-        afterData: updated.toMap(),
-      );
-
-      MBNotification.success(
-        title: 'Success',
-        message: product.isEnabled
-            ? 'Product disabled successfully.'
-            : 'Product enabled successfully.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to change product status.',
-      );
+      await doc.set(newProduct.toMap());
+    } finally {
+      isSaving.value = false;
     }
   }
 
-  Future<void> moveProductToQuarantine({
+  Future<void> updateProduct({
+    required MBProduct existing,
     required MBProduct product,
-    required String deletedByUid,
-    required String deletedByName,
+    AdminPickedImageFile? thumbnailFile,
+    List<AdminPickedImageFile> galleryFiles = const <AdminPickedImageFile>[],
+    Map<String, AdminPickedImageFile> variationImageFiles =
+    const <String, AdminPickedImageFile>{},
   }) async {
-    if (isDeleting.value) return;
-
     try {
-      isDeleting.value = true;
+      isSaving.value = true;
 
-      await _repository.moveToQuarantine(
-        product: product,
-        deletedByUid: deletedByUid,
-        deletedByName: deletedByName,
+      String thumbnailUrl = product.thumbnailUrl;
+      List<String> imageUrls = List<String>.from(product.imageUrls);
+
+      if (thumbnailFile != null) {
+        final uploaded = await _uploadOptionalImage(
+          productId: existing.id,
+          folder: 'thumbnail',
+          file: thumbnailFile,
+        );
+        if (uploaded != null && uploaded.isNotEmpty) {
+          thumbnailUrl = uploaded;
+        }
+      }
+
+      if (galleryFiles.isNotEmpty) {
+        imageUrls = await _uploadGalleryImages(
+          productId: existing.id,
+          files: galleryFiles,
+        );
+      }
+
+      final processedVariations = await _uploadVariationImages(
+        productId: existing.id,
+        variations: product.variations,
+        variationImageFiles: variationImageFiles,
       );
 
-      await AdminActivityLogger.log(
-        adminUid: deletedByUid,
-        adminName: deletedByName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'delete_product',
-        targetType: 'product',
-        targetId: product.id,
-        targetTitle: product.titleEn,
-        summary: 'Moved product "${product.titleEn}" to quarantine',
-        beforeData: product.toMap(),
+      final updated = product.copyWith(
+        id: existing.id,
+        thumbnailUrl: thumbnailUrl,
+        imageUrls: imageUrls,
+        variations: processedVariations,
+        createdAt: existing.createdAt,
+        updatedAt: DateTime.now(),
       );
 
-      MBNotification.success(
-        title: 'Success',
-        message: 'Product moved to quarantine.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to quarantine product.',
-      );
+      await productsCollection.doc(existing.id).set(updated.toMap());
     } finally {
-      isDeleting.value = false;
+      isSaving.value = false;
     }
+  }
+
+  Future<void> toggleEnabled(MBProduct product, bool value) async {
+    final updated = product.copyWith(
+      isEnabled: value,
+      updatedAt: DateTime.now(),
+    );
+
+    await productsCollection.doc(product.id).set(updated.toMap());
+  }
+
+  Future<void> softDisableProduct(MBProduct product) async {
+    final updated = product.copyWith(
+      isEnabled: false,
+      updatedAt: DateTime.now(),
+    );
+
+    await productsCollection.doc(product.id).set(updated.toMap());
+  }
+
+  Future<void> softDeleteProduct(MBProduct product) async {
+    final now = DateTime.now();
+    final deleteAfterAt = now.add(const Duration(days: 30));
+
+    final quarantineDoc = quarantineCollection.doc(product.id);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.set(quarantineDoc, {
+        'id': product.id,
+        'productData': product.toMap(),
+        'deletedAt': now.toIso8601String(),
+        'deleteAfterAt': deleteAfterAt.toIso8601String(),
+      });
+
+      transaction.delete(productsCollection.doc(product.id));
+    });
   }
 
   Future<void> restoreProduct(String productId) async {
-    try {
-      final item = quarantineProducts.firstWhereOrNull((e) => e['id'] == productId);
-      final productData = item == null
-          ? null
-          : Map<String, dynamic>.from(
-        item['productData'] as Map<String, dynamic>? ?? const {},
-      );
+    final quarantineDoc = await quarantineCollection.doc(productId).get();
+    if (!quarantineDoc.exists) return;
 
-      await _repository.restoreFromQuarantine(productId);
+    final data = quarantineDoc.data();
+    if (data == null) return;
 
-      await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'restore_product',
-        targetType: 'product',
-        targetId: productId,
-        targetTitle: (productData?['titleEn'] ?? '').toString(),
-        summary:
-        'Restored product "${(productData?['titleEn'] ?? productId).toString()}" from quarantine',
-        afterData: productData,
-      );
+    final productData =
+    Map<String, dynamic>.from(data['productData'] as Map<String, dynamic>? ?? {});
 
-      MBNotification.success(
-        title: 'Success',
-        message: 'Product restored successfully.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to restore product.',
-      );
-    }
+    final restored = MBProduct.fromMap(productData).copyWith(
+      updatedAt: DateTime.now(),
+    );
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.set(productsCollection.doc(productId), restored.toMap());
+      transaction.delete(quarantineCollection.doc(productId));
+    });
   }
 
   Future<void> hardDeleteQuarantineProduct(String productId) async {
-    try {
-      final item = quarantineProducts.firstWhereOrNull((e) => e['id'] == productId);
-      final productData = item == null
-          ? null
-          : Map<String, dynamic>.from(
-        item['productData'] as Map<String, dynamic>? ?? const {},
-      );
-
-      await _repository.hardDeleteFromQuarantine(productId);
-
-      await AdminActivityLogger.log(
-        adminUid: _profileController.user.value.id,
-        adminName: _profileController.fullName,
-        adminEmail: _profileController.user.value.email,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'hard_delete_quarantine_product',
-        targetType: 'product',
-        targetId: productId,
-        targetTitle: (productData?['titleEn'] ?? '').toString(),
-        summary:
-        'Permanently deleted product "${(productData?['titleEn'] ?? productId).toString()}" from quarantine',
-        beforeData: productData,
-      );
-
-      MBNotification.success(
-        title: 'Success',
-        message: 'Quarantine product deleted permanently.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to permanently delete product.',
-      );
-    }
+    await quarantineCollection.doc(productId).delete();
   }
 
-  @override
-  void onClose() {
-    _productsSubscription?.cancel();
-    _quarantineSubscription?.cancel();
-    super.onClose();
+  Future<void> deleteProduct(MBProduct product) async {
+    await productsCollection.doc(product.id).delete();
+  }
+
+  Future<String?> _uploadOptionalImage({
+    required String productId,
+    required String folder,
+    required AdminPickedImageFile? file,
+  }) async {
+    if (file == null || file.bytes == null) return null;
+
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+    final ref = _storage.ref().child('products/$productId/$folder/$fileName');
+
+    await ref.putData(
+      file.bytes!,
+      SettableMetadata(contentType: file.mimeType),
+    );
+
+    return ref.getDownloadURL();
+  }
+
+  Future<List<String>> _uploadGalleryImages({
+    required String productId,
+    required List<AdminPickedImageFile> files,
+  }) async {
+    if (files.isEmpty) return <String>[];
+
+    final urls = <String>[];
+
+    for (final file in files) {
+      if (file.bytes == null) continue;
+
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final ref = _storage.ref().child('products/$productId/gallery/$fileName');
+
+      await ref.putData(
+        file.bytes!,
+        SettableMetadata(contentType: file.mimeType),
+      );
+
+      urls.add(await ref.getDownloadURL());
+    }
+
+    return urls;
+  }
+
+  Future<List<MBProductVariation>> _uploadVariationImages({
+    required String productId,
+    required List<MBProductVariation> variations,
+    required Map<String, AdminPickedImageFile> variationImageFiles,
+  }) async {
+    if (variations.isEmpty) return variations;
+
+    final result = <MBProductVariation>[];
+
+    for (final variation in variations) {
+      final imageFile = variationImageFiles[variation.id];
+
+      if (imageFile == null || imageFile.bytes == null) {
+        result.add(variation);
+        continue;
+      }
+
+      final fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
+      final ref = _storage
+          .ref()
+          .child('products/$productId/variations/${variation.id}/$fileName');
+
+      await ref.putData(
+        imageFile.bytes!,
+        SettableMetadata(contentType: imageFile.mimeType),
+      );
+
+      final imageUrl = await ref.getDownloadURL();
+      result.add(variation.copyWith(imageUrl: imageUrl));
+    }
+
+    return result;
   }
 }
 
+class AdminLookupOption {
+  AdminLookupOption({
+    required this.id,
+    required this.name,
+  });
 
+  final String id;
+  final String name;
+}
 
+class AdminPickedImageFile {
+  AdminPickedImageFile({
+    required this.name,
+    required this.bytes,
+    required this.mimeType,
+  });
 
-
-
-
-
-
-
-
-
+  final String name;
+  final Uint8List? bytes;
+  final String mimeType;
+}

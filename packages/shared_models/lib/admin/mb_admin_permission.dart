@@ -17,6 +17,8 @@ class MBAdminPermission {
   final bool canManageBrands;
   final bool canManageProducts;
   final bool canManageBanners;
+  final bool canManageCoupons;
+  final bool canManageOffers;
 
   final bool canDeleteProducts;
   final bool canRestoreProducts;
@@ -40,6 +42,8 @@ class MBAdminPermission {
     this.canManageBrands = false,
     this.canManageProducts = false,
     this.canManageBanners = false,
+    this.canManageCoupons = false,
+    this.canManageOffers = false,
     this.canDeleteProducts = false,
     this.canRestoreProducts = false,
     this.canViewActivityLogs = false,
@@ -61,7 +65,7 @@ class MBAdminPermission {
     required String uid,
     required String actorUid,
   }) {
-    final now = DateTime.now();
+    final DateTime now = DateTime.now();
 
     return MBAdminPermission(
       uid: uid,
@@ -76,6 +80,8 @@ class MBAdminPermission {
       canManageBrands: true,
       canManageProducts: true,
       canManageBanners: true,
+      canManageCoupons: true,
+      canManageOffers: true,
       canDeleteProducts: true,
       canRestoreProducts: true,
       canViewActivityLogs: true,
@@ -90,7 +96,7 @@ class MBAdminPermission {
     required String uid,
     required String actorUid,
   }) {
-    final now = DateTime.now();
+    final DateTime now = DateTime.now();
 
     return MBAdminPermission(
       uid: uid,
@@ -105,6 +111,8 @@ class MBAdminPermission {
       canManageBrands: true,
       canManageProducts: true,
       canManageBanners: true,
+      canManageCoupons: true,
+      canManageOffers: true,
       canDeleteProducts: true,
       canRestoreProducts: true,
       canViewActivityLogs: true,
@@ -128,6 +136,8 @@ class MBAdminPermission {
     bool? canManageBrands,
     bool? canManageProducts,
     bool? canManageBanners,
+    bool? canManageCoupons,
+    bool? canManageOffers,
     bool? canDeleteProducts,
     bool? canRestoreProducts,
     bool? canViewActivityLogs,
@@ -142,7 +152,8 @@ class MBAdminPermission {
       isActive: isActive ?? this.isActive,
       canAccessAdminPanel: canAccessAdminPanel ?? this.canAccessAdminPanel,
       canManageAdmins: canManageAdmins ?? this.canManageAdmins,
-      canManageAdminInvites: canManageAdminInvites ?? this.canManageAdminInvites,
+      canManageAdminInvites:
+      canManageAdminInvites ?? this.canManageAdminInvites,
       canManageAdminPermissions:
       canManageAdminPermissions ?? this.canManageAdminPermissions,
       canManageUsers: canManageUsers ?? this.canManageUsers,
@@ -150,6 +161,8 @@ class MBAdminPermission {
       canManageBrands: canManageBrands ?? this.canManageBrands,
       canManageProducts: canManageProducts ?? this.canManageProducts,
       canManageBanners: canManageBanners ?? this.canManageBanners,
+      canManageCoupons: canManageCoupons ?? this.canManageCoupons,
+      canManageOffers: canManageOffers ?? this.canManageOffers,
       canDeleteProducts: canDeleteProducts ?? this.canDeleteProducts,
       canRestoreProducts: canRestoreProducts ?? this.canRestoreProducts,
       canViewActivityLogs: canViewActivityLogs ?? this.canViewActivityLogs,
@@ -174,6 +187,8 @@ class MBAdminPermission {
       'canManageBrands': canManageBrands,
       'canManageProducts': canManageProducts,
       'canManageBanners': canManageBanners,
+      'canManageCoupons': canManageCoupons,
+      'canManageOffers': canManageOffers,
       'canDeleteProducts': canDeleteProducts,
       'canRestoreProducts': canRestoreProducts,
       'canViewActivityLogs': canViewActivityLogs,
@@ -200,6 +215,8 @@ class MBAdminPermission {
       canManageBrands: map['canManageBrands'] ?? false,
       canManageProducts: map['canManageProducts'] ?? false,
       canManageBanners: map['canManageBanners'] ?? false,
+      canManageCoupons: map['canManageCoupons'] ?? false,
+      canManageOffers: map['canManageOffers'] ?? false,
       canDeleteProducts: map['canDeleteProducts'] ?? false,
       canRestoreProducts: map['canRestoreProducts'] ?? false,
       canViewActivityLogs: map['canViewActivityLogs'] ?? false,
@@ -219,14 +236,3 @@ class MBAdminPermission {
   factory MBAdminPermission.fromJson(String source) =>
       MBAdminPermission.fromMap(json.decode(source) as Map<String, dynamic>);
 }
-
-
-
-
-
-
-
-
-
-
-

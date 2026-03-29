@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_models/customer/mb_user_profile.dart';
 
-import '../../../models/user_model.dart';
 
 class AdminUserRepository {
   AdminUserRepository._();

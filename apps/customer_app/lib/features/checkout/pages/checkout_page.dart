@@ -1,12 +1,13 @@
+import 'package:customer_app/features/cart/controllers/cart_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:shared_ui/shared_ui.dart';
 import 'package:customer_app/app/routes/customer_app_routes.dart';
-import '../../../core/widgets/common/mb_card.dart';
+
 import 'package:shared_models/shared_models.dart';
 import 'package:customer_app/features/orders/controllers/order_controller.dart';
-import '../controllers/cart_controller.dart';
+
 
 class CheckoutPage extends StatefulWidget {
   final String checkoutMode; // instant | scheduled | all

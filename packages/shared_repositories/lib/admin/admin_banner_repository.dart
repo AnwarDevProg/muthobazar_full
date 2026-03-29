@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_models/marketing/mb_banner.dart';
 
-import '../../../models/home/mb_banner.dart';
 
 class AdminBannerRepository {
   AdminBannerRepository._();

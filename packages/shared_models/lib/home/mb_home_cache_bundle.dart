@@ -1,11 +1,4 @@
-import '../../../../models/catalog/mb_brand.dart';
-import '../../../../models/catalog/mb_category.dart';
-import '../../../../models/catalog/mb_product.dart';
-import '../../../../models/home/mb_home_config.dart';
-
-// MB Home Cache Bundle
-// --------------------
-// Unified home payload used across controller/repository/datasources.
+import 'package:shared_models/shared_models.dart';
 
 class MBHomeCacheBundle {
   final MBHomeConfig config;
@@ -22,21 +15,24 @@ class MBHomeCacheBundle {
     required this.cachedAt,
   });
 
-  factory MBHomeCacheBundle.empty() => MBHomeCacheBundle(
-    config: MBHomeConfig.empty(),
-    categories: const [],
-    brands: const [],
-    products: const [],
-    cachedAt: DateTime.now(),
-  );
+  factory MBHomeCacheBundle.empty() {
+    return MBHomeCacheBundle(
+      config: MBHomeConfig.empty(),
+      categories: const <MBCategory>[],
+      brands: const <MBBrand>[],
+      products: const <MBProduct>[],
+      cachedAt: DateTime.now(),
+    );
+  }
 
-  bool get hasData =>
-      categories.isNotEmpty ||
-          brands.isNotEmpty ||
-          products.isNotEmpty ||
-          config.sections.isNotEmpty ||
-          config.banners.isNotEmpty ||
-          config.offers.isNotEmpty;
+  bool get hasData {
+    return categories.isNotEmpty ||
+        brands.isNotEmpty ||
+        products.isNotEmpty ||
+        config.sections.isNotEmpty ||
+        config.banners.isNotEmpty ||
+        config.offers.isNotEmpty;
+  }
 
   MBHomeCacheBundle copyWith({
     MBHomeConfig? config,
@@ -47,15 +43,21 @@ class MBHomeCacheBundle {
   }) {
     return MBHomeCacheBundle(
       config: config ?? this.config,
-      categories: categories ?? this.categories,
-      brands: brands ?? this.brands,
-      products: products ?? this.products,
+      categories: List<MBCategory>.unmodifiable(
+        categories ?? this.categories,
+      ),
+      brands: List<MBBrand>.unmodifiable(
+        brands ?? this.brands,
+      ),
+      products: List<MBProduct>.unmodifiable(
+        products ?? this.products,
+      ),
       cachedAt: cachedAt ?? this.cachedAt,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    return <String, dynamic>{
       'config': config.toMap(),
       'categories': categories.map((e) => e.toMap()).toList(),
       'brands': brands.map((e) => e.toMap()).toList(),
@@ -67,31 +69,49 @@ class MBHomeCacheBundle {
   factory MBHomeCacheBundle.fromMap(Map<String, dynamic>? map) {
     if (map == null) return MBHomeCacheBundle.empty();
 
+    final Object? rawConfig = map['config'];
+    final Object? rawCategories = map['categories'];
+    final Object? rawBrands = map['brands'];
+    final Object? rawProducts = map['products'];
+    final Object? rawCachedAt = map['cachedAt'];
+
     return MBHomeCacheBundle(
-      config: MBHomeConfig.fromMap(map['config'] as Map<String, dynamic>?),
-      categories: (map['categories'] as List<dynamic>? ?? const [])
-          .map((e) => MBCategory.fromMap(e as Map<String, dynamic>))
-          .toList(),
-      brands: (map['brands'] as List<dynamic>? ?? const [])
-          .map((e) => MBBrand.fromMap(e as Map<String, dynamic>))
-          .toList(),
-      products: (map['products'] as List<dynamic>? ?? const [])
-          .map((e) => MBProduct.fromMap(e as Map<String, dynamic>))
-          .toList(),
-      cachedAt: map['cachedAt'] == null
+      config: rawConfig is Map
+          ? MBHomeConfig.fromMap(Map<String, dynamic>.from(rawConfig))
+          : MBHomeConfig.empty(),
+      categories: _mapCategoryList(rawCategories),
+      brands: _mapBrandList(rawBrands),
+      products: _mapProductList(rawProducts),
+      cachedAt: rawCachedAt == null
           ? DateTime.now()
-          : DateTime.tryParse(map['cachedAt'].toString()) ?? DateTime.now(),
+          : DateTime.tryParse(rawCachedAt.toString()) ?? DateTime.now(),
     );
   }
+
+  static List<MBCategory> _mapCategoryList(Object? raw) {
+    if (raw is! List) return const <MBCategory>[];
+
+    return raw
+        .whereType<Map>()
+        .map((e) => MBCategory.fromMap(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
+  }
+
+  static List<MBBrand> _mapBrandList(Object? raw) {
+    if (raw is! List) return const <MBBrand>[];
+
+    return raw
+        .whereType<Map>()
+        .map((e) => MBBrand.fromMap(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
+  }
+
+  static List<MBProduct> _mapProductList(Object? raw) {
+    if (raw is! List) return const <MBProduct>[];
+
+    return raw
+        .whereType<Map>()
+        .map((e) => MBProduct.fromMap(Map<String, dynamic>.from(e)))
+        .toList(growable: false);
+  }
 }
-
-
-
-
-
-
-
-
-
-
-

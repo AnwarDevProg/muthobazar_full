@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_models/catalog/mb_product.dart';
 
-import '../../../models/catalog/mb_product.dart';
 
 class AdminProductRepository {
   AdminProductRepository._();

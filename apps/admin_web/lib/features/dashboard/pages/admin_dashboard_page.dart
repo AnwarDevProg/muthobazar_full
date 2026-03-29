@@ -1,3 +1,4 @@
+import 'package:admin_web/app/shell/admin_web_shell.dart';
 import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,134 +9,243 @@ class AdminDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AdminAccessController adminController =
-        Get.find<AdminAccessController>();
+    final AdminAccessController controller = Get.find<AdminAccessController>();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(MBSpacing.xl),
-      child: Obx(() {
-        final permission = adminController.permission.value;
+    return AdminWebShell(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWide = constraints.maxWidth > 1400;
 
-        return Column(
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 1400 : 1100,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(MBSpacing.xl),
+                child: Obx(() {
+                  final permission = controller.permission.value;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _DashboardHeroCard(
+                        adminRole: permission?.role ?? '-',
+                        canAccessAdminPanel: controller.canAccessAdminPanel,
+                        isSuperAdmin: controller.isSuperAdmin,
+                      ),
+                      MBSpacing.h(MBSpacing.xl),
+                      const _SectionHeader(
+                        title: 'Quick Overview',
+                        subtitle:
+                        'Important access and control information at a glance.',
+                      ),
+                      MBSpacing.h(MBSpacing.md),
+                      _ResponsiveStatsGrid(controller: controller),
+                      MBSpacing.h(MBSpacing.xl),
+                      _ResponsiveMainGrid(controller: controller),
+                      MBSpacing.h(MBSpacing.xl),
+                      const _SectionHeader(
+                        title: 'Recommended Next Actions',
+                        subtitle:
+                        'Suggested admin tasks based on current access.',
+                      ),
+                      MBSpacing.h(MBSpacing.md),
+                      _ResponsiveActionsGrid(controller: controller),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ResponsiveStatsGrid extends StatelessWidget {
+  const _ResponsiveStatsGrid({
+    required this.controller,
+  });
+
+  final AdminAccessController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int columns = 4;
+
+        if (constraints.maxWidth < 1100) columns = 2;
+        if (constraints.maxWidth < 700) columns = 1;
+
+        final double itemWidth =
+            (constraints.maxWidth - ((columns - 1) * MBSpacing.md)) / columns;
+
+        final items = <Widget>[
+          _AdminStatCard(
+            title: 'Admin Access',
+            value: controller.canAccessAdminPanel ? 'Allowed' : 'Denied',
+            icon: Icons.verified_user_outlined,
+            accentColor: controller.canAccessAdminPanel
+                ? MBColors.success
+                : MBColors.error,
+          ),
+          _AdminStatCard(
+            title: 'Role',
+            value: controller.permission.value?.role ?? '-',
+            icon: Icons.badge_outlined,
+            accentColor: MBColors.primaryOrange,
+          ),
+          _AdminStatCard(
+            title: 'Manage Admins',
+            value: controller.canManageAdmins ? 'Yes' : 'No',
+            icon: Icons.manage_accounts_outlined,
+            accentColor: controller.canManageAdmins
+                ? MBColors.success
+                : MBColors.textMuted,
+          ),
+          _AdminStatCard(
+            title: 'Manage Users',
+            value: controller.canManageUsers ? 'Yes' : 'No',
+            icon: Icons.people_alt_outlined,
+            accentColor: controller.canManageUsers
+                ? MBColors.success
+                : MBColors.textMuted,
+          ),
+        ];
+
+        return Wrap(
+          spacing: MBSpacing.md,
+          runSpacing: MBSpacing.md,
+          children: items
+              .map(
+                (item) => SizedBox(
+              width: itemWidth,
+              child: item,
+            ),
+          )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ResponsiveMainGrid extends StatelessWidget {
+  const _ResponsiveMainGrid({
+    required this.controller,
+  });
+
+  final AdminAccessController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool stacked = constraints.maxWidth < 1000;
+
+        if (stacked) {
+          return Column(
+            children: [
+              _PermissionSummaryCard(adminController: controller),
+              MBSpacing.h(MBSpacing.lg),
+              _AdminHighlightsCard(adminController: controller),
+            ],
+          );
+        }
+
+        return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _DashboardHeroCard(
-              adminRole: permission?.role ?? '-',
-              canAccessAdminPanel: adminController.canAccessAdminPanel,
-              isSuperAdmin: adminController.isSuperAdmin,
+            Expanded(
+              flex: 3,
+              child: _PermissionSummaryCard(adminController: controller),
             ),
-            MBSpacing.h(MBSpacing.xl),
-            _SectionHeader(
-              title: 'Quick Overview',
-              subtitle: 'Important access and control information at a glance.',
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Wrap(
-              spacing: MBSpacing.md,
-              runSpacing: MBSpacing.md,
-              children: [
-                _AdminStatCard(
-                  title: 'Admin Access',
-                  value: adminController.canAccessAdminPanel ? 'Allowed' : 'Denied',
-                  icon: Icons.verified_user_outlined,
-                  accentColor: adminController.canAccessAdminPanel
-                      ? MBColors.success
-                      : MBColors.error,
-                ),
-                _AdminStatCard(
-                  title: 'Role',
-                  value: permission?.role ?? '-',
-                  icon: Icons.badge_outlined,
-                  accentColor: MBColors.primaryOrange,
-                ),
-                _AdminStatCard(
-                  title: 'Manage Admins',
-                  value: adminController.canManageAdmins ? 'Yes' : 'No',
-                  icon: Icons.manage_accounts_outlined,
-                  accentColor: adminController.canManageAdmins
-                      ? MBColors.success
-                      : MBColors.textMuted,
-                ),
-                _AdminStatCard(
-                  title: 'Manage Users',
-                  value: adminController.canManageUsers ? 'Yes' : 'No',
-                  icon: Icons.people_alt_outlined,
-                  accentColor: adminController.canManageUsers
-                      ? MBColors.success
-                      : MBColors.textMuted,
-                ),
-              ],
-            ),
-            MBSpacing.h(MBSpacing.xl),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _PermissionSummaryCard(
-                    adminController: adminController,
-                  ),
-                ),
-                MBSpacing.w(MBSpacing.lg),
-                Expanded(
-                  flex: 2,
-                  child: _AdminHighlightsCard(
-                    adminController: adminController,
-                  ),
-                ),
-              ],
-            ),
-            MBSpacing.h(MBSpacing.xl),
-            _SectionHeader(
-              title: 'Recommended Next Actions',
-              subtitle: 'Suggested admin tasks based on current access.',
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Wrap(
-              spacing: MBSpacing.md,
-              runSpacing: MBSpacing.md,
-              children: [
-                _ActionHintCard(
-                  icon: Icons.inventory_2_outlined,
-                  title: 'Manage Products',
-                  subtitle: adminController.canManageProducts
-                      ? 'You can review, update, and organize product listings.'
-                      : 'Product management is not enabled for this account.',
-                ),
-                _ActionHintCard(
-                  icon: Icons.category_outlined,
-                  title: 'Organize Catalog',
-                  subtitle: adminController.canManageCategories ||
-                          adminController.canManageBrands
-                      ? 'Maintain category and brand structure for a cleaner store.'
-                      : 'Catalog organization permissions are currently restricted.',
-                ),
-                _ActionHintCard(
-                  icon: Icons.history_rounded,
-                  title: 'Audit Activity',
-                  subtitle: adminController.canViewActivityLogs
-                      ? 'Use activity logs to review changes and admin actions.'
-                      : 'Activity log visibility is not enabled for this account.',
-                ),
-              ],
+            MBSpacing.w(MBSpacing.lg),
+            Expanded(
+              flex: 2,
+              child: _AdminHighlightsCard(adminController: controller),
             ),
           ],
         );
-      }),
+      },
+    );
+  }
+}
+
+class _ResponsiveActionsGrid extends StatelessWidget {
+  const _ResponsiveActionsGrid({
+    required this.controller,
+  });
+
+  final AdminAccessController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int columns = 3;
+
+        if (constraints.maxWidth < 1000) columns = 2;
+        if (constraints.maxWidth < 600) columns = 1;
+
+        final double itemWidth =
+            (constraints.maxWidth - ((columns - 1) * MBSpacing.md)) / columns;
+
+        final items = <Widget>[
+          _ActionHintCard(
+            icon: Icons.inventory_2_outlined,
+            title: 'Manage Products',
+            subtitle: controller.canManageProducts
+                ? 'You can review, update, and organize product listings.'
+                : 'Product management is not enabled for this account.',
+          ),
+          _ActionHintCard(
+            icon: Icons.category_outlined,
+            title: 'Organize Catalog',
+            subtitle: controller.canManageCategories ||
+                controller.canManageBrands
+                ? 'Maintain category and brand structure for a cleaner store.'
+                : 'Catalog organization permissions are currently restricted.',
+          ),
+          _ActionHintCard(
+            icon: Icons.history_rounded,
+            title: 'Audit Activity',
+            subtitle: controller.canViewActivityLogs
+                ? 'Use activity logs to review changes and admin actions.'
+                : 'Activity log visibility is not enabled for this account.',
+          ),
+        ];
+
+        return Wrap(
+          spacing: MBSpacing.md,
+          runSpacing: MBSpacing.md,
+          children: items
+              .map(
+                (item) => SizedBox(
+              width: itemWidth,
+              child: item,
+            ),
+          )
+              .toList(),
+        );
+      },
     );
   }
 }
 
 class _DashboardHeroCard extends StatelessWidget {
-  final String adminRole;
-  final bool canAccessAdminPanel;
-  final bool isSuperAdmin;
-
   const _DashboardHeroCard({
     required this.adminRole,
     required this.canAccessAdminPanel,
     required this.isSuperAdmin,
   });
+
+  final String adminRole;
+  final bool canAccessAdminPanel;
+  final bool isSuperAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -143,14 +253,7 @@ class _DashboardHeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(MBSpacing.xl),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFF8A00),
-            Color(0xFFFF6A00),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: MBGradients.primaryGradient,
         borderRadius: BorderRadius.circular(MBRadius.xl),
         boxShadow: [
           BoxShadow(
@@ -161,6 +264,7 @@ class _DashboardHeroCard extends StatelessWidget {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 68,
@@ -202,13 +306,14 @@ class _DashboardHeroCard extends StatelessWidget {
                   runSpacing: MBSpacing.sm,
                   children: [
                     _HeroChip(
-                      label: 'Role: ',
+                      label: 'Role: $adminRole',
                     ),
                     _HeroChip(
                       label: isSuperAdmin ? 'Super Admin' : 'Standard Admin',
                     ),
                     _HeroChip(
-                      label: canAccessAdminPanel ? 'Panel Access On' : 'Panel Access Off',
+                      label:
+                      canAccessAdminPanel ? 'Panel Access On' : 'Panel Access Off',
                     ),
                   ],
                 ),
@@ -222,11 +327,11 @@ class _DashboardHeroCard extends StatelessWidget {
 }
 
 class _HeroChip extends StatelessWidget {
-  final String label;
-
   const _HeroChip({
     required this.label,
   });
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -254,13 +359,13 @@ class _HeroChip extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
   const _SectionHeader({
     required this.title,
     required this.subtitle,
   });
+
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -287,11 +392,6 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _AdminStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color accentColor;
-
   const _AdminStatCard({
     required this.title,
     required this.value,
@@ -299,55 +399,57 @@ class _AdminStatCard extends StatelessWidget {
     required this.accentColor,
   });
 
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color accentColor;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 260,
-      child: MBCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-              ),
-              child: Icon(
-                icon,
-                color: accentColor,
-                size: 24,
-              ),
+    return MBCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(MBRadius.md),
             ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              title,
-              style: MBTextStyles.caption.copyWith(
-                color: MBColors.textSecondary,
-              ),
+            child: Icon(
+              icon,
+              color: accentColor,
+              size: 24,
             ),
-            MBSpacing.h(MBSpacing.xxs),
-            Text(
-              value,
-              style: MBTextStyles.sectionTitle.copyWith(
-                fontWeight: FontWeight.w700,
-                color: MBColors.textPrimary,
-              ),
+          ),
+          MBSpacing.h(MBSpacing.md),
+          Text(
+            title,
+            style: MBTextStyles.caption.copyWith(
+              color: MBColors.textSecondary,
             ),
-          ],
-        ),
+          ),
+          MBSpacing.h(MBSpacing.xxs),
+          Text(
+            value,
+            style: MBTextStyles.sectionTitle.copyWith(
+              fontWeight: FontWeight.w700,
+              color: MBColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _PermissionSummaryCard extends StatelessWidget {
-  final AdminAccessController adminController;
-
   const _PermissionSummaryCard({
     required this.adminController,
   });
+
+  final AdminAccessController adminController;
 
   @override
   Widget build(BuildContext context) {
@@ -425,11 +527,11 @@ class _PermissionSummaryCard extends StatelessWidget {
 }
 
 class _AdminHighlightsCard extends StatelessWidget {
-  final AdminAccessController adminController;
-
   const _AdminHighlightsCard({
     required this.adminController,
   });
+
+  final AdminAccessController adminController;
 
   @override
   Widget build(BuildContext context) {
@@ -461,7 +563,7 @@ class _AdminHighlightsCard extends StatelessWidget {
           MBSpacing.h(MBSpacing.sm),
           _HighlightTile(
             title: 'Enabled Permissions',
-            value: '',
+            value: '$enabledCount',
             icon: Icons.shield_outlined,
           ),
           MBSpacing.h(MBSpacing.sm),
@@ -473,13 +575,15 @@ class _AdminHighlightsCard extends StatelessWidget {
           MBSpacing.h(MBSpacing.sm),
           _HighlightTile(
             title: 'Catalog Control',
-            value: adminController.canManageProducts ? 'Available' : 'Restricted',
+            value:
+            adminController.canManageProducts ? 'Available' : 'Restricted',
             icon: Icons.inventory_2_outlined,
           ),
           MBSpacing.h(MBSpacing.sm),
           _HighlightTile(
             title: 'Audit Visibility',
-            value: adminController.canViewActivityLogs ? 'Enabled' : 'Disabled',
+            value:
+            adminController.canViewActivityLogs ? 'Enabled' : 'Disabled',
             icon: Icons.history_rounded,
           ),
         ],
@@ -489,15 +593,15 @@ class _AdminHighlightsCard extends StatelessWidget {
 }
 
 class _HighlightTile extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
   const _HighlightTile({
     required this.title,
     required this.value,
     required this.icon,
   });
+
+  final String title;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -554,70 +658,67 @@ class _HighlightTile extends StatelessWidget {
 }
 
 class _ActionHintCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
   const _ActionHintCard({
     required this.icon,
     required this.title,
     required this.subtitle,
   });
 
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 320,
-      child: MBCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: MBColors.primaryOrange.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-              ),
-              child: Icon(
-                icon,
-                color: MBColors.primaryOrange,
-                size: 22,
-              ),
+    return MBCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: MBColors.primaryOrange.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(MBRadius.md),
             ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              title,
-              style: MBTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.w700,
-                color: MBColors.textPrimary,
-              ),
+            child: Icon(
+              icon,
+              color: MBColors.primaryOrange,
+              size: 22,
             ),
-            MBSpacing.h(MBSpacing.xxs),
-            Text(
-              subtitle,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
-                height: 1.45,
-              ),
+          ),
+          MBSpacing.h(MBSpacing.md),
+          Text(
+            title,
+            style: MBTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: MBColors.textPrimary,
             ),
-          ],
-        ),
+          ),
+          MBSpacing.h(MBSpacing.xxs),
+          Text(
+            subtitle,
+            style: MBTextStyles.body.copyWith(
+              color: MBColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _PermissionRow extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final bool isLast;
-
   const _PermissionRow({
     required this.label,
     required this.enabled,
     this.isLast = false,
   });
+
+  final String label;
+  final bool enabled;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
@@ -627,10 +728,10 @@ class _PermissionRow extends StatelessWidget {
         border: isLast
             ? null
             : Border(
-                bottom: BorderSide(
-                  color: MBColors.border.withValues(alpha: 0.85),
-                ),
-              ),
+          bottom: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.85),
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -652,4 +753,3 @@ class _PermissionRow extends StatelessWidget {
     );
   }
 }
-

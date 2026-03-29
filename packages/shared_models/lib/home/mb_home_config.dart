@@ -1,8 +1,10 @@
 import 'dart:convert';
 
-import 'mb_banner.dart';
+import 'package:shared_models/marketing/mb_banner.dart';
+import 'package:shared_models/marketing/mb_offer.dart';
+
 import 'mb_home_section.dart';
-import 'mb_offer.dart';
+
 
 // MB Home Config Model
 // --------------------

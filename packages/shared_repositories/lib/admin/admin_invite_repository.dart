@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import '../../../models/admin/mb_admin_invite.dart';
-import '../../../models/admin/mb_admin_permission.dart';
-import '../../../models/user_model.dart';
+import'package:shared_models/shared_models.dart';
 
 class AdminInviteRepository {
   AdminInviteRepository._();

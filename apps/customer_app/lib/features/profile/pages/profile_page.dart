@@ -1,13 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import '../../../core/responsive/mb_layout_grid.dart';
-import '../../../core/responsive/mb_responsive.dart';
 import 'package:customer_app/app/routes/customer_app_routes.dart';
-import '../../../core/widgets/common/mb_card.dart';
-import '../../admin/controllers/admin_access_controller.dart';
 import '../controllers/profile_controller.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -340,7 +335,6 @@ class _ProfileActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final bool isGuest = controller.isGuest;
-      final bool isAdmin = controller.isAdmin;
 
       return Container(
         padding: EdgeInsets.all(MBSpacing.cardPadding(context)),
@@ -357,38 +351,24 @@ class _ProfileActionsCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            if (!isGuest && isAdmin) ...[
               _ProfileListTile(
-                icon: Icons.person_outline,
-                title: 'Admin page',
-                subtitle: isGuest
-                    ? ''
-                    : 'Update Product Info.',
-                onTap: () async {
-                  if (controller.isGuest) {
-                    await MBDialogs.showLoginRequired(context);
-                    return;
-                  }
-
-                  Get.toNamed(AppRoutes.mobileAdminPurchases);
-                },
-              ),
-
-              const _TileDivider(),
-            ],
-            _ProfileListTile(
               icon: Icons.person_outline,
               title: 'Edit Profile',
               subtitle: isGuest
                   ? 'Login to update your name, profile photo, and basic info.'
                   : 'Update your name, profile photo, and basic info.',
-              onTap: () async {
-                if (controller.isGuest) {
-                  await MBDialogs.showLoginRequired(context);
-                  return;
-                }
-                Get.toNamed(AppRoutes.editProfile);
-              },
+                onTap: () async {
+                  if (controller.isGuest) {
+                    await MBDialogs.showLoginRequired(
+                      context,
+                      onLoginTap: () async {
+                        Get.toNamed(AppRoutes.login);
+                      },
+                    );
+                    return;
+                  }
+                  Get.toNamed(AppRoutes.editProfile);
+                },
             ),
             if (!isGuest) ...[
               const _TileDivider(),
@@ -565,9 +545,15 @@ class _SuggestionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(MBRadius.lg),
         onTap: () async {
           if (controller.isGuest) {
-            await MBDialogs.showLoginRequired(context);
+            await MBDialogs.showLoginRequired(
+              context,
+              onLoginTap: () async {
+                Get.toNamed(AppRoutes.login);
+              },
+            );
             return;
           }
+
 
           switch (item.title) {
             case 'My Orders':

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
-import '../../../../models/catalog/mb_brand.dart';
-import '../../controllers/admin_brand_controller.dart';
+
+import '../controllers/admin_brand_controller.dart';
 
 class AdminBrandFormDialog extends StatefulWidget {
-  final MBBrand? brand;
-
   const AdminBrandFormDialog({
     super.key,
     this.brand,
   });
+
+  final MBBrand? brand;
 
   @override
   State<AdminBrandFormDialog> createState() => _AdminBrandFormDialogState();
@@ -78,170 +78,192 @@ class _AdminBrandFormDialogState extends State<AdminBrandFormDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.all(32),
-      child: Container(
-        width: 760,
-        padding: const EdgeInsets.all(MBSpacing.xl),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 860,
+          maxHeight: 720,
+        ),
         child: Obx(
-              () => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Edit Brand' : 'Create Brand',
-                style: MBTextStyles.sectionTitle,
-              ),
-              MBSpacing.h(MBSpacing.md),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: MBTextField(
-                                controller: _nameEnController,
-                                labelText: 'Name (English)',
-                                validator: (value) {
-                                  if ((value ?? '').trim().isEmpty) {
-                                    return 'Enter English name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            MBSpacing.w(MBSpacing.md),
-                            Expanded(
-                              child: MBTextField(
-                                controller: _nameBnController,
-                                labelText: 'Name (Bangla)',
-                              ),
-                            ),
-                          ],
+              () => AbsorbPointer(
+            absorbing: controller.isSaving.value,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(MBSpacing.xl),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          isEdit ? 'Edit Brand' : 'Create Brand',
+                          style: MBTextStyles.sectionTitle.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        MBSpacing.h(MBSpacing.md),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: MBTextField(
-                                controller: _descriptionEnController,
-                                labelText: 'Description (English)',
-                                maxLines: 3,
-                              ),
-                            ),
-                            MBSpacing.w(MBSpacing.md),
-                            Expanded(
-                              child: MBTextField(
-                                controller: _descriptionBnController,
-                                labelText: 'Description (Bangla)',
-                                maxLines: 3,
-                              ),
-                            ),
-                          ],
-                        ),
-                        MBSpacing.h(MBSpacing.md),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: MBTextField(
-                                controller: _logoUrlController,
-                                labelText: 'Logo URL',
-                              ),
-                            ),
-                            MBSpacing.w(MBSpacing.md),
-                            Expanded(
-                              child: MBTextField(
-                                controller: _slugController,
-                                labelText: 'Slug',
-                              ),
-                            ),
-                          ],
-                        ),
-                        MBSpacing.h(MBSpacing.md),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: MBTextField(
-                                controller: _sortOrderController,
-                                labelText: 'Sort Order',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                            MBSpacing.w(MBSpacing.md),
-                            Expanded(
-                              child: MBTextField(
-                                controller: _productsCountController,
-                                labelText: 'Products Count',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ),
-                          ],
-                        ),
-                        MBSpacing.h(MBSpacing.md),
-                        MBCard(
-                          padding: const EdgeInsets.all(MBSpacing.md),
-                          child: Column(
+                      ),
+                      IconButton(
+                        onPressed: () => Get.back(),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(MBSpacing.xl),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          Row(
                             children: [
-                              SwitchListTile(
-                                title: const Text('Featured'),
-                                value: _isFeatured,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _isFeatured = value;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _nameEnController,
+                                  labelText: 'Name (English)',
+                                  validator: (value) {
+                                    if ((value ?? '').trim().isEmpty) {
+                                      return 'Enter English name';
+                                    }
+                                    return null;
+                                  },
+                                ),
                               ),
-                              SwitchListTile(
-                                title: const Text('Show On Home'),
-                                value: _showOnHome,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _showOnHome = value;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              SwitchListTile(
-                                title: const Text('Active'),
-                                value: _isActive,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _isActive = value;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
+                              MBSpacing.w(MBSpacing.md),
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _nameBnController,
+                                  labelText: 'Name (Bangla)',
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          MBSpacing.h(MBSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _descriptionEnController,
+                                  labelText: 'Description (English)',
+                                  maxLines: 3,
+                                ),
+                              ),
+                              MBSpacing.w(MBSpacing.md),
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _descriptionBnController,
+                                  labelText: 'Description (Bangla)',
+                                  maxLines: 3,
+                                ),
+                              ),
+                            ],
+                          ),
+                          MBSpacing.h(MBSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _logoUrlController,
+                                  labelText: 'Logo URL',
+                                ),
+                              ),
+                              MBSpacing.w(MBSpacing.md),
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _slugController,
+                                  labelText: 'Slug',
+                                ),
+                              ),
+                            ],
+                          ),
+                          MBSpacing.h(MBSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _sortOrderController,
+                                  labelText: 'Sort Order',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              MBSpacing.w(MBSpacing.md),
+                              Expanded(
+                                child: MBTextField(
+                                  controller: _productsCountController,
+                                  labelText: 'Products Count',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          MBSpacing.h(MBSpacing.md),
+                          MBCard(
+                            padding: const EdgeInsets.all(MBSpacing.md),
+                            child: Column(
+                              children: [
+                                SwitchListTile(
+                                  title: const Text('Featured'),
+                                  value: _isFeatured,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _isFeatured = value;
+                                    });
+                                  },
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Show On Home'),
+                                  value: _showOnHome,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _showOnHome = value;
+                                    });
+                                  },
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                SwitchListTile(
+                                  title: const Text('Active'),
+                                  value: _isActive,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _isActive = value;
+                                    });
+                                  },
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              MBSpacing.h(MBSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: MBSecondaryButton(
-                      text: 'Cancel',
-                      isLoading: controller.isSaving.value,
-                      onPressed: () => Get.back(),
-                    ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(MBSpacing.xl),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: MBSecondaryButton(
+                          text: 'Cancel',
+                          isLoading: controller.isSaving.value,
+                          onPressed: () => Get.back(),
+                        ),
+                      ),
+                      MBSpacing.w(MBSpacing.md),
+                      Expanded(
+                        child: MBPrimaryButton(
+                          text: isEdit ? 'Update Brand' : 'Create Brand',
+                          isLoading: controller.isSaving.value,
+                          onPressed: _submit,
+                        ),
+                      ),
+                    ],
                   ),
-                  MBSpacing.w(MBSpacing.md),
-                  Expanded(
-                    child: MBPrimaryButton(
-                      text: isEdit ? 'Update Brand' : 'Create Brand',
-                      isLoading: controller.isSaving.value,
-                      onPressed: _submit,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -284,15 +306,3 @@ class _AdminBrandFormDialogState extends State<AdminBrandFormDialog> {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

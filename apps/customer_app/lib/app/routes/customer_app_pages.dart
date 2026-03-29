@@ -1,15 +1,18 @@
 import 'package:customer_app/app/bindings/address_binding.dart';
+import 'package:customer_app/app/middleware/customer_auth_middleware.dart';
 import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:customer_app/app/shell/customer_app_shell.dart';
 import 'package:customer_app/app/startup/customer_launch_router_page.dart';
-import 'package:customer_app/app/startup/force_update_page.dart';
-import 'package:customer_app/app/startup/onboarding_page.dart';
+import 'package:customer_app/features/account_status/pages/account_blocked_page.dart';
 import 'package:customer_app/features/address/pages/address_form_page.dart';
 import 'package:customer_app/features/address/pages/addresses_page.dart';
+import 'package:customer_app/features/app_update/pages/force_update_page.dart';
 import 'package:customer_app/features/auth/pages/login_page.dart';
 import 'package:customer_app/features/auth/pages/register_page.dart';
 import 'package:customer_app/features/auth/pages/welcome_page.dart';
 import 'package:customer_app/features/checkout/pages/checkout_page.dart';
+import 'package:customer_app/features/onboarding/pages/onboarding_page.dart';
+
 import 'package:customer_app/features/orders/pages/my_orders_page.dart';
 import 'package:customer_app/features/orders/pages/order_details_page.dart';
 import 'package:customer_app/features/profile/pages/app_settings_page.dart';
@@ -18,6 +21,8 @@ import 'package:customer_app/features/profile/pages/edit_profile_page.dart';
 import 'package:customer_app/features/profile/pages/help_center_page.dart';
 import 'package:customer_app/features/profile/pages/my_coupons_page.dart';
 import 'package:customer_app/features/profile/pages/update_phone_page.dart';
+import 'package:customer_app/features/profile_completion/pages/complete_profile_page.dart';
+
 import 'package:customer_app/features/wishlist/pages/wishlist_page.dart';
 import 'package:get/get.dart';
 
@@ -26,12 +31,20 @@ class AppPages {
 
   static final routes = <GetPage>[
     GetPage(
-      name: AppRoutes.splash,
+      name: AppRoutes.appLaunchRoute,
       page: () => const AppLaunchRouterPage(),
     ),
     GetPage(
       name: AppRoutes.forceUpdate,
       page: () => const ForceUpdatePage(),
+    ),
+    GetPage(
+      name: AppRoutes.accountBlocked,
+      page: () => const AccountBlockedPage(),
+    ),
+    GetPage(
+      name: AppRoutes.completeProfile,
+      page: () => const CompleteProfilePage(),
     ),
     GetPage(
       name: AppRoutes.onboarding,
@@ -57,6 +70,7 @@ class AppPages {
       name: AppRoutes.addresses,
       page: () => const AddressesPage(),
       binding: AddressBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.addAddress,
@@ -67,14 +81,17 @@ class AppPages {
       name: AppRoutes.editAddress,
       page: () => AddressFormPage(address: Get.arguments),
       binding: AddressBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.editProfile,
       page: () => const EditProfilePage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.updatePhone,
       page: () => const UpdatePhonePage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.deleteAccountVerify,
@@ -83,18 +100,22 @@ class AppPages {
     GetPage(
       name: AppRoutes.myOrders,
       page: () => const MyOrdersPage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.orderDetails,
       page: () => const OrderDetailsPage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.myCoupons,
       page: () => const MyCouponsPage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.appSettings,
       page: () => const AppSettingsPage(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: AppRoutes.helpCenter,
@@ -110,6 +131,7 @@ class AppPages {
         final mode = (Get.arguments ?? 'all').toString();
         return CheckoutPage(checkoutMode: mode);
       },
+      middlewares: [AuthMiddleware()],
     ),
   ];
 }

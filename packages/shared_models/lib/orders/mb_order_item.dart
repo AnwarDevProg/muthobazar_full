@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import '../catalog/mb_cart_item.dart';
+import 'package:shared_models/orders/mb_cart_item.dart';
+
 
 class MBOrderItem {
   final String productId;

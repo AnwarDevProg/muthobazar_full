@@ -10,11 +10,14 @@ export 'services/storage_service.dart';
 export 'services/update_service.dart';
 
 export 'auth/guards/mb_auth_guard_service.dart';
-export 'auth/services/auth_redirect_service.dart';
 export 'auth/services/core_auth_service.dart';
 export 'auth/services/permission_service.dart';
 
 export 'utils/mb_repository_load_result.dart';
+export 'auth/services/auth_profile_redirect_resolver.dart';
+export 'auth/services/auth_profile_redirect_decision.dart';
+export 'auth/services/auth_profile_redirect_result.dart';
+
 
 
 

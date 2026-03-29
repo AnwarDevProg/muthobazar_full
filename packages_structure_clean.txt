@@ -1,0 +1,246 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages
+C.
++---shared_contracts
+|   +---lib
+|   |   +---auth
+|   |   +---delivery
+|   |   +---finance
+|   |   +---inventory
+|   |   +---orders
+|   |   +---purchases
+|   |   +---services
+|   |   +---support
+|   |   \---shared_contracts.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_core
+|   +---lib
+|   |   +---auth
+|   |   |   +---constants
+|   |   |   +---guards
+|   |   |   |   \---mb_auth_guard_service.dart
+|   |   |   +---middleware_helpers
+|   |   |   +---models
+|   |   |   \---services
+|   |   |       +---auth_profile_redirect_decision.dart
+|   |   |       +---auth_profile_redirect_resolver.dart
+|   |   |       +---auth_profile_redirect_result.dart
+|   |   |       +---core_auth_service.dart
+|   |   |       \---permission_service.dart
+|   |   +---config
+|   |   +---constants
+|   |   +---enums
+|   |   +---firestore
+|   |   +---helpers
+|   |   |   +---image_helper.dart
+|   |   |   +---mb_cache_policy.dart
+|   |   |   \---mb_cache_state.dart
+|   |   +---services
+|   |   |   +---app_initializer.dart
+|   |   |   +---auth_rate_limit_storage.dart
+|   |   |   +---firebase_service.dart
+|   |   |   +---notification_service.dart
+|   |   |   +---storage_service.dart
+|   |   |   \---update_service.dart
+|   |   +---utils
+|   |   |   \---mb_repository_load_result.dart
+|   |   +---validators
+|   |   \---shared_core.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_models
+|   +---lib
+|   |   +---admin
+|   |   |   +---purchases
+|   |   |   |   \---admin_purchase_model.dart
+|   |   |   +---mb_admin_activity_log.dart
+|   |   |   +---mb_admin_invite.dart
+|   |   |   \---mb_admin_permission.dart
+|   |   +---analytics
+|   |   +---catalog
+|   |   |   +---mb_brand.dart
+|   |   |   +---mb_category.dart
+|   |   |   +---mb_product.dart
+|   |   |   +---mb_product_attribute.dart
+|   |   |   +---mb_product_purchase_option.dart
+|   |   |   \---mb_product_variation.dart
+|   |   +---customer
+|   |   |   +---mb_customer_address.dart
+|   |   |   \---mb_user_profile.dart
+|   |   +---delivery
+|   |   +---finance
+|   |   +---home
+|   |   |   +---mb_home_cache_bundle.dart
+|   |   |   +---mb_home_config.dart
+|   |   |   \---mb_home_section.dart
+|   |   +---inventory
+|   |   +---loyalty
+|   |   +---marketing
+|   |   |   +---mb_banner.dart
+|   |   |   +---mb_offer.dart
+|   |   |   +---mb_promo_code.dart
+|   |   |   \---mb_user_promo_code.dart
+|   |   +---orders
+|   |   |   +---mb_cart_item.dart
+|   |   |   +---mb_order.dart
+|   |   |   \---mb_order_item.dart
+|   |   +---referrals
+|   |   +---reviews
+|   |   |   +---mb_review.dart
+|   |   |   \---mb_review_reply.dart
+|   |   +---search
+|   |   +---services
+|   |   +---staff
+|   |   +---support
+|   |   \---shared_models.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_repositories
+|   +---lib
+|   |   +---admin
+|   |   |   +---purchases
+|   |   |   |   \---mobile_admin_purchase_repository.dart
+|   |   |   +---admin_access_repository.dart
+|   |   |   +---admin_activity_log_repository.dart
+|   |   |   +---admin_banner_repository.dart
+|   |   |   +---admin_brand_repository.dart
+|   |   |   +---admin_category_repository.dart
+|   |   |   +---admin_invite_repository.dart
+|   |   |   +---admin_product_repository.dart
+|   |   |   +---admin_setup_repository.dart
+|   |   |   \---admin_user_repository.dart
+|   |   +---analytics
+|   |   +---base
+|   |   +---catalog
+|   |   +---customer
+|   |   |   +---address_repository.dart
+|   |   |   +---login_repository.dart
+|   |   |   +---phone_auth_repository.dart
+|   |   |   +---profile_repository.dart
+|   |   |   \---register_repository.dart
+|   |   +---delivery
+|   |   +---finance
+|   |   +---home
+|   |   |   +---datasources
+|   |   |   |   +---mb_home_local_data_source.dart
+|   |   |   |   \---mb_home_remote_data_source.dart
+|   |   |   \---mb_home_repository.dart
+|   |   +---inventory
+|   |   +---loyalty
+|   |   +---marketing
+|   |   +---orders
+|   |   |   +---cart_repository.dart
+|   |   |   \---order_repository.dart
+|   |   +---referrals
+|   |   +---reviews
+|   |   +---search
+|   |   +---services
+|   |   +---staff
+|   |   +---support
+|   |   \---shared_repositories.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_services
+|   +---lib
+|   |   +---admin
+|   |   |   \---admin_activity_logger.dart
+|   |   +---analytics
+|   |   +---export
+|   |   +---formatting
+|   |   +---media
+|   |   +---notifications
+|   |   +---pricing
+|   |   +---search
+|   |   \---shared_services.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_testkit
+|   +---lib
+|   |   +---builders
+|   |   +---fakes
+|   |   +---fixtures
+|   |   +---helpers
+|   |   +---mocks
+|   |   \---shared_testkit.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_ui
+|   +---assets
+|   |   +---fonts
+|   |   |   \---.gitkeep
+|   |   +---icons
+|   |   |   \---.gitkeep
+|   |   \---placeholders
+|   |       \---.gitkeep
+|   +---lib
+|   |   +---extensions
+|   |   +---layout
+|   |   |   +---mb_app_layout.dart
+|   |   |   \---mb_screen_padding.dart
+|   |   +---responsive
+|   |   |   +---mb_breakpoints.dart
+|   |   |   +---mb_layout_grid.dart
+|   |   |   +---mb_responsive.dart
+|   |   |   +---mb_responsive_container.dart
+|   |   |   +---mb_size_tokens.dart
+|   |   |   +---mb_spacing.dart
+|   |   |   \---mb_text_scale.dart
+|   |   +---scroll
+|   |   |   \---mb_scroll_behavior.dart
+|   |   +---theme
+|   |   |   +---mb_colors.dart
+|   |   |   +---mb_gradients.dart
+|   |   |   +---mb_radius.dart
+|   |   |   +---mb_text_styles.dart
+|   |   |   +---mb_text_theme.dart
+|   |   |   \---mb_theme.dart
+|   |   +---typography
+|   |   |   \---mb_app_text.dart
+|   |   +---widgets
+|   |   |   +---common
+|   |   |   |   +---mb_bottom_nav_bar.dart
+|   |   |   |   +---mb_card.dart
+|   |   |   |   +---mb_gradient_header.dart
+|   |   |   |   +---mb_primary_button.dart
+|   |   |   |   +---mb_product_card.dart
+|   |   |   |   +---mb_secondary_button.dart
+|   |   |   |   +---mb_section_header.dart
+|   |   |   |   +---mb_section_title.dart
+|   |   |   |   \---mb_text_field.dart
+|   |   |   +---dialogs
+|   |   |   |   \---mb_dialogs.dart
+|   |   |   +---feedback
+|   |   |   |   \---mb_notification.dart
+|   |   |   \---form
+|   |   \---shared_ui.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
++---shared_usecases
+|   +---lib
+|   |   +---auth
+|   |   +---customer
+|   |   +---delivery
+|   |   +---inventory
+|   |   +---marketing
+|   |   +---orders
+|   |   +---purchases
+|   |   +---reports
+|   |   +---services
+|   |   \---shared_usecases.dart
+|   +---analysis_options.yaml
+|   \---pubspec.yaml
+\---shared_workflows
+    +---lib
+    |   +---auth
+    |   +---delivery
+    |   +---inventory
+    |   +---loyalty
+    |   +---orders
+    |   +---purchases
+    |   +---referrals
+    |   +---reviews
+    |   +---services
+    |   \---shared_workflows.dart
+    +---analysis_options.yaml
+    \---pubspec.yaml

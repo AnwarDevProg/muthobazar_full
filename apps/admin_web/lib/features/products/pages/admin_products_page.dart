@@ -1,319 +1,404 @@
+import 'package:admin_web/app/shell/admin_web_shell.dart';
+import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
+import 'package:admin_web/features/products/widgets/admin_product_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import 'package:admin_web/app/routes/admin_web_routes.dart';
-import '../../../models/catalog/mb_product.dart';
-import '../../profile/controllers/profile_controller.dart';
-import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import '../controllers/admin_product_controller.dart';
-import 'widgets/admin_product_form_dialog.dart';
 
-class AdminProductsPage extends StatelessWidget {
+class AdminProductsPage extends GetView<AdminProductController> {
   const AdminProductsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final accessController = Get.find<AdminAccessController>();
-    final productController = Get.find<AdminProductController>();
-    final profileController = Get.find<ProfileController>();
+    return AdminWebShell(
+      child: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: MBColors.background,
-      body: Row(
-        children: [
-          _SidebarProxy(
-            currentRoute: AppRoutes.adminProducts,
-            isSuperAdmin: accessController.isSuperAdmin,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                _TopBarProxy(
-                  title: 'Products',
-                  onAdd: accessController.canManageProducts
-                      ? () {
-                    Get.dialog(
-                      const AdminProductFormDialog(),
-                      barrierDismissible: false,
-                    );
-                  }
-                      : null,
-                  onOpenQuarantine: accessController.canRestoreProducts
-                      ? () => Get.toNamed(AppRoutes.adminQuarantineProducts)
-                      : null,
-                ),
-                Expanded(
-                  child: Obx(() {
-                    if (!accessController.canManageProducts) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'You do not have permission to manage products.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (productController.isLoading.value) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    if (productController.products.isEmpty) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'No products found.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return RefreshIndicator(
-                      onRefresh: productController.refreshProducts,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        itemCount: productController.products.length,
-                        itemBuilder: (context, index) {
-                          final product = productController.products[index];
-                          return Padding(
-                            padding:
-                            const EdgeInsets.only(bottom: MBSpacing.md),
-                            child: _ProductListCard(
-                              product: product,
-                              canDelete: accessController.canDeleteProducts,
-                              onDelete: () async {
-                                await productController.moveProductToQuarantine(
-                                  product: product,
-                                  deletedByUid: profileController.user.value.id,
-                                  deletedByName: profileController.fullName,
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }),
-                ),
-              ],
+        return Column(
+          children: [
+            _ProductsToolbar(controller: controller),
+            Expanded(
+              child: controller.filteredProducts.isEmpty
+                  ? const _EmptyProductsState()
+                  : _ProductsTable(controller: controller),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }
 
-class _ProductListCard extends StatelessWidget {
-  final MBProduct product;
-  final bool canDelete;
-  final Future<void> Function() onDelete;
-
-  const _ProductListCard({
-    required this.product,
-    required this.canDelete,
-    required this.onDelete,
+class _ProductsToolbar extends StatelessWidget {
+  const _ProductsToolbar({
+    required this.controller,
   });
+
+  final AdminProductController controller;
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminProductController>();
-
-    return MBCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: MBColors.primarySoft,
-              borderRadius: BorderRadius.circular(16),
-              image: product.thumbnailUrl.trim().isNotEmpty
-                  ? DecorationImage(
-                image: NetworkImage(product.thumbnailUrl),
-                fit: BoxFit.cover,
-              )
-                  : null,
-            ),
-            child: product.thumbnailUrl.trim().isEmpty
-                ? const Icon(
-              Icons.inventory_2_outlined,
-              color: MBColors.primaryOrange,
-            )
-                : null,
+    return Container(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.85),
           ),
-          MBSpacing.w(MBSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.titleEn,
-                  style: MBTextStyles.bodyMedium.copyWith(
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Product Management',
+                  style: MBTextStyles.sectionTitle.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (product.titleBn.trim().isNotEmpty) ...[
-                  MBSpacing.h(MBSpacing.xxxs),
-                  Text(
-                    product.titleBn,
-                    style: MBTextStyles.body.copyWith(
-                      color: MBColors.textSecondary,
-                    ),
-                  ),
-                ],
-                MBSpacing.h(MBSpacing.xxs),
-                Text(
-                  'Price: ${product.price}  • Stock: ${product.stockQty}',
-                  style: MBTextStyles.caption,
-                ),
-                MBSpacing.h(MBSpacing.xxxs),
-                Text(
-                  'Type: ${product.productType} • '
-                      '${product.isEnabled ? 'Enabled' : 'Disabled'} • '
-                      'Attr: ${product.attributes.length} • '
-                      'Var: ${product.variations.length} • '
-                      'Options: ${product.purchaseOptions.length}',
-                  style: MBTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-          MBSpacing.w(MBSpacing.md),
-          Column(
-            children: [
-              MBSecondaryButton(
-                text: product.isEnabled ? 'Disable' : 'Enable',
-                expand: false,
-                height: 40,
-                onPressed: () => controller.toggleProductEnabled(product),
               ),
-              MBSpacing.h(MBSpacing.sm),
-              MBSecondaryButton(
-                text: 'Edit',
-                expand: false,
-                height: 40,
+              ElevatedButton.icon(
                 onPressed: () {
                   Get.dialog(
-                    AdminProductFormDialog(product: product),
+                    const AdminProductFormDialog(),
                     barrierDismissible: false,
                   );
                 },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add Product'),
               ),
-              if (canDelete) ...[
-                MBSpacing.h(MBSpacing.sm),
-                MBSecondaryButton(
-                  text: 'Quarantine',
-                  expand: false,
-                  height: 40,
-                  foregroundColor: MBColors.error,
-                  borderColor: MBColors.error,
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Move To Quarantine'),
-                        content: Text(
-                          'Move "${product.titleEn}" to quarantine?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
+            ],
+          ),
+          MBSpacing.h(MBSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: controller.searchController,
+                  onChanged: controller.setSearchQuery,
+                  decoration: const InputDecoration(
+                    hintText: 'Search by title, SKU, code, tags, category, brand...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: controller.statusFilter.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All')),
+                    DropdownMenuItem(value: 'enabled', child: Text('Enabled')),
+                    DropdownMenuItem(value: 'disabled', child: Text('Disabled')),
+                    DropdownMenuItem(value: 'featured', child: Text('Featured')),
+                    DropdownMenuItem(value: 'bestSeller', child: Text('Best Seller')),
+                    DropdownMenuItem(value: 'newArrival', child: Text('New Arrival')),
+                    DropdownMenuItem(value: 'flashSale', child: Text('Flash Sale')),
+                    DropdownMenuItem(value: 'inStock', child: Text('In Stock')),
+                    DropdownMenuItem(value: 'outOfStock', child: Text('Out of Stock')),
+                  ],
+                  onChanged: (value) =>
+                      controller.setStatusFilter(value ?? 'all'),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: controller.categoryFilter.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'all', child: Text('All')),
+                    ...controller.categories.map(
+                          (e) => DropdownMenuItem(
+                        value: e.id,
+                        child: Text(e.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      controller.setCategoryFilter(value ?? 'all'),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: controller.brandFilter.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Brand',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'all', child: Text('All')),
+                    ...controller.brands.map(
+                          (e) => DropdownMenuItem(
+                        value: e.id,
+                        child: Text(e.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      controller.setBrandFilter(value ?? 'all'),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              OutlinedButton(
+                onPressed: controller.resetFilters,
+                child: const Text('Reset'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductsTable extends StatelessWidget {
+  const _ProductsTable({
+    required this.controller,
+  });
+
+  final AdminProductController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(MBRadius.lg),
+          side: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.9),
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 24,
+            headingRowHeight: 56,
+            dataRowMinHeight: 84,
+            dataRowMaxHeight: 96,
+            columns: const [
+              DataColumn(label: Text('Product')),
+              DataColumn(label: Text('Category')),
+              DataColumn(label: Text('Brand')),
+              DataColumn(label: Text('Price')),
+              DataColumn(label: Text('Inventory')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Updated')),
+              DataColumn(label: Text('Actions')),
+            ],
+            rows: controller.filteredProducts.map((product) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    SizedBox(
+                      width: 340,
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(MBRadius.md),
+                            child: product.thumbnailUrl.isNotEmpty
+                                ? Image.network(
+                              product.thumbnailUrl,
+                              width: 54,
+                              height: 54,
+                              fit: BoxFit.cover,
+                            )
+                                : Container(
+                              width: 54,
+                              height: 54,
+                              color: MBColors.background,
+                              child: const Icon(Icons.image_not_supported),
+                            ),
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Move'),
+                          MBSpacing.w(MBSpacing.md),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.titleEn,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                MBSpacing.h(MBSpacing.xxxs),
+                                Text(
+                                  product.titleBn,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.caption.copyWith(
+                                    color: MBColors.textSecondary,
+                                  ),
+                                ),
+                                MBSpacing.h(MBSpacing.xxxs),
+                                Text(
+                                  'SKU: ${product.sku ?? '-'} | Code: ${product.productCode ?? '-'}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.caption.copyWith(
+                                    color: MBColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    );
+                    ),
+                  ),
+                  DataCell(Text(product.categoryId ?? '-')),
+                  DataCell(Text(product.brandId ?? '-')),
+                  DataCell(
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('৳ ${product.effectivePrice.toStringAsFixed(2)}'),
+                        if (product.hasDiscount)
+                          Text(
+                            'Base: ৳ ${product.price.toStringAsFixed(2)}',
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Stock: ${product.stockQty}'),
+                        Text(
+                          'Instant: ${product.instantAvailableToday}',
+                          style: MBTextStyles.caption.copyWith(
+                            color: MBColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      children: [
+                        Switch(
+                          value: product.isEnabled,
+                          onChanged: (value) =>
+                              controller.toggleEnabled(product, value),
+                        ),
+                        Text(product.isEnabled ? 'Enabled' : 'Disabled'),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      product.updatedAt.toString().split('.').first,
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Edit product',
+                          onPressed: () {
+                            Get.dialog(
+                              AdminProductFormDialog(product: product),
+                              barrierDismissible: false,
+                            );
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: 'Disable product',
+                          onPressed: () async {
+                            final confirm = await Get.dialog<bool>(
+                              AlertDialog(
+                                title: const Text('Disable product'),
+                                content: Text(
+                                  'Do you want to disable "${product.titleEn}"?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('Disable'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                    if (confirmed == true) {
-                      await onDelete();
-                    }
-                  },
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+                            if (confirm == true) {
+                              await controller.softDisableProduct(product);
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.visibility_off_outlined,
+                            color: MBColors.error,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Delete product',
+                          onPressed: () async {
+                            final confirm = await Get.dialog<bool>(
+                              AlertDialog(
+                                title: const Text('Delete product'),
+                                content: Text(
+                                  'This will permanently delete "${product.titleEn}". Continue?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-class _SidebarProxy extends StatelessWidget {
-  final String currentRoute;
-  final bool isSuperAdmin;
-
-  const _SidebarProxy({
-    required this.currentRoute,
-    required this.isSuperAdmin,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      decoration: const BoxDecoration(
-        color: MBColors.primaryOrange,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(MBSpacing.md),
-          child: Column(
-            children: [
-              _ProxyTile(
-                label: 'Dashboard',
-                selected: currentRoute == AppRoutes.adminDashboard ||
-                    currentRoute == AppRoutes.adminShell,
-                onTap: () => Get.offNamed(AppRoutes.adminShell),
-              ),
-              _ProxyTile(
-                label: 'Categories',
-                selected: currentRoute == AppRoutes.adminCategories,
-                onTap: () => Get.offNamed(AppRoutes.adminCategories),
-              ),
-              _ProxyTile(
-                label: 'Brands',
-                selected: currentRoute == AppRoutes.adminBrands,
-                onTap: () => Get.offNamed(AppRoutes.adminBrands),
-              ),
-              _ProxyTile(
-                label: 'Banners',
-                selected: currentRoute == AppRoutes.adminBanners,
-                onTap: () => Get.offNamed(AppRoutes.adminBanners),
-              ),
-              _ProxyTile(
-                label: 'Products',
-                selected: currentRoute == AppRoutes.adminProducts,
-                onTap: () => Get.offNamed(AppRoutes.adminProducts),
-              ),
-              _ProxyTile(
-                label: 'Admin Invites',
-                selected: currentRoute == AppRoutes.adminInvites,
-                onTap: () => Get.offNamed(AppRoutes.adminInvites),
-              ),
-              if (isSuperAdmin)
-                _ProxyTile(
-                  label: 'Admin Permissions',
-                  selected: currentRoute == AppRoutes.adminPermissions,
-                  onTap: () => Get.offNamed(AppRoutes.adminPermissions),
-                ),
-            ],
+                            if (confirm == true) {
+                              await controller.deleteProduct(product);
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: MBColors.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),
@@ -321,98 +406,52 @@ class _SidebarProxy extends StatelessWidget {
   }
 }
 
-class _ProxyTile extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ProxyTile({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _EmptyProductsState extends StatelessWidget {
+  const _EmptyProductsState();
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      selected: selected,
-      selectedTileColor: Colors.white.withValues(alpha: 0.18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      title: Text(
-        label,
-        style: MBTextStyles.body.copyWith(
+    return Center(
+      child: Container(
+        width: 420,
+        padding: const EdgeInsets.all(MBSpacing.xl),
+        decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: BorderRadius.circular(MBRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: MBColors.shadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-      ),
-      onTap: onTap,
-    );
-  }
-}
-
-class _TopBarProxy extends StatelessWidget {
-  final String title;
-  final VoidCallback? onAdd;
-  final VoidCallback? onOpenQuarantine;
-
-  const _TopBarProxy({
-    required this.title,
-    this.onAdd,
-    this.onOpenQuarantine,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 76,
-      padding: const EdgeInsets.symmetric(horizontal: MBSpacing.xl),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: MBColors.border),
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: MBTextStyles.pageTitle,
-          ),
-          const Spacer(),
-          if (onOpenQuarantine != null)
-            SizedBox(
-              width: 180,
-              child: MBSecondaryButton(
-                text: 'Quarantine',
-                height: 44,
-                onPressed: onOpenQuarantine,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 44,
+              color: MBColors.primaryOrange,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'No products found',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
               ),
             ),
-          if (onOpenQuarantine != null) MBSpacing.w(MBSpacing.md),
-          if (onAdd != null)
-            SizedBox(
-              width: 170,
-              child: MBPrimaryButton(
-                text: 'Add Product',
-                height: 44,
-                onPressed: onAdd,
+            MBSpacing.h(MBSpacing.xs),
+            Text(
+              'Create your first product or adjust the current filters.',
+              textAlign: TextAlign.center,
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

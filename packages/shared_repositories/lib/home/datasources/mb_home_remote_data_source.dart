@@ -1,39 +1,27 @@
-import '../../../../data/dummy/dummy_catalog_data.dart';
-import '../../../../data/dummy/home_dummy_data.dart';
-import '../models/mb_home_cache_bundle.dart';
-
-// MB Home Remote Data Source
-// --------------------------
-// Remote contract for home fetching.
-// Current implementation uses dummy data.
-// Later replace with Firestore or Laravel API.
+import 'package:shared_models/home/mb_home_cache_bundle.dart';
 
 abstract class MBHomeRemoteDataSource {
   Future<MBHomeCacheBundle> fetchHomeBundle();
 }
 
 class MBDummyHomeRemoteDataSource implements MBHomeRemoteDataSource {
+  MBDummyHomeRemoteDataSource({
+    required MBHomeCacheBundle Function() bundleBuilder,
+    Duration delay = const Duration(milliseconds: 350),
+  })  : _bundleBuilder = bundleBuilder,
+        _delay = delay;
+
+  final MBHomeCacheBundle Function() _bundleBuilder;
+  final Duration _delay;
+
   @override
   Future<MBHomeCacheBundle> fetchHomeBundle() async {
-    await Future<void>.delayed(const Duration(milliseconds: 350));
+    await Future<void>.delayed(_delay);
 
-    return MBHomeCacheBundle(
-      config: HomeDummyData.config,
-      categories: DummyCatalogData.categories,
-      brands: DummyCatalogData.brands,
-      products: DummyCatalogData.products,
+    final MBHomeCacheBundle bundle = _bundleBuilder();
+
+    return bundle.copyWith(
       cachedAt: DateTime.now(),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

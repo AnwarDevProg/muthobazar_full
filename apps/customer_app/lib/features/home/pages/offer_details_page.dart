@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import '../../../core/responsive/mb_layout_grid.dart';
-import '../../../models/catalog/mb_product.dart';
-import '../../../models/home/mb_offer.dart';
+import 'package:shared_models/shared_models.dart';
 
 class MBOfferDetailsPage extends StatelessWidget {
   final MBOffer offer;

@@ -1,12 +1,13 @@
+import 'package:customer_app/features/cart/widgets/cart_section_card.dart';
+import 'package:customer_app/features/checkout/pages/checkout_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:shared_ui/shared_ui.dart';
 import 'package:customer_app/app/routes/customer_app_routes.dart';
-import '../../../core/widgets/common/mb_card.dart';
+
 import '../controllers/cart_controller.dart';
-import '../widgets/cart_section_card.dart';
-import 'checkout_page.dart';
+
 
 class CartPage extends StatelessWidget {
   const CartPage({super.key});

@@ -1,19 +1,13 @@
+import 'package:customer_app/features/home/widgets/sections/mb_home_category_grid_section.dart';
+import 'package:customer_app/features/home/widgets/sections/mb_home_hero_banner_section.dart';
+import 'package:customer_app/features/home/widgets/sections/mb_home_offer_strip_section.dart';
+import 'package:customer_app/features/home/widgets/sections/mb_home_product_grid_section.dart';
+import 'package:customer_app/features/home/widgets/sections/mb_home_product_horizontal_section.dart';
+import 'package:customer_app/features/home/widgets/sections/mb_home_unknown_section.dart';
 import 'package:flutter/material.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import '../../../models/catalog/mb_brand.dart';
-import '../../../models/catalog/mb_category.dart';
-import '../../../models/catalog/mb_product.dart';
-import '../../../models/home/mb_banner.dart';
-import '../../../models/home/mb_home_config.dart';
-import '../../../models/home/mb_home_section.dart';
-import '../../../models/home/mb_offer.dart';
-import 'sections/mb_home_category_grid_section.dart';
-import 'sections/mb_home_hero_banner_section.dart';
-import 'sections/mb_home_offer_strip_section.dart';
-import 'sections/mb_home_product_grid_section.dart';
-import 'sections/mb_home_product_horizontal_section.dart';
-import 'sections/mb_home_unknown_section.dart';
+import 'package:shared_models/shared_models.dart';
+
 
 // MB Home Renderer
 // ----------------

@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import '../../responsive/mb_spacing.dart';
-import '../../typography/mb_app_text.dart';
-import '../../../theme/mb_colors.dart';
-import '../../../theme/mb_gradients.dart';
-import '../../../theme/mb_radius.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 enum MBNotificationType {
   success,
@@ -159,7 +154,7 @@ class _MBNotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(MBSpacing.md),
+      padding: EdgeInsets.all(MBSpacing.md),
       decoration: BoxDecoration(
         color: MBColors.card,
         borderRadius: BorderRadius.circular(MBRadius.xl),

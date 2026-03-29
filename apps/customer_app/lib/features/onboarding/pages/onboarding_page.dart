@@ -1,10 +1,11 @@
+
+import 'package:customer_app/features/onboarding/controllers/onboarding_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:shared_ui/shared_ui.dart';
 
-import '../../theme/mb_text_theme.dart';
-import '../controllers/onboarding_controller.dart';
 
 
 class OnboardingPage extends StatelessWidget {

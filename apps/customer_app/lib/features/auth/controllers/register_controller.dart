@@ -1,3 +1,4 @@
+import 'package:customer_app/app/startup/customer_auth_redirect_service.dart';
 import 'package:customer_app/features/auth/helpers/firestore_auth_debug_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,15 +12,15 @@ import 'base_phone_auth_controller.dart';
 class RegisterController extends BasePhoneAuthController {
   RegisterController({
     RegisterRepository? repository,
-    AuthRedirectService? authRedirectService,
+    CustomerAuthRedirectService? authRedirectService,
     this.isSuperAdminRegistration = false,
     this.requestedRole = 'customer',
     this.bootstrapSuperAdmin = false,
   })  : _repository = repository ?? RegisterRepository(),
-        _authRedirectService = authRedirectService ?? AuthRedirectService();
+        _authRedirectService = authRedirectService ?? CustomerAuthRedirectService();
 
   final RegisterRepository _repository;
-  final AuthRedirectService _authRedirectService;
+  final CustomerAuthRedirectService _authRedirectService;
 
   final bool isSuperAdminRegistration;
   final String requestedRole;
@@ -390,12 +391,6 @@ class RegisterController extends BasePhoneAuthController {
 
   Future<void> continueAfterSuccess() async {
     await resetAllOtpSecurityStorage();
-
-    if (isSuperAdminRegistration && bootstrapSuperAdmin) {
-      Get.offAllNamed(AppRoutes.adminShell);
-      return;
-    }
-
     await _authRedirectService.screenRedirect();
   }
 

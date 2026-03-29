@@ -18,59 +18,72 @@ class AdminAccessController extends GetxController {
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<MBAdminPermission?>? _permissionSubscription;
 
+  User? get _currentUser => FirebaseAuth.instance.currentUser;
+
+  String get currentAdminUid => _currentUser?.uid ?? '';
+
+  String get currentAdminEmail => _currentUser?.email ?? '';
+
+  String get currentAdminName {
+    final String displayName = (_currentUser?.displayName ?? '').trim();
+    if (displayName.isNotEmpty) return displayName;
+
+    final String email = (_currentUser?.email ?? '').trim();
+    if (email.isNotEmpty) {
+      return email.split('@').first;
+    }
+
+    return 'Admin';
+  }
+
   bool get hasPermissionDoc => permission.value != null;
 
+  bool get isPermissionActive => permission.value?.isActive == true;
+
   bool get canAccessAdminPanel =>
-      permission.value?.isActive == true &&
-      permission.value?.canAccessAdminPanel == true;
+      isPermissionActive && permission.value?.canAccessAdminPanel == true;
 
   bool get isSuperAdmin =>
-      permission.value?.isActive == true &&
-      permission.value?.role == 'super_admin';
+      isPermissionActive && permission.value?.role == 'super_admin';
 
   bool get canManageAdmins =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageAdmins == true;
+      isPermissionActive && permission.value?.canManageAdmins == true;
 
   bool get canManageAdminInvites =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageAdminInvites == true;
+      isPermissionActive && permission.value?.canManageAdminInvites == true;
 
   bool get canManageAdminPermissions =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageAdminPermissions == true;
+      isPermissionActive && permission.value?.canManageAdminPermissions == true;
 
   bool get canManageUsers =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageUsers == true;
+      isPermissionActive && permission.value?.canManageUsers == true;
 
   bool get canManageCategories =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageCategories == true;
+      isPermissionActive && permission.value?.canManageCategories == true;
 
   bool get canManageBrands =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageBrands == true;
+      isPermissionActive && permission.value?.canManageBrands == true;
 
   bool get canManageProducts =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageProducts == true;
+      isPermissionActive && permission.value?.canManageProducts == true;
 
   bool get canManageBanners =>
-      permission.value?.isActive == true &&
-      permission.value?.canManageBanners == true;
+      isPermissionActive && permission.value?.canManageBanners == true;
+
+  bool get canManageCoupons =>
+      isPermissionActive && permission.value?.canManageCoupons == true;
+
+  bool get canManageOffers =>
+      isPermissionActive && permission.value?.canManageOffers == true;
 
   bool get canDeleteProducts =>
-      permission.value?.isActive == true &&
-      permission.value?.canDeleteProducts == true;
+      isPermissionActive && permission.value?.canDeleteProducts == true;
 
   bool get canRestoreProducts =>
-      permission.value?.isActive == true &&
-      permission.value?.canRestoreProducts == true;
+      isPermissionActive && permission.value?.canRestoreProducts == true;
 
   bool get canViewActivityLogs =>
-      permission.value?.isActive == true &&
-      permission.value?.canViewActivityLogs == true;
+      isPermissionActive && permission.value?.canViewActivityLogs == true;
 
   @override
   void onInit() {
@@ -82,31 +95,40 @@ class AdminAccessController extends GetxController {
     _authSubscription?.cancel();
     _permissionSubscription?.cancel();
 
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
-      _permissionSubscription?.cancel();
+    isLoading.value = true;
 
-      if (user == null) {
-        permission.value = null;
-        isLoading.value = false;
-        return;
-      }
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+          (User? user) {
+        _permissionSubscription?.cancel();
 
-      isLoading.value = true;
-
-      _permissionSubscription = _repository.watchPermission(user.uid).listen((MBAdminPermission? value) {
-          permission.value = value;
-          isLoading.value = false;
-        },
-        onError: (_) {
+        if (user == null) {
           permission.value = null;
           isLoading.value = false;
-        },
-      );
-    });
+          return;
+        }
+
+        isLoading.value = true;
+
+        _permissionSubscription = _repository.watchPermission(user.uid).listen(
+              (MBAdminPermission? value) {
+            permission.value = value;
+            isLoading.value = false;
+          },
+          onError: (_) {
+            permission.value = null;
+            isLoading.value = false;
+          },
+        );
+      },
+      onError: (_) {
+        permission.value = null;
+        isLoading.value = false;
+      },
+    );
   }
 
   Future<void> refreshPermission() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     if (uid.isEmpty) {
       permission.value = null;
       return;
@@ -115,6 +137,12 @@ class AdminAccessController extends GetxController {
     try {
       isLoading.value = true;
       permission.value = await _repository.fetchPermission(uid);
+    } catch (_) {
+      permission.value = null;
+      MBNotification.error(
+        title: 'Error',
+        message: 'Failed to refresh admin permission.',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -128,7 +156,7 @@ class AdminAccessController extends GetxController {
     try {
       isLoading.value = true;
 
-      final superPermission = MBAdminPermission.superAdmin(
+      final MBAdminPermission superPermission = MBAdminPermission.superAdmin(
         uid: uid,
         actorUid: uid,
       );
@@ -152,7 +180,7 @@ class AdminAccessController extends GetxController {
         targetType: 'admin_permission',
         targetId: uid,
         targetTitle: name,
-        summary: 'Initialized first super admin access for """"',
+        summary: 'Initialized first super admin access for "$name"',
         afterData: superPermission.toMap(),
       );
 
@@ -179,5 +207,3 @@ class AdminAccessController extends GetxController {
     super.onClose();
   }
 }
-
-

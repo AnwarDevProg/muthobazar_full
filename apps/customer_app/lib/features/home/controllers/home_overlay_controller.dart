@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import '../../../models/home/mb_home_config.dart';
-import '../../../models/home/mb_offer.dart';
+import 'package:shared_models/home/mb_home_config.dart';
+import 'package:shared_models/marketing/mb_offer.dart';
 
 // MB Home Overlay Controller
 // --------------------------

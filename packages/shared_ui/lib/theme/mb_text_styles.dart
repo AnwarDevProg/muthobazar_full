@@ -6,6 +6,44 @@ class MBTextStyles {
 
   static const String fontFamily = 'Poppins';
 
+  //MBTextStyles.h1 → Important screen heading
+  // MBTextStyles.h2 → Page title
+  // MBTextStyles.h3 → Section title
+  // MBTextStyles.body → Normal text
+  // MBTextStyles.caption → Secondary info
+
+  // ========================
+  // HEADINGS (NEW)
+  // ========================
+
+  static const TextStyle h1 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 26,
+    fontWeight: FontWeight.w700,
+    color: MBColors.textPrimary,
+    height: 1.2,
+  );
+
+  static const TextStyle h2 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: MBColors.textPrimary,
+    height: 1.2,
+  );
+
+  static const TextStyle h3 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: MBColors.textPrimary,
+    height: 1.3,
+  );
+
+  // ========================
+  // EXISTING
+  // ========================
+
   static const TextStyle hero = TextStyle(
     fontFamily: fontFamily,
     fontSize: 28,
@@ -70,14 +108,3 @@ class MBTextStyles {
     height: 1.2,
   );
 }
-
-
-
-
-
-
-
-
-
-
-

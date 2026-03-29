@@ -22,7 +22,7 @@ class OrderController extends GetxController {
 
   bool get isLoggedIn => _profileController.isLoggedIn;
   String get userId => _profileController.user.value.id;
-  MBUserProfile get currentUser => _profileController.user.value;
+  UserModel get currentUser => _profileController.user.value;
 
   @override
   void onInit() {

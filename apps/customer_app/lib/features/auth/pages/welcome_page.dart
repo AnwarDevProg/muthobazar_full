@@ -1,20 +1,8 @@
+import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import '../../../core/constants/mb_size_tokens.dart';
-import '../../../core/layout/mb_app_layout.dart';
-import '../../../core/layout/mb_screen_padding.dart';
-import '../../../core/responsive/mb_responsive.dart';
-import '../../../core/responsive/mb_spacing.dart';
-import '../../../core/routes/app_routes.dart';
-import '../../../core/typography/mb_app_text.dart';
-import '../../../core/widgets/common/mb_primary_button.dart';
-import '../../../core/widgets/common/mb_secondary_button.dart';
-import '../../../theme/mb_colors.dart';
-import '../../../theme/mb_gradients.dart';
-import '../../../theme/mb_radius.dart';
-import '../../admin/repositories/admin_setup_repository.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});

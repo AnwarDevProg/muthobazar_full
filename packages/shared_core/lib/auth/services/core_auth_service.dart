@@ -13,12 +13,22 @@ class AuthService {
 
   static String? get phoneNumber => currentUser?.phoneNumber;
 
+  static Stream<User?> get authStateChanges => instance.authStateChanges();
+
+  static Stream<User?> get idTokenChanges => instance.idTokenChanges();
+
+  static Future<User?> reloadCurrentUser() async {
+    final User? user = currentUser;
+    if (user == null) return null;
+
+    await user.reload();
+    return instance.currentUser;
+  }
+
   static Future<void> signOut() async {
     await instance.signOut();
   }
 }
-
-
 
 
 

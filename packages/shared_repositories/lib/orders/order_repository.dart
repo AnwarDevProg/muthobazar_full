@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_models/customer/mb_user_profile.dart';
+import 'package:shared_models/orders/mb_cart_item.dart';
+import 'package:shared_models/orders/mb_order.dart';
+import 'package:shared_models/orders/mb_order_item.dart';
 
-import '../../../models/catalog/mb_cart_item.dart';
-import '../../../models/commerce/mb_order.dart';
-import '../../../models/commerce/mb_order_item.dart';
-import '../../../models/user_model.dart';
 
 class OrderRepository {
   OrderRepository._();

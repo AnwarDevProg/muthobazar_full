@@ -1,163 +1,115 @@
+import 'package:admin_web/app/shell/admin_web_shell.dart';
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import 'package:admin_web/app/routes/admin_web_routes.dart';
-import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import '../controllers/admin_product_controller.dart';
 
 class AdminQuarantineProductsPage extends StatelessWidget {
   const AdminQuarantineProductsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final accessController = Get.find<AdminAccessController>();
-    final productController = Get.find<AdminProductController>();
+    final AdminAccessController accessController =
+    Get.find<AdminAccessController>();
+    final AdminProductController productController =
+    Get.find<AdminProductController>();
 
-    return Scaffold(
-      backgroundColor: MBColors.background,
-      body: Row(
-        children: [
-          _SidebarProxy(
-            currentRoute: AppRoutes.adminQuarantineProducts,
-            isSuperAdmin: accessController.isSuperAdmin,
+    return AdminWebShell(
+      child: Obx(() {
+        if (!accessController.canRestoreProducts) {
+          return const _NoRestorePermissionState();
+        }
+
+        if (productController.isQuarantineLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (productController.quarantineProducts.isEmpty) {
+          return const _EmptyQuarantineState();
+        }
+
+        return Column(
+          children: [
+            _QuarantineHeader(
+              count: productController.quarantineProducts.length,
+            ),
+            Expanded(
+              child: _QuarantineProductsTable(
+                items: productController.quarantineProducts,
+                onRestore: (id) async {
+                  await productController.restoreProduct(id);
+                },
+                onPermanentDelete: (id) async {
+                  await productController.hardDeleteQuarantineProduct(id);
+                },
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+}
+
+class _QuarantineHeader extends StatelessWidget {
+  const _QuarantineHeader({
+    required this.count,
+  });
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.85),
           ),
+        ),
+      ),
+      child: Row(
+        children: [
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _TopBarProxy(title: 'Quarantine Products'),
-                Expanded(
-                  child: Obx(() {
-                    if (!accessController.canRestoreProducts) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'You do not have permission to restore products.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (productController.isQuarantineLoading.value) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    if (productController.quarantineProducts.isEmpty) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'No quarantine products found.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(MBSpacing.xl),
-                      itemCount: productController.quarantineProducts.length,
-                      itemBuilder: (context, index) {
-                        final item = productController.quarantineProducts[index];
-                        final productData = Map<String, dynamic>.from(
-                          item['productData'] as Map<String, dynamic>? ?? const {},
-                        );
-
-                        final title =
-                        (productData['titleEn'] ?? 'Untitled Product').toString();
-                        final deletedAt = (item['deletedAt'] ?? '').toString();
-                        final deleteAfterAt = (item['deleteAfterAt'] ?? '').toString();
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: MBSpacing.md),
-                          child: MBCard(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        style: MBTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      MBSpacing.h(MBSpacing.xxxs),
-                                      Text(
-                                        'Deleted At: $deletedAt',
-                                        style: MBTextStyles.caption,
-                                      ),
-                                      MBSpacing.h(MBSpacing.xxxs),
-                                      Text(
-                                        'Auto Delete After: $deleteAfterAt',
-                                        style: MBTextStyles.caption,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                MBSecondaryButton(
-                                  text: 'Restore',
-                                  expand: false,
-                                  height: 40,
-                                  onPressed: () async {
-                                    await productController
-                                        .restoreProduct(item['id'].toString());
-                                  },
-                                ),
-                                MBSpacing.w(MBSpacing.sm),
-                                MBSecondaryButton(
-                                  text: 'Delete Permanently',
-                                  expand: false,
-                                  height: 40,
-                                  foregroundColor: MBColors.error,
-                                  borderColor: MBColors.error,
-                                  onPressed: () async {
-                                    final confirmed = await showDialog<bool>(
-                                      context: context,
-                                      builder: (_) => AlertDialog(
-                                        title: const Text('Delete Permanently'),
-                                        content: Text(
-                                          'Delete "$title" permanently from quarantine?',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () => Navigator.of(context).pop(true),
-                                            child: const Text('Delete'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-
-                                    if (confirmed == true) {
-                                      await productController
-                                          .hardDeleteQuarantineProduct(
-                                        item['id'].toString(),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
+                Text(
+                  'Quarantine Products',
+                  style: MBTextStyles.sectionTitle.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                MBSpacing.h(MBSpacing.xxxs),
+                Text(
+                  'Products moved here can be restored or permanently deleted.',
+                  style: MBTextStyles.body.copyWith(
+                    color: MBColors.textSecondary,
+                  ),
                 ),
               ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: MBSpacing.md,
+              vertical: MBSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              gradient: MBGradients.primaryGradient,
+              borderRadius: BorderRadius.circular(MBRadius.pill),
+            ),
+            child: Text(
+              '$count item${count == 1 ? '' : 's'}',
+              style: MBTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -166,110 +118,337 @@ class AdminQuarantineProductsPage extends StatelessWidget {
   }
 }
 
-class _SidebarProxy extends StatelessWidget {
-  final String currentRoute;
-  final bool isSuperAdmin;
-
-  const _SidebarProxy({
-    required this.currentRoute,
-    required this.isSuperAdmin,
+class _QuarantineProductsTable extends StatelessWidget {
+  const _QuarantineProductsTable({
+    required this.items,
+    required this.onRestore,
+    required this.onPermanentDelete,
   });
+
+  final List<Map<String, dynamic>> items;
+  final Future<void> Function(String id) onRestore;
+  final Future<void> Function(String id) onPermanentDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      decoration: const BoxDecoration(
-        color: MBColors.primaryOrange,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(MBSpacing.md),
-          child: Column(
-            children: [
-              _ProxyTile(
-                label: 'Products',
-                selected: currentRoute == AppRoutes.adminProducts,
-                onTap: () => Get.offNamed(AppRoutes.adminProducts),
-              ),
-              _ProxyTile(
-                label: 'Quarantine',
-                selected: currentRoute == AppRoutes.adminQuarantineProducts,
-                onTap: () => Get.offNamed(AppRoutes.adminQuarantineProducts),
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(MBRadius.lg),
+          side: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.9),
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 24,
+            headingRowHeight: 56,
+            dataRowMinHeight: 92,
+            dataRowMaxHeight: 108,
+            columns: const [
+              DataColumn(label: Text('Product')),
+              DataColumn(label: Text('Deleted At')),
+              DataColumn(label: Text('Auto Delete After')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
+            rows: items.map((item) {
+              final Map<String, dynamic> productData = Map<String, dynamic>.from(
+                item['productData'] as Map<String, dynamic>? ?? const {},
+              );
+
+              final String id = item['id'].toString();
+              final String titleEn =
+              (productData['titleEn'] ?? 'Untitled Product').toString();
+              final String titleBn =
+              (productData['titleBn'] ?? '').toString();
+              final String thumbnailUrl =
+              (productData['thumbnailUrl'] ?? '').toString();
+              final String sku = (productData['sku'] ?? '-').toString();
+              final String deletedAt = _prettyDate(item['deletedAt']);
+              final String deleteAfterAt = _prettyDate(item['deleteAfterAt']);
+
+              return DataRow(
+                cells: [
+                  DataCell(
+                    SizedBox(
+                      width: 340,
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(MBRadius.md),
+                            child: thumbnailUrl.isNotEmpty
+                                ? Image.network(
+                              thumbnailUrl,
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 56,
+                                height: 56,
+                                color: MBColors.background,
+                                child: const Icon(
+                                  Icons.broken_image_outlined,
+                                ),
+                              ),
+                            )
+                                : Container(
+                              width: 56,
+                              height: 56,
+                              color: MBColors.background,
+                              child: const Icon(
+                                Icons.inventory_2_outlined,
+                              ),
+                            ),
+                          ),
+                          MBSpacing.w(MBSpacing.md),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  titleEn,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (titleBn.isNotEmpty) ...[
+                                  MBSpacing.h(MBSpacing.xxxs),
+                                  Text(
+                                    titleBn,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: MBTextStyles.caption.copyWith(
+                                      color: MBColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                                MBSpacing.h(MBSpacing.xxxs),
+                                Text(
+                                  'SKU: $sku',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.caption.copyWith(
+                                    color: MBColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(Text(deletedAt)),
+                  DataCell(Text(deleteAfterAt)),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: MBSpacing.md,
+                        vertical: MBSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: MBColors.warning.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(MBRadius.pill),
+                      ),
+                      child: Text(
+                        'In Quarantine',
+                        style: MBTextStyles.caption.copyWith(
+                          color: MBColors.warning,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      children: [
+                        MBSecondaryButton(
+                          text: 'Restore',
+                          expand: false,
+                          height: 40,
+                          onPressed: () async {
+                            final bool? confirmed = await Get.dialog<bool>(
+                              AlertDialog(
+                                title: const Text('Restore product'),
+                                content: Text(
+                                  'Do you want to restore "$titleEn" back to active products?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('Restore'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true) {
+                              await onRestore(id);
+                            }
+                          },
+                        ),
+                        MBSpacing.w(MBSpacing.sm),
+                        MBSecondaryButton(
+                          text: 'Delete Permanently',
+                          expand: false,
+                          height: 40,
+                          foregroundColor: MBColors.error,
+                          borderColor: MBColors.error,
+                          onPressed: () async {
+                            final bool? confirmed = await Get.dialog<bool>(
+                              AlertDialog(
+                                title: const Text('Delete permanently'),
+                                content: Text(
+                                  'Delete "$titleEn" permanently from quarantine?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true) {
+                              await onPermanentDelete(id);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),
     );
   }
+
+  static String _prettyDate(dynamic value) {
+    final raw = (value ?? '').toString().trim();
+    if (raw.isEmpty) return '-';
+
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+
+    return parsed.toString().split('.').first;
+  }
 }
 
-class _ProxyTile extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ProxyTile({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _NoRestorePermissionState extends StatelessWidget {
+  const _NoRestorePermissionState();
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      selected: selected,
-      selectedTileColor: Colors.white.withValues(alpha: 0.18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      title: Text(
-        label,
-        style: MBTextStyles.body.copyWith(
+    return Center(
+      child: Container(
+        width: 480,
+        padding: const EdgeInsets.all(MBSpacing.xl),
+        decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: BorderRadius.circular(MBRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: MBColors.shadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              size: 44,
+              color: MBColors.error,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'Permission Required',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            MBSpacing.h(MBSpacing.xs),
+            Text(
+              'You do not have permission to restore quarantine products.',
+              textAlign: TextAlign.center,
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
-      onTap: onTap,
     );
   }
 }
 
-class _TopBarProxy extends StatelessWidget {
-  final String title;
-
-  const _TopBarProxy({
-    required this.title,
-  });
+class _EmptyQuarantineState extends StatelessWidget {
+  const _EmptyQuarantineState();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 76,
-      padding: const EdgeInsets.symmetric(horizontal: MBSpacing.xl),
-      alignment: Alignment.centerLeft,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: MBColors.border),
+    return Center(
+      child: Container(
+        width: 460,
+        padding: const EdgeInsets.all(MBSpacing.xl),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MBRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: MBColors.shadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-      ),
-      child: Text(
-        title,
-        style: MBTextStyles.pageTitle,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 44,
+              color: MBColors.primaryOrange,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'No Quarantine Products',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            MBSpacing.h(MBSpacing.xs),
+            Text(
+              'Deleted products will appear here before permanent removal.',
+              textAlign: TextAlign.center,
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

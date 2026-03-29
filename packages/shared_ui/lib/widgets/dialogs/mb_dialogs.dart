@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_ui/shared_ui.dart';
 
-import '../../responsive/mb_spacing.dart';
-
-import '../../typography/mb_app_text.dart';
-import '../common/mb_primary_button.dart';
-import '../common/mb_secondary_button.dart';
-import '../../../theme/mb_colors.dart';
-import '../../../theme/mb_gradients.dart';
-import '../../../theme/mb_radius.dart';
 
 enum MBDialogType {
   info,
@@ -63,8 +56,11 @@ class MBDialogs {
     );
   }
 
-  static Future<void> showLoginRequired(BuildContext context) async {
-    final shouldLogin = await showConfirm(
+  static Future<bool> showLoginRequired(
+      BuildContext context, {
+        Future<void> Function()? onLoginTap,
+      }) async {
+    final bool? shouldLogin = await showConfirm(
       context: context,
       title: 'Login Required',
       message: 'You need to login first to use this feature.',
@@ -75,8 +71,13 @@ class MBDialogs {
     );
 
     if (shouldLogin == true) {
-      Get.back(); // or pass callback
+      if (onLoginTap != null) {
+        await onLoginTap();
+      }
+      return true;
     }
+
+    return false;
   }
 
   static Future<void> showInfo({

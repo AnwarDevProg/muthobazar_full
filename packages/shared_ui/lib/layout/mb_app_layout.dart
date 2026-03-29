@@ -5,19 +5,15 @@ import '../responsive/mb_spacing.dart';
 class MBAppLayout extends StatelessWidget {
   final Widget child;
 
-  // Optional sections
   final Widget? header;
   final Widget? footer;
 
-  // Layout modes
   final bool scrollable;
   final bool sliverMode;
   final bool pinnedHeader;
 
-  // Refresh
   final Future<void> Function()? onRefresh;
 
-  // States
   final bool isLoading;
   final bool isEmpty;
   final bool hasError;
@@ -26,19 +22,15 @@ class MBAppLayout extends StatelessWidget {
   final Widget? emptyWidget;
   final Widget? errorWidget;
 
-  // Background
   final Gradient? topGradient;
   final Color? backgroundColor;
 
-  // Safe area
   final bool safeTop;
   final bool safeBottom;
 
-  // Width / padding
   final EdgeInsetsGeometry? padding;
   final double? maxWidth;
 
-  // Scaffold features
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
 
@@ -81,7 +73,7 @@ class MBAppLayout extends StatelessWidget {
               ),
             ),
           ),
-          content,
+          Positioned.fill(child: content),
         ],
       );
     }
@@ -132,44 +124,69 @@ class MBAppLayout extends StatelessWidget {
   }
 
   Widget _buildStandardLayout(BuildContext context) {
-    final resolvedPadding = padding ?? MBSpacing.pagePadding(context);
-
-    final contentColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (header != null) header!,
-        if (header != null) MBSpacing.h(MBSpacing.blockGap(context)),
-        Padding(
-          padding: resolvedPadding,
-          child: child,
-        ),
-        if (footer != null) footer!,
-      ],
-    );
-
-    Widget body;
+    final EdgeInsetsGeometry resolvedPadding =
+        padding ?? MBSpacing.pagePadding(context);
 
     if (scrollable) {
-      body = SingleChildScrollView(
+      Widget body = SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: contentColumn,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (header != null) header!,
+            if (header != null) MBSpacing.h(MBSpacing.blockGap(context)),
+            Padding(
+              padding: resolvedPadding,
+              child: child,
+            ),
+            if (footer != null) footer!,
+          ],
+        ),
       );
-    } else {
-      body = MBResponsiveContainer(
-        padding: EdgeInsets.zero,
-        maxWidth: maxWidth,
-        child: contentColumn,
-      );
-    }
 
-    if (scrollable) {
       body = MBResponsiveContainer(
         padding: EdgeInsets.zero,
         maxWidth: maxWidth,
         child: body,
       );
+
+      if (onRefresh != null) {
+        body = RefreshIndicator(
+          onRefresh: onRefresh!,
+          child: body,
+        );
+      }
+
+      return body;
     }
+
+    Widget body = LayoutBuilder(
+      builder: (context, constraints) {
+        return MBResponsiveContainer(
+          padding: EdgeInsets.zero,
+          maxWidth: maxWidth,
+          child: SizedBox(
+            width: double.infinity,
+            height: constraints.maxHeight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (header != null) header!,
+                if (header != null) MBSpacing.h(MBSpacing.blockGap(context)),
+                Expanded(
+                  child: Padding(
+                    padding: resolvedPadding,
+                    child: child,
+                  ),
+                ),
+                if (footer != null) footer!,
+              ],
+            ),
+          ),
+        );
+      },
+    );
 
     if (onRefresh != null) {
       body = RefreshIndicator(
@@ -236,14 +253,3 @@ class MBAppLayout extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

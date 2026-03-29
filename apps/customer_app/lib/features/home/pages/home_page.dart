@@ -1,19 +1,12 @@
+
+import 'package:customer_app/features/home/controllers/home_controller.dart';
+import 'package:customer_app/features/home/pages/offer_details_page.dart';
+import 'package:customer_app/features/home/widgets/floating_offer_card.dart';
+import 'package:customer_app/features/home/widgets/home_cache_debug_section.dart';
+import 'package:customer_app/features/home/widgets/home_renderer.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:shared_ui/shared_ui.dart';
-import '../controllers/mb_home_controller.dart';
-import '../widgets/mb_floating_offer_card.dart';
-import '../widgets/mb_home_cache_debug_section.dart';
-import '../widgets/mb_home_renderer.dart';
-import '../widgets/mb_offer_details_page.dart';
-
-// Home Page
-// ---------
-// Controller-driven HomePage for MuthoBazar.
-// Uses a bounded SizedBox + Stack to safely support:
-// - scrollable content
-// - floating offer overlay
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -43,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
     super.dispose();
   }
 
@@ -103,7 +97,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final floatingOffer = _controller.floatingOffer;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return MBAppLayout(
       backgroundColor: MBColors.background,
@@ -111,66 +104,66 @@ class _HomePageState extends State<HomePage> {
       safeBottom: false,
       padding: EdgeInsets.zero,
       scrollable: false,
-      child: SizedBox(
-        height: screenHeight,
-        width: double.infinity,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RefreshIndicator(
-                onRefresh: _refresh,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  children: [
-                    const _HomeHeader(),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: MBSpacing.pageHorizontal(context),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: MBSpacing.md),
-                          if (_showCacheDebugSection) ...[
-                            MBHomeCacheDebugSection(
-                              isUsingCachedData: _controller.isUsingCachedData,
-                              isLoading: _controller.isLoading,
-                              isRefreshing: _controller.isRefreshing,
-                              lastSyncedAt: _controller.lastSyncedAt,
-                              cacheState: _controller.cacheState,
-                            ),
-                            const SizedBox(height: MBSpacing.lg),
-                          ],
-                          MBHomeRenderer(
-                            config: _controller.config,
-                            products: _controller.products,
-                            categories: _controller.categories,
-                            brands: _controller.brands,
-                            onBannerTap: _handleBannerTap,
-                            onOfferTap: _handleOfferTap,
-                            onCategoryTap: _handleCategoryTap,
-                            onProductTap: _handleProductTap,
-                            onViewAllTap: _handleViewAllTap,
-                          ),
-                          const SizedBox(height: MBSpacing.xl),
-                        ],
-                      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                children: [
+                  const _HomeHeader(),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MBSpacing.pageHorizontal(context),
                     ),
-                  ],
-                ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: MBSpacing.md),
+                        if (_showCacheDebugSection) ...[
+                          MBHomeCacheDebugSection(
+                            isUsingCachedData: _controller.isUsingCachedData,
+                            isLoading: _controller.isLoading,
+                            isRefreshing: _controller.isRefreshing,
+                            lastSyncedAt: _controller.lastSyncedAt,
+                            cacheState: _controller.cacheState,
+                          ),
+                          const SizedBox(height: MBSpacing.lg),
+                        ],
+                        MBHomeRenderer(
+                          config: _controller.config,
+                          products: _controller.products,
+                          categories: _controller.categories,
+                          brands: _controller.brands,
+                          onBannerTap: _handleBannerTap,
+                          onOfferTap: _handleOfferTap,
+                          onCategoryTap: _handleCategoryTap,
+                          onProductTap: _handleProductTap,
+                          onViewAllTap: _handleViewAllTap,
+                        ),
+                        const SizedBox(height: 140),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (floatingOffer != null)
-              MBFloatingOfferCard(
+          ),
+          if (floatingOffer != null)
+            Positioned(
+              right: 16,
+              bottom: 20,
+              child: MBFloatingOfferCard(
                 offer: floatingOffer,
                 onClose: () {
                   _controller.closeFloatingOffer();
                 },
                 onTap: _openFloatingOfferDetails,
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

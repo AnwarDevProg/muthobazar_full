@@ -1,0 +1,920 @@
+Use this pattern: allow exactly one controlled bootstrap path through a single setup document, then lock everything down forever after bootstrap is completed.
+
+This gives you:
+
+no temporary weak rules
+no client-side open admin creation
+first super admin can be created once
+after that, normal super-admin permission rules take over
+Required idea
+
+Create one document manually in Firebase Console before first launch:
+
+Collection: system
+Document ID: bootstrap
+
+Initial document:
+
+{
+  "allowFirstSuperAdminSetup": true,
+  "firstSuperAdminUid": "",
+  "bootstrapCompleted": false
+}
+
+Your setup page should then:
+
+create /admin_permissions/{uid}
+create /admins/{uid}
+update /system/bootstrap to:
+allowFirstSuperAdminSetup: false
+firstSuperAdminUid: "<that uid>"
+bootstrapCompleted: true
+
+All in one client batch/transaction.
+
+Final bootstrap-safe production firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // Base helpers
+    // =========================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // =========================================================
+    // Bootstrap helpers
+    // =========================================================
+
+    function bootstrapDocPath() {
+      return /databases/$(database)/documents/system/bootstrap;
+    }
+
+    function bootstrapDocExists() {
+      return exists(bootstrapDocPath());
+    }
+
+    function bootstrapDoc() {
+      return get(bootstrapDocPath()).data;
+    }
+
+    function bootstrapOpen() {
+      return bootstrapDocExists()
+        && bootstrapDoc().allowFirstSuperAdminSetup == true
+        && bootstrapDoc().bootstrapCompleted == false;
+    }
+
+    function isBootstrappingSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validBootstrapWrite(uid) {
+      return bootstrapOpen()
+        && isBootstrappingSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'super_admin'
+        && request.resource.data.isActive == true
+        && request.resource.data.canAccessAdminPanel == true
+        && request.resource.data.canManageAdmins == true
+        && request.resource.data.canManageAdminInvites == true
+        && request.resource.data.canManageAdminPermissions == true
+        && request.resource.data.canManageUsers == true
+        && request.resource.data.canManageCategories == true
+        && request.resource.data.canManageBrands == true
+        && request.resource.data.canManageProducts == true
+        && request.resource.data.canManageBanners == true
+        && request.resource.data.canManageCoupons == true
+        && request.resource.data.canManageOffers == true
+        && request.resource.data.canDeleteProducts == true
+        && request.resource.data.canRestoreProducts == true
+        && request.resource.data.canViewActivityLogs == true;
+    }
+
+    function validBootstrapAdminProfile(uid) {
+      return bootstrapOpen()
+        && isBootstrappingSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'super_admin';
+    }
+
+    function validBootstrapFinalize() {
+      return bootstrapOpen()
+        && signedIn()
+        && request.resource.data.allowFirstSuperAdminSetup == false
+        && request.resource.data.bootstrapCompleted == true
+        && request.resource.data.firstSuperAdminUid == request.auth.uid;
+    }
+
+    // =========================================================
+    // Admin permission helpers
+    // =========================================================
+
+    function adminPermissionDoc(uid) {
+      return /databases/$(database)/documents/admin_permissions/$(uid);
+    }
+
+    function hasAdminPermissionDoc() {
+      return signedIn() && exists(adminPermissionDoc(request.auth.uid));
+    }
+
+    function adminPermission() {
+      return get(adminPermissionDoc(request.auth.uid)).data;
+    }
+
+    function isActiveAdmin() {
+      return hasAdminPermissionDoc()
+        && adminPermission().isActive == true
+        && adminPermission().canAccessAdminPanel == true;
+    }
+
+    function isSuperAdmin() {
+      return isActiveAdmin()
+        && adminPermission().role == 'super_admin';
+    }
+
+    function canManageUsers() {
+      return isActiveAdmin() && adminPermission().canManageUsers == true;
+    }
+
+    function canManageCategories() {
+      return isActiveAdmin() && adminPermission().canManageCategories == true;
+    }
+
+    function canManageBrands() {
+      return isActiveAdmin() && adminPermission().canManageBrands == true;
+    }
+
+    function canManageProducts() {
+      return isActiveAdmin() && adminPermission().canManageProducts == true;
+    }
+
+    function canManageBanners() {
+      return isActiveAdmin() && adminPermission().canManageBanners == true;
+    }
+
+    function canManageCoupons() {
+      return isActiveAdmin() && adminPermission().canManageCoupons == true;
+    }
+
+    function canManageOffers() {
+      return isActiveAdmin() && adminPermission().canManageOffers == true;
+    }
+
+    function canManageAdmins() {
+      return isActiveAdmin() && adminPermission().canManageAdmins == true;
+    }
+
+    function canManageAdminInvites() {
+      return isActiveAdmin() && adminPermission().canManageAdminInvites == true;
+    }
+
+    function canManageAdminPermissions() {
+      return isActiveAdmin() && adminPermission().canManageAdminPermissions == true;
+    }
+
+    function canDeleteProducts() {
+      return isActiveAdmin() && adminPermission().canDeleteProducts == true;
+    }
+
+    function canRestoreProducts() {
+      return isActiveAdmin() && adminPermission().canRestoreProducts == true;
+    }
+
+    function canViewActivityLogs() {
+      return isActiveAdmin() && adminPermission().canViewActivityLogs == true;
+    }
+
+    // =========================================================
+    // Phone helpers
+    // =========================================================
+
+    function phoneIndexDoc(phone) {
+      return /databases/$(database)/documents/phone_index/$(phone);
+    }
+
+    function phoneIndexExists(phone) {
+      return exists(phoneIndexDoc(phone));
+    }
+
+    function existingPhoneUid(phone) {
+      return get(phoneIndexDoc(phone)).data.Uid;
+    }
+
+    function incomingUidMatchesAuth() {
+      return signedIn() && request.resource.data.Uid == request.auth.uid;
+    }
+
+    function incomingPhoneMatchesDocId(phone) {
+      return request.resource.data.PhoneNumber == phone;
+    }
+
+    function validBdPhone(phone) {
+      return phone is string
+        && phone.matches('^01[3-9][0-9]{8}$');
+    }
+
+    function validPhoneIndexKeys() {
+      return request.resource.data.keys().hasOnly([
+        'Uid',
+        'PhoneNumber',
+        'PhoneNumberE164',
+        'UpdatedAt'
+      ]);
+    }
+
+    function validPhoneIndexPayload(phone) {
+      return validPhoneIndexKeys()
+        && incomingUidMatchesAuth()
+        && incomingPhoneMatchesDocId(phone)
+        && validBdPhone(phone)
+        && (
+          !('PhoneNumberE164' in request.resource.data)
+          || request.resource.data.PhoneNumberE164 is string
+        );
+    }
+
+    // =========================================================
+    // System
+    // =========================================================
+
+    match /system/bootstrap {
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Create only from console/admin SDK, not client
+      allow create: if false;
+
+      // One-time finalize by the first signed-in bootstrapper
+      allow update: if validBootstrapFinalize();
+
+      // Never delete from client
+      allow delete: if false;
+    }
+
+    // =========================================================
+    // Users
+    // =========================================================
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || canManageUsers();
+
+      allow create, update: if isSelf(userId)
+        && request.resource.data.keys().hasOnly([
+          'FirstName',
+          'LastName',
+          'Email',
+          'PhoneNumber',
+          'PhoneNumberE164',
+          'ProfilePicture',
+          'Gender',
+          'DOB',
+          'Role',
+          'AccountStatus',
+          'IsGuest',
+          'DefaultAddressId',
+          'Addresses',
+          'CreatedAt',
+          'UpdatedAt',
+          'LastLoginAt'
+        ]);
+
+      allow update: if canManageUsers();
+
+      allow delete: if isSelf(userId) || isSuperAdmin();
+
+      match /cart/{cartItemId} {
+        allow read, write: if isSelf(userId);
+      }
+
+      match /addresses/{addressId} {
+        allow read, write: if isSelf(userId);
+      }
+    }
+
+    // =========================================================
+    // Phone index / history
+    // =========================================================
+
+    match /phone_index/{phone} {
+      allow get: if validBdPhone(phone);
+      allow list: if false;
+
+      allow create: if signedIn()
+        && validPhoneIndexPayload(phone)
+        && !phoneIndexExists(phone);
+
+      allow update: if signedIn()
+        && phoneIndexExists(phone)
+        && existingPhoneUid(phone) == request.auth.uid
+        && validPhoneIndexPayload(phone);
+
+      allow delete: if signedIn()
+        && phoneIndexExists(phone)
+        && existingPhoneUid(phone) == request.auth.uid;
+    }
+
+    match /phone_history/{historyId} {
+      allow read: if signedIn() && resource.data.Uid == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.Uid == request.auth.uid
+        && request.resource.data.OldPhoneNumber is string
+        && request.resource.data.NewPhoneNumber is string
+        && request.resource.data.ChangeType == 'user_phone_update'
+        && request.resource.data.Sequence is int;
+
+      allow update, delete: if false;
+    }
+
+    // =========================================================
+    // Admin security collections
+    // =========================================================
+
+    match /admin_permissions/{uid} {
+      allow get: if isSelf(uid) || canManageAdminPermissions();
+      allow list: if canManageAdminPermissions() || isSuperAdmin();
+
+      // One-time self-bootstrap only when bootstrap doc is open
+      allow create: if validBootstrapWrite(uid) || isSuperAdmin();
+
+      allow update: if canManageAdminPermissions() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isSelf(uid) || canManageAdmins();
+      allow list: if canManageAdmins() || isSuperAdmin();
+
+      // One-time self-bootstrap only when bootstrap doc is open
+      allow create: if validBootstrapAdminProfile(uid) || canManageAdmins() || isSuperAdmin();
+
+      allow update: if canManageAdmins() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admin_invites/{inviteId} {
+      allow read: if canManageAdminInvites() || isSuperAdmin();
+      allow create: if canManageAdminInvites() || isSuperAdmin();
+      allow update: if canManageAdminInvites() || isSuperAdmin();
+      allow delete: if canManageAdminInvites() || isSuperAdmin();
+    }
+
+    match /admin_activity_logs/{logId} {
+      allow read: if canViewActivityLogs() || isSuperAdmin();
+      allow create: if isActiveAdmin();
+      allow update, delete: if false;
+    }
+
+    // =========================================================
+    // Catalog
+    // =========================================================
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if canManageProducts();
+      allow delete: if canDeleteProducts() || isSuperAdmin();
+    }
+
+    match /quarantine_products/{productId} {
+      allow read: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
+      allow create: if canDeleteProducts() || canManageProducts() || isSuperAdmin();
+      allow update: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
+      allow delete: if canDeleteProducts() || isSuperAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if canManageCategories() || isSuperAdmin();
+    }
+
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create, update, delete: if canManageBrands() || isSuperAdmin();
+    }
+
+    // =========================================================
+    // Marketing
+    // =========================================================
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if canManageBanners() || isSuperAdmin();
+    }
+
+    match /offers/{offerId} {
+      allow read: if true;
+      allow create, update, delete: if canManageOffers() || isSuperAdmin();
+    }
+
+    match /promos/{promoId} {
+      allow read: if canManageCoupons() || isSuperAdmin();
+      allow create, update, delete: if canManageCoupons() || isSuperAdmin();
+    }
+
+    match /user_promos/{promoId} {
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid)
+        || canManageCoupons()
+        || isSuperAdmin();
+
+      allow create, update, delete: if canManageCoupons() || isSuperAdmin();
+    }
+
+    // =========================================================
+    // Orders
+    // =========================================================
+
+    match /orders/{orderId} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.Uid == request.auth.uid
+        || isActiveAdmin()
+      );
+
+      allow create: if signedIn();
+
+      allow update: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.Uid == request.auth.uid
+        || isActiveAdmin()
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================
+    // Catch all
+    // =========================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+How bootstrap works with this
+Step 1
+
+Manually create this doc in Firebase Console:
+
+/system/bootstrap
+
+{
+  "allowFirstSuperAdminSetup": true,
+  "firstSuperAdminUid": "",
+  "bootstrapCompleted": false
+}
+Step 2
+
+A signed-in user opens your setup page and performs a single batch/transaction that:
+
+creates /admin_permissions/{uid} as full super admin
+creates /admins/{uid}
+updates /system/bootstrap
+
+Final bootstrap doc becomes:
+
+{
+  "allowFirstSuperAdminSetup": false,
+  "firstSuperAdminUid": "THE_UID",
+  "bootstrapCompleted": true
+}
+Step 3
+
+After that:
+
+no one can use bootstrap path again
+all future admin creation must come from a super admin
+Important implementation note
+
+Your bootstrap transaction should update all 3 docs together in one batch:
+
+admin_permissions/{uid}
+admins/{uid}
+system/bootstrap
+
+That avoids half-completed bootstrap states.
+
+Recommended client-side bootstrap sequence
+
+In your setup page/controller:
+
+sign in user
+get current uid
+batch:
+set admin_permissions/{uid}
+set admins/{uid}
+update system/bootstrap
+refresh access controller
+route to dashboard
+Why this is safer
+
+This avoids:
+
+temporarily weak rules
+open self-promotion to admin after launch
+accidental multiple super-admin bootstrap
+dependency on manual admin_permissions creation
+
+Only the existence and state of /system/bootstrap controls the one-time bootstrap path.
+
+If you want, next I’ll give you the exact Flutter batch write code for SetupSuperAdminPage that matches this rule set.
+
+
+
+****************************Flutter batch write code*****************************
+
+
+Use this exact batch-write pattern for your first super-admin setup.
+
+It matches the bootstrap-safe rules I gave you:
+
+creates admin_permissions/{uid}
+creates admins/{uid}
+updates system/bootstrap
+all in one atomic batch
+
+I’m giving you a clean production-ready helper plus a sample page action.
+
+1) Super-admin bootstrap service
+
+Create this file:
+
+features/setup/services/setup_super_admin_service.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_models/shared_models.dart';
+
+class SetupSuperAdminService {
+  SetupSuperAdminService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  Future<void> bootstrapFirstSuperAdmin({
+    required String fullName,
+    required String email,
+  }) async {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No signed-in user found.');
+    }
+
+    final String uid = user.uid;
+    final DateTime now = DateTime.now();
+
+    final DocumentReference<Map<String, dynamic>> bootstrapRef =
+        _firestore.collection('system').doc('bootstrap');
+
+    final DocumentReference<Map<String, dynamic>> permissionRef =
+        _firestore.collection('admin_permissions').doc(uid);
+
+    final DocumentReference<Map<String, dynamic>> adminProfileRef =
+        _firestore.collection('admins').doc(uid);
+
+    final MBAdminPermission permission = MBAdminPermission.superAdmin(
+      uid: uid,
+      actorUid: uid,
+    );
+
+    await _firestore.runTransaction((transaction) async {
+      final DocumentSnapshot<Map<String, dynamic>> bootstrapSnap =
+          await transaction.get(bootstrapRef);
+
+      if (!bootstrapSnap.exists) {
+        throw Exception(
+          'Bootstrap document is missing. Create /system/bootstrap first.',
+        );
+      }
+
+      final Map<String, dynamic> bootstrapData = bootstrapSnap.data() ?? {};
+
+      final bool allowFirstSuperAdminSetup =
+          bootstrapData['allowFirstSuperAdminSetup'] == true;
+      final bool bootstrapCompleted =
+          bootstrapData['bootstrapCompleted'] == true;
+
+      if (!allowFirstSuperAdminSetup || bootstrapCompleted) {
+        throw Exception('Super admin bootstrap is already closed.');
+      }
+
+      final DocumentSnapshot<Map<String, dynamic>> permissionSnap =
+          await transaction.get(permissionRef);
+
+      final DocumentSnapshot<Map<String, dynamic>> adminProfileSnap =
+          await transaction.get(adminProfileRef);
+
+      if (permissionSnap.exists || adminProfileSnap.exists) {
+        throw Exception(
+          'This account already has admin bootstrap data.',
+        );
+      }
+
+      transaction.set(
+        permissionRef,
+        permission.toMap(),
+      );
+
+      transaction.set(
+        adminProfileRef,
+        <String, dynamic>{
+          'uid': uid,
+          'name': fullName.trim(),
+          'email': email.trim(),
+          'role': 'super_admin',
+          'isActive': true,
+          'createdAt': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+          'createdByUid': uid,
+          'updatedByUid': uid,
+        },
+      );
+
+      transaction.update(
+        bootstrapRef,
+        <String, dynamic>{
+          'allowFirstSuperAdminSetup': false,
+          'firstSuperAdminUid': uid,
+          'bootstrapCompleted': true,
+          'updatedAt': now.toIso8601String(),
+        },
+      );
+    });
+  }
+}
+2) Example controller for setup page
+
+If you want a proper GetX controller, use this:
+
+features/setup/controllers/setup_super_admin_controller.dart
+import 'package:get/get.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+import '../services/setup_super_admin_service.dart';
+
+class SetupSuperAdminController extends GetxController {
+  SetupSuperAdminController({
+    SetupSuperAdminService? service,
+  }) : _service = service ?? SetupSuperAdminService();
+
+  final SetupSuperAdminService _service;
+
+  final RxBool isSubmitting = false.obs;
+
+  Future<void> createFirstSuperAdmin({
+    required String fullName,
+    required String email,
+  }) async {
+    if (isSubmitting.value) return;
+
+    try {
+      isSubmitting.value = true;
+
+      await _service.bootstrapFirstSuperAdmin(
+        fullName: fullName,
+        email: email,
+      );
+
+      MBNotification.success(
+        title: 'Success',
+        message: 'First super admin has been created successfully.',
+      );
+    } catch (e) {
+      MBNotification.error(
+        title: 'Setup Failed',
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+      rethrow;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+}
+3) Example usage in SetupSuperAdminPage
+
+Here is a complete minimal page example.
+
+features/setup/pages/setup_super_admin_page.dart
+import 'package:admin_web/app/routes/admin_web_routes.dart';
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/setup/controllers/setup_super_admin_controller.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+class SetupSuperAdminPage extends StatefulWidget {
+  const SetupSuperAdminPage({super.key});
+
+  @override
+  State<SetupSuperAdminPage> createState() => _SetupSuperAdminPageState();
+}
+
+class _SetupSuperAdminPageState extends State<SetupSuperAdminPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _emailController;
+
+  late final SetupSuperAdminController _setupController;
+  late final AdminAccessController _accessController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _setupController = Get.put(SetupSuperAdminController());
+    _accessController = Get.find<AdminAccessController>();
+
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    _fullNameController = TextEditingController(
+      text: (user?.displayName ?? '').trim(),
+    );
+    _emailController = TextEditingController(
+      text: (user?.email ?? '').trim(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: MBColors.background,
+      body: Center(
+        child: Container(
+          width: 520,
+          padding: const EdgeInsets.all(MBSpacing.xl),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(MBRadius.xl),
+            boxShadow: [
+              BoxShadow(
+                color: MBColors.shadow.withValues(alpha: 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Obx(
+            () => Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Setup First Super Admin',
+                    style: MBTextStyles.sectionTitle.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  MBSpacing.h(MBSpacing.sm),
+                  Text(
+                    'This can only be done once.',
+                    style: MBTextStyles.body.copyWith(
+                      color: MBColors.textSecondary,
+                    ),
+                  ),
+                  MBSpacing.h(MBSpacing.lg),
+                  MBTextField(
+                    controller: _fullNameController,
+                    labelText: 'Full Name',
+                    validator: (value) {
+                      if ((value ?? '').trim().isEmpty) {
+                        return 'Enter full name';
+                      }
+                      return null;
+                    },
+                  ),
+                  MBSpacing.h(MBSpacing.md),
+                  MBTextField(
+                    controller: _emailController,
+                    labelText: 'Email',
+                    validator: (value) {
+                      if ((value ?? '').trim().isEmpty) {
+                        return 'Enter email';
+                      }
+                      return null;
+                    },
+                  ),
+                  MBSpacing.h(MBSpacing.xl),
+                  SizedBox(
+                    width: double.infinity,
+                    child: MBPrimaryButton(
+                      text: 'Create Super Admin',
+                      isLoading: _setupController.isSubmitting.value,
+                      onPressed: _submit,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      await _setupController.createFirstSuperAdmin(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+      );
+
+      await _accessController.refreshPermission();
+
+      if (_accessController.canAccessAdminPanel) {
+        Get.offAllNamed(AdminWebRoutes.dashboard);
+      }
+    } catch (_) {
+      // Notification already shown in controller.
+    }
+  }
+}
+4) Firestore bootstrap document you must create manually once
+
+In Firebase Console, create:
+
+Collection: system
+Document: bootstrap
+
+{
+  "allowFirstSuperAdminSetup": true,
+  "firstSuperAdminUid": "",
+  "bootstrapCompleted": false
+}
+
+You can also include:
+
+{
+  "allowFirstSuperAdminSetup": true,
+  "firstSuperAdminUid": "",
+  "bootstrapCompleted": false,
+  "updatedAt": ""
+}
+
+That is fine too.
+
+5) What this batch does
+
+When the signed-in user presses setup:
+
+verifies /system/bootstrap exists
+verifies bootstrap still open
+verifies this user does not already have admin docs
+creates:
+/admin_permissions/{uid}
+/admins/{uid}
+updates:
+/system/bootstrap
+
+All in one transaction.
+
+So if one write fails, nothing is partially written.
+
+6) Recommended admin profile shape
+
+This setup writes admin profile as:
+
+{
+  "uid": "...",
+  "name": "...",
+  "email": "...",
+  "role": "super_admin",
+  "isActive": true,
+  "createdAt": "...",
+  "updatedAt": "...",
+  "createdByUid": "...",
+  "updatedByUid": "..."
+}
+
+That is a good minimal base for your current admin web phase.
+
+7) Important note for your existing repository layer
+
+Because you said repositories will be revised later, this setup code writes directly with FirebaseFirestore. That is correct for now. Later you can move the same logic into a repository/service layer without changing the rule strategy.
+
+Next best step is to generate a matching AdminLoginPage + AdminLaunchRouterPage flow so web admin automatically routes between:
+
+login
+setup first super admin
+dashboard

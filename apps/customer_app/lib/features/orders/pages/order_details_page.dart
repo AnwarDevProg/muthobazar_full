@@ -1,10 +1,11 @@
+import 'package:customer_app/features/orders/widgets/order_item_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:shared_ui/shared_ui.dart';
-import '../../../core/widgets/common/mb_card.dart';
+
 import 'package:customer_app/features/orders/controllers/order_controller.dart';
-import '../widgets/order_item_tile.dart';
+
 
 class OrderDetailsPage extends StatefulWidget {
   const OrderDetailsPage({super.key});

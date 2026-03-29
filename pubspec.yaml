@@ -20,12 +20,3 @@ workspace:
 
 dev_dependencies:
   melos: ^7.5.0
-
-melos:
-  useRootAsPackage: false
-
-  scripts:
-    pub_get: dart pub get
-    analyze: dart analyze
-    format: dart format .
-    clean: dart pub get

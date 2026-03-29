@@ -1,12 +1,11 @@
+import 'package:admin_web/app/shell/admin_web_shell.dart';
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/banners/controllers/admin_banner_controller.dart';
+import 'package:admin_web/features/banners/widgets/admin_banner_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
-import 'package:admin_web/app/routes/admin_web_routes.dart';
-import '../../../models/home/mb_banner.dart';
-import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import '../controllers/admin_banner_controller.dart';
-import 'widgets/admin_banner_form_dialog.dart';
 
 class AdminBannersPage extends StatelessWidget {
   const AdminBannersPage({super.key});
@@ -18,277 +17,335 @@ class AdminBannersPage extends StatelessWidget {
     final AdminBannerController bannerController =
     Get.find<AdminBannerController>();
 
-    return Scaffold(
-      backgroundColor: MBColors.background,
-      body: Row(
-        children: [
-          _SidebarProxy(
-            currentRoute: AppRoutes.adminBanners,
-            isSuperAdmin: accessController.isSuperAdmin,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                _TopBarProxy(
-                  title: 'Banners',
-                  onAdd: accessController.canManageBanners
-                      ? () {
-                    Get.dialog(
-                      const AdminBannerFormDialog(),
-                      barrierDismissible: false,
-                    );
-                  }
-                      : null,
+    return AdminWebShell(
+      child: Obx(() {
+        if (!accessController.canManageBanners) {
+          return const _NoBannerPermissionState();
+        }
+
+        if (bannerController.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        return Column(
+          children: [
+            const _BannersHeader(),
+            Expanded(
+              child: bannerController.filteredBanners.isEmpty
+                  ? const _EmptyBannersState()
+                  : RefreshIndicator(
+                onRefresh: bannerController.refreshBanners,
+                child: _BannersTable(
+                  banners: bannerController.filteredBanners,
                 ),
-                Expanded(
-                  child: Obx(() {
-                    if (!accessController.canManageBanners) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'You do not have permission to manage banners.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (bannerController.isLoading.value) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    if (bannerController.banners.isEmpty) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        child: MBCard(
-                          child: Text(
-                            'No banners found.',
-                            style: MBTextStyles.body.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return RefreshIndicator(
-                      onRefresh: bannerController.refreshBanners,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(MBSpacing.xl),
-                        itemCount: bannerController.banners.length,
-                        itemBuilder: (context, index) {
-                          final banner = bannerController.banners[index];
-                          return Padding(
-                            padding:
-                            const EdgeInsets.only(bottom: MBSpacing.md),
-                            child: _BannerListCard(
-                              banner: banner,
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }
 
-class _BannerListCard extends StatelessWidget {
-  final MBBanner banner;
-
-  const _BannerListCard({
-    required this.banner,
-  });
+class _BannersHeader extends StatelessWidget {
+  const _BannersHeader();
 
   @override
   Widget build(BuildContext context) {
     final AdminBannerController controller = Get.find<AdminBannerController>();
 
-    return MBCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 140,
-            height: 80,
-            decoration: BoxDecoration(
-              color: MBColors.primarySoft,
-              borderRadius: BorderRadius.circular(16),
-              image: banner.imageUrl.trim().isNotEmpty
-                  ? DecorationImage(
-                image: NetworkImage(banner.imageUrl),
-                fit: BoxFit.cover,
-              )
-                  : null,
-            ),
-            child: banner.imageUrl.trim().isEmpty
-                ? const Icon(
-              Icons.image_outlined,
-              color: MBColors.primaryOrange,
-            )
-                : null,
+    return Container(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.85),
           ),
-          MBSpacing.w(MBSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  banner.titleEn.isEmpty ? 'Untitled Banner' : banner.titleEn,
-                  style: MBTextStyles.bodyMedium.copyWith(
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Banner Management',
+                  style: MBTextStyles.sectionTitle.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (banner.titleBn.trim().isNotEmpty) ...[
-                  MBSpacing.h(MBSpacing.xxxs),
-                  Text(
-                    banner.titleBn,
-                    style: MBTextStyles.body.copyWith(
-                      color: MBColors.textSecondary,
-                    ),
-                  ),
-                ],
-                MBSpacing.h(MBSpacing.xxs),
-                Text(
-                  'Target: ${banner.targetType}'
-                      '${banner.targetId != null && banner.targetId!.isNotEmpty ? ' • ${banner.targetId}' : ''}',
-                  style: MBTextStyles.caption,
-                ),
-                MBSpacing.h(MBSpacing.xxxs),
-                Text(
-                  'Sort: ${banner.sortOrder} • ${banner.isActive ? 'Active' : 'Inactive'}',
-                  style: MBTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-          MBSpacing.w(MBSpacing.md),
-          Column(
-            children: [
-              MBSecondaryButton(
-                text: banner.isActive ? 'Deactivate' : 'Activate',
-                expand: false,
-                height: 40,
-                onPressed: () => controller.toggleBannerActive(banner),
               ),
-              MBSpacing.h(MBSpacing.sm),
-              MBSecondaryButton(
-                text: 'Edit',
-                expand: false,
-                height: 40,
+              ElevatedButton.icon(
                 onPressed: () {
                   Get.dialog(
-                    AdminBannerFormDialog(banner: banner),
+                    const AdminBannerFormDialog(),
                     barrierDismissible: false,
                   );
                 },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add Banner'),
               ),
-              MBSpacing.h(MBSpacing.sm),
-              MBSecondaryButton(
-                text: 'Delete',
-                expand: false,
-                height: 40,
-                foregroundColor: MBColors.error,
-                borderColor: MBColors.error,
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text('Delete Banner'),
-                      content: Text(
-                        'Are you sure you want to delete "${banner.titleEn.isEmpty ? 'this banner' : banner.titleEn}"?',
+            ],
+          ),
+          MBSpacing.h(MBSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  onChanged: controller.setSearchQuery,
+                  decoration: const InputDecoration(
+                    hintText: 'Search banners...',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: controller.statusFilter.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All')),
+                    DropdownMenuItem(value: 'active', child: Text('Active')),
+                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    DropdownMenuItem(
+                      value: 'scheduledOut',
+                      child: Text('Out of Schedule'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      controller.setStatusFilter(value ?? 'all'),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: controller.targetTypeFilter.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Target Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All')),
+                    DropdownMenuItem(value: 'none', child: Text('None')),
+                    DropdownMenuItem(value: 'product', child: Text('Product')),
+                    DropdownMenuItem(value: 'category', child: Text('Category')),
+                    DropdownMenuItem(value: 'brand', child: Text('Brand')),
+                    DropdownMenuItem(value: 'offer', child: Text('Offer')),
+                    DropdownMenuItem(value: 'route', child: Text('Route')),
+                    DropdownMenuItem(value: 'external', child: Text('External')),
+                  ],
+                  onChanged: (value) =>
+                      controller.setTargetTypeFilter(value ?? 'all'),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.md),
+              OutlinedButton(
+                onPressed: controller.resetFilters,
+                child: const Text('Reset'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BannersTable extends StatelessWidget {
+  const _BannersTable({
+    required this.banners,
+  });
+
+  final List<MBBanner> banners;
+
+  @override
+  Widget build(BuildContext context) {
+    final AdminBannerController controller = Get.find<AdminBannerController>();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(MBSpacing.lg),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(MBRadius.lg),
+          side: BorderSide(
+            color: MBColors.border.withValues(alpha: 0.9),
+          ),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 24,
+            headingRowHeight: 56,
+            dataRowMinHeight: 84,
+            dataRowMaxHeight: 96,
+            columns: const [
+              DataColumn(label: Text('Banner')),
+              DataColumn(label: Text('Target')),
+              DataColumn(label: Text('Schedule')),
+              DataColumn(label: Text('Sort')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
+            ],
+            rows: banners.map((banner) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    SizedBox(
+                      width: 360,
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(MBRadius.md),
+                            child: banner.imageUrl.trim().isNotEmpty
+                                ? Image.network(
+                              banner.imageUrl,
+                              width: 120,
+                              height: 64,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 120,
+                                height: 64,
+                                color: MBColors.background,
+                                child: const Icon(
+                                  Icons.broken_image_outlined,
+                                ),
+                              ),
+                            )
+                                : Container(
+                              width: 120,
+                              height: 64,
+                              color: MBColors.background,
+                              child: const Icon(
+                                Icons.image_outlined,
+                              ),
+                            ),
+                          ),
+                          MBSpacing.w(MBSpacing.md),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  banner.titleEn.isEmpty
+                                      ? 'Untitled Banner'
+                                      : banner.titleEn,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MBTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                if (banner.titleBn.isNotEmpty) ...[
+                                  MBSpacing.h(MBSpacing.xxxs),
+                                  Text(
+                                    banner.titleBn,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: MBTextStyles.caption.copyWith(
+                                      color: MBColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                                if (banner.subtitleEn.isNotEmpty) ...[
+                                  MBSpacing.h(MBSpacing.xxxs),
+                                  Text(
+                                    banner.subtitleEn,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: MBTextStyles.caption.copyWith(
+                                      color: MBColors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      '${banner.targetType}${banner.targetId != null ? ' • ${banner.targetId}' : ''}',
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      '${banner.startAt?.toString().split(".").first ?? "-"}\n${banner.endAt?.toString().split(".").first ?? "-"}',
+                    ),
+                  ),
+                  DataCell(Text('${banner.sortOrder}')),
+                  DataCell(
+                    _BannerStatusPill(
+                      label: banner.isAvailable ? 'Active' : 'Inactive',
+                      active: banner.isAvailable,
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      children: [
+                        Switch(
+                          value: banner.isActive,
+                          onChanged: (_) => controller.toggleBannerActive(banner),
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Delete'),
+                        IconButton(
+                          tooltip: 'Edit banner',
+                          onPressed: () {
+                            Get.dialog(
+                              AdminBannerFormDialog(banner: banner),
+                              barrierDismissible: false,
+                            );
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: 'Delete banner',
+                          onPressed: () async {
+                            final bool? confirmed = await Get.dialog<bool>(
+                              AlertDialog(
+                                title: const Text('Delete Banner'),
+                                content: Text(
+                                  'Are you sure you want to delete "${banner.titleEn.isEmpty ? 'this banner' : banner.titleEn}"?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmed == true) {
+                              await controller.deleteBanner(banner.id);
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: MBColors.error,
+                          ),
                         ),
                       ],
                     ),
-                  );
-
-                  if (confirmed == true) {
-                    await controller.deleteBanner(banner.id);
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarProxy extends StatelessWidget {
-  final String currentRoute;
-  final bool isSuperAdmin;
-
-  const _SidebarProxy({
-    required this.currentRoute,
-    required this.isSuperAdmin,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      decoration: const BoxDecoration(
-        color: MBColors.primaryOrange,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(MBSpacing.md),
-          child: Column(
-            children: [
-              _ProxyTile(
-                label: 'Dashboard',
-                selected: currentRoute == AppRoutes.adminDashboard ||
-                    currentRoute == AppRoutes.adminShell,
-                onTap: () => Get.offNamed(AppRoutes.adminShell),
-              ),
-              _ProxyTile(
-                label: 'Categories',
-                selected: currentRoute == AppRoutes.adminCategories,
-                onTap: () => Get.offNamed(AppRoutes.adminCategories),
-              ),
-              _ProxyTile(
-                label: 'Brands',
-                selected: currentRoute == AppRoutes.adminBrands,
-                onTap: () => Get.offNamed(AppRoutes.adminBrands),
-              ),
-              _ProxyTile(
-                label: 'Banners',
-                selected: currentRoute == AppRoutes.adminBanners,
-                onTap: () => Get.offNamed(AppRoutes.adminBanners),
-              ),
-              _ProxyTile(
-                label: 'Admin Invites',
-                selected: currentRoute == AppRoutes.adminInvites,
-                onTap: () => Get.offNamed(AppRoutes.adminInvites),
-              ),
-              if (isSuperAdmin)
-                _ProxyTile(
-                  label: 'Admin Permissions',
-                  selected: currentRoute == AppRoutes.adminPermissions,
-                  onTap: () => Get.offNamed(AppRoutes.adminPermissions),
-                ),
-            ],
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
       ),
@@ -296,86 +353,135 @@ class _SidebarProxy extends StatelessWidget {
   }
 }
 
-class _ProxyTile extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ProxyTile({
+class _BannerStatusPill extends StatelessWidget {
+  const _BannerStatusPill({
     required this.label,
-    required this.selected,
-    required this.onTap,
+    required this.active,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      selected: selected,
-      selectedTileColor: Colors.white.withValues(alpha: 0.18),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      title: Text(
-        label,
-        style: MBTextStyles.body.copyWith(
-          color: Colors.white,
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
-}
-
-class _TopBarProxy extends StatelessWidget {
-  final String title;
-  final VoidCallback? onAdd;
-
-  const _TopBarProxy({
-    required this.title,
-    this.onAdd,
-  });
+  final String label;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 76,
-      padding: const EdgeInsets.symmetric(horizontal: MBSpacing.xl),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: MBColors.border),
+      padding: const EdgeInsets.symmetric(
+        horizontal: MBSpacing.md,
+        vertical: MBSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: active
+            ? MBColors.success.withValues(alpha: 0.12)
+            : MBColors.textMuted.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(MBRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: MBTextStyles.caption.copyWith(
+          color: active ? MBColors.success : MBColors.textSecondary,
+          fontWeight: FontWeight.w700,
         ),
       ),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: MBTextStyles.pageTitle,
-          ),
-          const Spacer(),
-          if (onAdd != null)
-            SizedBox(
-              width: 160,
-              child: MBPrimaryButton(
-                text: 'Add Banner',
-                height: 44,
-                onPressed: onAdd,
+    );
+  }
+}
+
+class _NoBannerPermissionState extends StatelessWidget {
+  const _NoBannerPermissionState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 480,
+        padding: const EdgeInsets.all(MBSpacing.xl),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MBRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: MBColors.shadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              size: 44,
+              color: MBColors.error,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'Permission Required',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
               ),
             ),
-        ],
+            MBSpacing.h(MBSpacing.xs),
+            Text(
+              'You do not have permission to manage banners.',
+              textAlign: TextAlign.center,
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+class _EmptyBannersState extends StatelessWidget {
+  const _EmptyBannersState();
 
-
-
-
-
-
-
-
-
-
-
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 460,
+        padding: const EdgeInsets.all(MBSpacing.xl),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(MBRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: MBColors.shadow.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.image_outlined,
+              size: 44,
+              color: MBColors.primaryOrange,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'No Banners Found',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            MBSpacing.h(MBSpacing.xs),
+            Text(
+              'Create banners for homepage campaigns and promotions.',
+              textAlign: TextAlign.center,
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

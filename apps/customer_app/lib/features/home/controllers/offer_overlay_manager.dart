@@ -1,6 +1,7 @@
 import 'dart:math';
+import 'package:shared_models/shared_models.dart';
 
-import '../../../models/home/mb_offer.dart';
+
 
 // MB Offer Overlay Manager
 // ------------------------

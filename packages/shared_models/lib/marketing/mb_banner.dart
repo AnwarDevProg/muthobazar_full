@@ -2,7 +2,10 @@ import 'dart:convert';
 
 // MB Banner Model
 // ---------------
-// For hero banners, promo sliders, and campaign banners on the home page.
+// Unified production-ready home banner model for:
+// - hero sliders
+// - campaign banners
+// - section promo banners
 
 class MBBanner {
   final String id;
@@ -19,9 +22,8 @@ class MBBanner {
   final String imageUrl;
   final String mobileImageUrl;
 
-  /// none | product | category | offer | route | external
+  /// none | product | category | brand | offer | route | external
   final String targetType;
-
   final String? targetId;
   final String? targetRoute;
   final String? externalUrl;
@@ -29,8 +31,10 @@ class MBBanner {
   final bool isActive;
   final int sortOrder;
 
-  final DateTime? startsAt;
-  final DateTime? endsAt;
+  final DateTime? startAt;
+  final DateTime? endAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const MBBanner({
     required this.id,
@@ -48,11 +52,22 @@ class MBBanner {
     this.externalUrl,
     this.isActive = true,
     this.sortOrder = 0,
-    this.startsAt,
-    this.endsAt,
+    this.startAt,
+    this.endAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  factory MBBanner.empty() => const MBBanner(id: '');
+  static const MBBanner empty = MBBanner(id: '');
+
+  bool get isWithinSchedule {
+    final DateTime now = DateTime.now();
+    if (startAt != null && now.isBefore(startAt!)) return false;
+    if (endAt != null && now.isAfter(endAt!)) return false;
+    return true;
+  }
+
+  bool get isAvailable => isActive && isWithinSchedule;
 
   MBBanner copyWith({
     String? id,
@@ -73,10 +88,12 @@ class MBBanner {
     bool clearExternalUrl = false,
     bool? isActive,
     int? sortOrder,
-    DateTime? startsAt,
-    bool clearStartsAt = false,
-    DateTime? endsAt,
-    bool clearEndsAt = false,
+    DateTime? startAt,
+    bool clearStartAt = false,
+    DateTime? endAt,
+    bool clearEndAt = false,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return MBBanner(
       id: id ?? this.id,
@@ -94,22 +111,15 @@ class MBBanner {
       externalUrl: clearExternalUrl ? null : (externalUrl ?? this.externalUrl),
       isActive: isActive ?? this.isActive,
       sortOrder: sortOrder ?? this.sortOrder,
-      startsAt: clearStartsAt ? null : (startsAt ?? this.startsAt),
-      endsAt: clearEndsAt ? null : (endsAt ?? this.endsAt),
+      startAt: clearStartAt ? null : (startAt ?? this.startAt),
+      endAt: clearEndAt ? null : (endAt ?? this.endAt),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  bool get isWithinSchedule {
-    final now = DateTime.now();
-    if (startsAt != null && now.isBefore(startsAt!)) return false;
-    if (endsAt != null && now.isAfter(endsAt!)) return false;
-    return true;
-  }
-
-  bool get isAvailable => isActive && isWithinSchedule;
-
   Map<String, dynamic> toMap() {
-    return {
+    return <String, dynamic>{
       'id': id,
       'titleEn': titleEn,
       'titleBn': titleBn,
@@ -125,13 +135,15 @@ class MBBanner {
       'externalUrl': externalUrl,
       'isActive': isActive,
       'sortOrder': sortOrder,
-      'startsAt': startsAt?.toIso8601String(),
-      'endsAt': endsAt?.toIso8601String(),
+      'startAt': startAt?.toIso8601String(),
+      'endAt': endAt?.toIso8601String(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
   factory MBBanner.fromMap(Map<String, dynamic>? map) {
-    if (map == null) return MBBanner.empty();
+    if (map == null) return empty;
 
     return MBBanner(
       id: (map['id'] ?? '').toString(),
@@ -151,12 +163,22 @@ class MBBanner {
       sortOrder: (map['sortOrder'] ?? 0) is int
           ? map['sortOrder'] as int
           : int.tryParse((map['sortOrder'] ?? '0').toString()) ?? 0,
-      startsAt: map['startsAt'] == null
+      startAt: map['startAt'] == null
+          ? (map['startsAt'] == null
           ? null
-          : DateTime.tryParse(map['startsAt'].toString()),
-      endsAt: map['endsAt'] == null
+          : DateTime.tryParse(map['startsAt'].toString()))
+          : DateTime.tryParse(map['startAt'].toString()),
+      endAt: map['endAt'] == null
+          ? (map['endsAt'] == null
           ? null
-          : DateTime.tryParse(map['endsAt'].toString()),
+          : DateTime.tryParse(map['endsAt'].toString()))
+          : DateTime.tryParse(map['endAt'].toString()),
+      createdAt: map['createdAt'] == null
+          ? null
+          : DateTime.tryParse(map['createdAt'].toString()),
+      updatedAt: map['updatedAt'] == null
+          ? null
+          : DateTime.tryParse(map['updatedAt'].toString()),
     );
   }
 
@@ -165,14 +187,3 @@ class MBBanner {
   factory MBBanner.fromJson(String source) =>
       MBBanner.fromMap(json.decode(source) as Map<String, dynamic>);
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -1,5 +1,6 @@
 import 'package:customer_app/app/bindings/customer_app_binding.dart';
-import 'package:customer_app/app/shell/customer_app_shell.dart';
+import 'package:customer_app/app/routes/customer_app_pages.dart';
+import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:customer_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -18,14 +19,13 @@ Future<void> main() async {
   );
 
   await Hive.initFlutter();
+  await AppInitializer.initialize();
 
   if (!kIsWeb) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
   }
-
-  await AppInitializer.initialize();
 
   runApp(const MuthoBazarCustomerApp());
 }
@@ -43,9 +43,10 @@ class MuthoBazarCustomerApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       scrollBehavior: const MBScrollBehavior(),
       initialBinding: AppBinding(),
-      home: const CustomerAppShell(),
+      initialRoute: AppRoutes.appLaunchRoute,
+      getPages: AppPages.routes,
       builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
+        final MediaQueryData mediaQuery = MediaQuery.of(context);
 
         return MediaQuery(
           data: mediaQuery.copyWith(
@@ -57,13 +58,3 @@ class MuthoBazarCustomerApp extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-

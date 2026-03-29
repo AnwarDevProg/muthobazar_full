@@ -1,13 +1,3 @@
-// MB Responsive Container
-// -----------------------
-// Standard page/content wrapper for MuthoBazar screens.
-//
-// Features:
-// - applies responsive horizontal padding
-// - can constrain content width on tablet
-// - supports alignment and optional safe area wrapping
-// - useful as the default outer container inside Scaffold body
-
 import 'package:flutter/material.dart';
 import 'mb_breakpoints.dart';
 import 'mb_responsive.dart';
@@ -65,7 +55,10 @@ class MBResponsiveContainer extends StatelessWidget {
       );
     }
 
-    return content;
+    return SizedBox(
+      width: double.infinity,
+      child: content,
+    );
   }
 }
 
@@ -91,14 +84,3 @@ extension MBResponsiveContainerX on Widget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

@@ -8,6 +8,7 @@ import 'mb_product_variation.dart';
 // ---------------------------------------------------------
 // Supports:
 // - bilingual product data
+// - attributes
 // - variations
 // - purchase options
 // - hybrid inventory logic
@@ -168,6 +169,8 @@ class MBProduct {
     if (!hasDiscount || price <= 0) return 0;
     return (((price - salePrice!) / price) * 100).round();
   }
+
+  bool get hasAttributes => attributes.isNotEmpty;
 
   bool get hasVariations => variations.isNotEmpty;
 
@@ -418,8 +421,9 @@ class MBProduct {
       thumbnailUrl: (map['thumbnailUrl'] ?? '').toString(),
       imageUrls: List<String>.from(map['imageUrls'] ?? const []),
       price: ((map['price'] ?? 0) as num).toDouble(),
-      salePrice:
-      map['salePrice'] == null ? null : ((map['salePrice'] as num).toDouble()),
+      salePrice: map['salePrice'] == null
+          ? null
+          : ((map['salePrice'] as num).toDouble()),
       stockQty: (map['stockQty'] ?? 0) is int
           ? (map['stockQty'] ?? 0) as int
           : int.tryParse((map['stockQty'] ?? '0').toString()) ?? 0,
@@ -430,7 +434,8 @@ class MBProduct {
       regularStockQty: (map['regularStockQty'] ?? map['stockQty'] ?? 0) is int
           ? (map['regularStockQty'] ?? map['stockQty'] ?? 0) as int
           : int.tryParse(
-          (map['regularStockQty'] ?? map['stockQty'] ?? '0').toString()) ??
+          (map['regularStockQty'] ?? map['stockQty'] ?? '0')
+              .toString()) ??
           0,
       reservedInstantQty: (map['reservedInstantQty'] ?? 0) is int
           ? (map['reservedInstantQty'] ?? 0) as int
@@ -444,7 +449,8 @@ class MBProduct {
           : int.tryParse((map['todayInstantSold'] ?? '0').toString()) ?? 0,
       maxScheduleQtyPerDay: (map['maxScheduleQtyPerDay'] ?? 999999) is int
           ? (map['maxScheduleQtyPerDay'] ?? 999999) as int
-          : int.tryParse((map['maxScheduleQtyPerDay'] ?? '999999').toString()) ??
+          : int.tryParse(
+          (map['maxScheduleQtyPerDay'] ?? '999999').toString()) ??
           999999,
       schedulePriceType: (map['schedulePriceType'] ?? 'fixed').toString(),
       estimatedSchedulePrice: map['estimatedSchedulePrice'] == null
@@ -453,7 +459,8 @@ class MBProduct {
       instantCutoffTime: map['instantCutoffTime']?.toString(),
       minScheduleNoticeHours: (map['minScheduleNoticeHours'] ?? 0) is int
           ? (map['minScheduleNoticeHours'] ?? 0) as int
-          : int.tryParse((map['minScheduleNoticeHours'] ?? '0').toString()) ?? 0,
+          : int.tryParse((map['minScheduleNoticeHours'] ?? '0').toString()) ??
+          0,
       categoryId: map['categoryId']?.toString(),
       brandId: map['brandId']?.toString(),
       productType: (map['productType'] ?? 'simple').toString(),
@@ -505,14 +512,3 @@ class MBProduct {
   factory MBProduct.fromJson(String source) =>
       MBProduct.fromMap(json.decode(source) as Map<String, dynamic>);
 }
-
-
-
-
-
-
-
-
-
-
-
