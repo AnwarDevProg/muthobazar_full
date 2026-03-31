@@ -1,0 +1,578 @@
+Yes — then for the staff app, I would not use one single vague role called only staff.
+
+Use a two-layer structure:
+
+1. App-level role
+
+This controls which app the user may enter.
+
+For staff app registration:
+
+Role = staff
+
+This is the top-level identity.
+
+2. Staff-type / job-type
+
+This defines what kind of staff they are.
+
+Use a second field, for example:
+
+StaffType
+
+Allowed values:
+
+delivery_boy
+cleaner
+purchase_helper
+technician
+electrician
+plumber
+
+So a record would look like:
+
+Role = staff
+StaffType = electrician
+Why this is the best structure
+
+If you make each of those a top-level role, your system becomes messy:
+
+delivery_boy
+cleaner
+purchase_helper
+technician
+electrician
+plumber
+customer
+admin
+super_admin
+
+That grows into too many top-level roles.
+
+Instead:
+
+Keep top-level roles small
+customer
+staff
+admin
+super_admin
+Put specialization in a second field
+StaffType
+
+That is much cleaner.
+
+Recommended final model
+Common user identity
+Role
+
+Allowed:
+
+customer
+staff
+admin
+super_admin
+Only for staff users
+StaffType
+
+Allowed:
+
+delivery_boy
+cleaner
+purchase_helper
+technician
+electrician
+plumber
+Optional future field
+StaffDepartment
+
+Examples:
+
+delivery
+maintenance
+procurement
+field_service
+
+This helps later when staff types grow.
+
+Even better future-safe version
+
+Since electrician and plumber are actually kinds of technician/service workers, you could normalize like this:
+
+Option A: direct type list
+delivery_boy
+cleaner
+purchase_helper
+technician
+electrician
+plumber
+
+Simple and easy now.
+
+Option B: structured hierarchy
+Role = staff
+StaffGroup = service
+StaffType = electrician
+
+Examples:
+
+StaffGroup = delivery, StaffType = delivery_boy
+StaffGroup = procurement, StaffType = purchase_helper
+StaffGroup = service, StaffType = electrician
+
+This is better long-term, but slightly more complex now.
+
+For your current stage, I recommend:
+
+Use:
+Role
+StaffType
+
+That is enough.
+
+App access flow
+Customer app
+
+Allow only:
+
+Role == customer
+Staff app
+
+Allow only:
+
+Role == staff
+
+Then inside staff app, show different modules based on:
+
+StaffType
+
+Example:
+
+delivery_boy → delivery UI
+purchase_helper → purchase tasks UI
+electrician / plumber / technician → service job UI
+cleaner → cleaning task UI
+Admin web
+
+Allow only:
+
+Role == admin || Role == super_admin
+My recommendation for registration
+Staff app registration
+
+During registration:
+
+set Role = staff
+require selecting StaffType
+
+So a new staff member registers as:
+
+staff + electrician
+staff + cleaner
+staff + delivery_boy
+
+Then admin web can:
+
+approve
+activate/deactivate
+assign permissions
+assign branch/zone/team
+Final recommendation
+
+Use this:
+
+Role
+StaffType
+AccountStatus
+
+Example records:
+
+Delivery staff
+Role = staff
+StaffType = delivery_boy
+AccountStatus = active
+Electrician
+Role = staff
+StaffType = electrician
+AccountStatus = active
+Customer
+Role = customer
+Admin
+Role = admin
+Super admin
+Role = super_admin
+
+This is the clean architecture I recommend for your monorepo.
+
+If you want, next I’ll help you define the full final role matrix for customer app, staff app, and admin web.
+
+define the full final role matrix for customer app, staff app, and admin web. with Option B: structured hierarchy
+
+Here is the full final role matrix using Option B: structured hierarchy.
+
+This is the model I recommend for MuthoBazar.
+
+1. Core identity model
+
+Use a small, stable top-level role set.
+
+Top-level Role
+
+Allowed values:
+
+customer
+staff
+admin
+super_admin
+
+This controls which app the user may enter.
+
+2. Structured hierarchy fields
+For staff users
+
+Use:
+
+StaffGroup
+StaffType
+StaffGroup
+
+Allowed values:
+
+delivery
+procurement
+service
+operations
+StaffType
+
+Allowed values:
+
+delivery_boy
+purchase_helper
+technician
+electrician
+plumber
+cleaner
+3. Final user model shape
+Common fields for all users
+Role
+AccountStatus
+FirstName
+LastName
+PhoneNumber
+PhoneNumberE164
+CreatedAt
+UpdatedAt
+LastLoginAt
+ProfilePicture
+Additional for staff only
+StaffGroup
+StaffType
+AssignedBranchId
+AssignedZoneId
+AssignedManagerUid
+EmploymentStatus
+Additional for admin only
+AdminGroup
+CanAccessAdminPanel
+4. Recommended enums
+Role
+customer
+staff
+admin
+super_admin
+AccountStatus
+pending
+active
+blocked
+suspended
+rejected
+EmploymentStatus for staff
+pending
+active
+inactive
+suspended
+AdminGroup
+operations_admin
+catalog_admin
+service_admin
+delivery_admin
+finance_admin
+super_admin_office
+5. Staff hierarchy mapping
+
+This is the structured hierarchy.
+
+StaffType	StaffGroup
+delivery_boy	delivery
+purchase_helper	procurement
+technician	service
+electrician	service
+plumber	service
+cleaner	operations
+
+So for example:
+
+Delivery staff
+Role = staff
+StaffGroup = delivery
+StaffType = delivery_boy
+Electrician
+Role = staff
+StaffGroup = service
+StaffType = electrician
+Purchase helper
+Role = staff
+StaffGroup = procurement
+StaffType = purchase_helper
+6. App entry matrix
+
+This defines who may enter which app.
+
+App	Allowed top-level role
+Customer app	customer
+Staff app	staff
+Admin web	admin, super_admin
+
+This should be enforced at startup/redirect level in each app.
+
+7. Customer app matrix
+Allowed
+Role = customer
+AccountStatus = active
+Blocked
+staff
+admin
+super_admin
+any non-active account if you want stricter control
+Customer app capabilities
+Capability	Customer
+Browse catalog	Yes
+Cart	Yes
+Checkout	Yes
+Order tracking	Yes
+Address management	Yes
+Profile	Yes
+Admin pages	No
+Staff task pages	No
+8. Staff app matrix
+Allowed
+Role = staff
+EmploymentStatus = active
+optionally AccountStatus = active
+Blocked
+customer
+admin
+super_admin
+Staff app base modules by StaffGroup
+StaffGroup	Primary modules
+delivery	deliveries, route, COD, delivery status
+procurement	purchase tasks, receiving assist, stock intake
+service	service jobs, onsite tasks, technician workflow
+operations	operational tasks, cleaning tasks, support tasks
+Staff app detailed matrix by StaffType
+StaffType	Staff app access
+delivery_boy	delivery jobs only
+purchase_helper	procurement/inbound support
+technician	general service work orders
+electrician	electrician service jobs
+plumber	plumbing service jobs
+cleaner	cleaning/operations tasks
+9. Admin web matrix
+Allowed
+Role = admin
+Role = super_admin
+Additional rule
+
+Also require:
+
+active admin permission
+canAccessAdminPanel = true
+
+So Role = admin alone should not be enough.
+Actual entry should require admin permission profile too.
+
+Admin web capability model
+
+Admin web should depend on:
+
+top-level role
+admin permission document
+module-specific permission flags
+10. Full final matrix by identity
+Role	StaffGroup	StaffType	Customer App	Staff App	Admin Web
+customer	null	null	Yes	No	No
+staff	delivery	delivery_boy	No	Yes	No
+staff	procurement	purchase_helper	No	Yes	No
+staff	service	technician	No	Yes	No
+staff	service	electrician	No	Yes	No
+staff	service	plumber	No	Yes	No
+staff	operations	cleaner	No	Yes	No
+admin	null	null	No	No	Yes
+super_admin	null	null	No	No	Yes
+11. Registration matrix
+Customer app registration
+
+Creates:
+
+Role = customer
+AccountStatus = active
+Staff app registration
+
+Creates:
+
+Role = staff
+StaffGroup = selected group
+StaffType = selected type
+EmploymentStatus = pending or active
+AccountStatus = active
+
+I recommend new staff starts as:
+
+EmploymentStatus = pending
+
+until approved by admin.
+
+Admin web registration
+First ever bootstrap
+
+Creates:
+
+Role = super_admin
+Normal admin registration
+
+Creates:
+
+Role = admin
+
+Then later admin permissions are assigned by super admin.
+
+12. Approval model
+Customer
+
+Usually auto-active.
+
+Staff
+
+Recommended:
+
+registration allowed
+but EmploymentStatus = pending
+admin approves later
+Admin
+
+Recommended:
+
+registration allowed
+but no panel access until admin_permissions exists and allows panel access
+
+This gives you clean control without invites.
+
+13. Admin-side management matrix
+Super admin can manage
+admins
+staff
+customers
+permissions
+system-wide settings
+Admin can manage
+
+Depends on permission document, for example:
+
+user management
+catalog
+delivery ops
+service ops
+procurement
+finance
+marketing
+Staff cannot manage admin web
+
+Even if they have operational power in staff app.
+
+14. Suggested Firestore fields
+Customer example
+{
+  "Role": "customer",
+  "AccountStatus": "active"
+}
+Staff electrician example
+{
+  "Role": "staff",
+  "StaffGroup": "service",
+  "StaffType": "electrician",
+  "EmploymentStatus": "pending",
+  "AccountStatus": "active"
+}
+Staff delivery example
+{
+  "Role": "staff",
+  "StaffGroup": "delivery",
+  "StaffType": "delivery_boy",
+  "EmploymentStatus": "active",
+  "AccountStatus": "active"
+}
+Admin example
+{
+  "Role": "admin",
+  "AccountStatus": "active"
+}
+Super admin example
+{
+  "Role": "super_admin",
+  "AccountStatus": "active"
+}
+15. App startup guard logic
+Customer app
+
+Allow only if:
+
+Role == customer
+AccountStatus == active
+Staff app
+
+Allow only if:
+
+Role == staff
+AccountStatus == active
+EmploymentStatus == active
+Admin web
+
+Allow only if:
+
+(Role == admin || Role == super_admin)
+AND admin_permissions.canAccessAdminPanel == true
+AND admin_permissions.isActive == true
+16. My final recommendation
+
+Use this exact structure:
+
+Top-level
+Role
+Staff specialization
+StaffGroup
+StaffType
+Status control
+AccountStatus
+EmploymentStatus for staff
+Admin control
+admin_permissions
+admins
+
+This is the cleanest full-role matrix for your monorepo.
+
+17. Final simplified role hierarchy
+customer
+staff
+  ├── delivery
+  │   └── delivery_boy
+  ├── procurement
+  │   └── purchase_helper
+  ├── service
+  │   ├── technician
+  │   ├── electrician
+  │   └── plumber
+  └── operations
+      └── cleaner
+admin
+super_admin
+
+Next best step is to define the final registration matrix and Firestore document schema for all three apps.

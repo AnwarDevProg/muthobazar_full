@@ -1,0 +1,22 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar\tools
+C.
++---ci
+|   +---pipeline_notes.md
+|   \---README.md
++---generators
+|   +---feature_templates
+|   |   +---admin_feature.md
+|   |   +---customer_feature.md
+|   |   \---staff_feature.md
+|   \---README.md
+\---scripts
+    +---analyze_all.sh
+    +---bootstrap_all.sh
+    +---format_all.sh
+    +---generate_clean_tree.ps1
+    +---run_admin_web.sh
+    +---run_customer.sh
+    +---run_staff.sh
+    +---setup_workspace.sh
+    \---test_all.sh

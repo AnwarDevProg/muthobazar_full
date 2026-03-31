@@ -1,39 +1,44 @@
 import 'dart:convert';
 
+// MB Admin Permission Model
+// -------------------------
+// Must stay aligned with Firestore rules.
+// Important:
+// - field names are camelCase
+// - superAdmin() must set every required permission to true
+// - uid, role, isActive, canAccessAdminPanel are mandatory for bootstrap
+
 class MBAdminPermission {
   final String uid;
   final String role;
-  final bool isActive;
 
+  final bool isActive;
   final bool canAccessAdminPanel;
 
   final bool canManageAdmins;
   final bool canManageAdminInvites;
   final bool canManageAdminPermissions;
-
   final bool canManageUsers;
-
   final bool canManageCategories;
   final bool canManageBrands;
   final bool canManageProducts;
   final bool canManageBanners;
   final bool canManageCoupons;
   final bool canManageOffers;
-
   final bool canDeleteProducts;
   final bool canRestoreProducts;
   final bool canViewActivityLogs;
 
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
   final String createdByUid;
   final String updatedByUid;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const MBAdminPermission({
     required this.uid,
     required this.role,
     this.isActive = true,
-    this.canAccessAdminPanel = true,
+    this.canAccessAdminPanel = false,
     this.canManageAdmins = false,
     this.canManageAdminInvites = false,
     this.canManageAdminPermissions = false,
@@ -47,16 +52,17 @@ class MBAdminPermission {
     this.canDeleteProducts = false,
     this.canRestoreProducts = false,
     this.canViewActivityLogs = false,
-    this.createdAt,
-    this.updatedAt,
     this.createdByUid = '',
     this.updatedByUid = '',
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory MBAdminPermission.empty() {
     return const MBAdminPermission(
       uid: '',
       role: 'admin',
+      isActive: false,
       canAccessAdminPanel: false,
     );
   }
@@ -64,6 +70,8 @@ class MBAdminPermission {
   factory MBAdminPermission.superAdmin({
     required String uid,
     required String actorUid,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     final DateTime now = DateTime.now();
 
@@ -85,41 +93,58 @@ class MBAdminPermission {
       canDeleteProducts: true,
       canRestoreProducts: true,
       canViewActivityLogs: true,
-      createdAt: now,
-      updatedAt: now,
       createdByUid: actorUid,
       updatedByUid: actorUid,
+      createdAt: createdAt ?? now,
+      updatedAt: updatedAt ?? now,
     );
   }
 
-  factory MBAdminPermission.standardAdmin({
+  factory MBAdminPermission.admin({
     required String uid,
     required String actorUid,
+    bool isActive = true,
+    bool canAccessAdminPanel = true,
+    bool canManageAdmins = false,
+    bool canManageAdminInvites = false,
+    bool canManageAdminPermissions = false,
+    bool canManageUsers = false,
+    bool canManageCategories = false,
+    bool canManageBrands = false,
+    bool canManageProducts = false,
+    bool canManageBanners = false,
+    bool canManageCoupons = false,
+    bool canManageOffers = false,
+    bool canDeleteProducts = false,
+    bool canRestoreProducts = false,
+    bool canViewActivityLogs = false,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     final DateTime now = DateTime.now();
 
     return MBAdminPermission(
       uid: uid,
       role: 'admin',
-      isActive: true,
-      canAccessAdminPanel: true,
-      canManageAdmins: false,
-      canManageAdminInvites: false,
-      canManageAdminPermissions: false,
-      canManageUsers: true,
-      canManageCategories: true,
-      canManageBrands: true,
-      canManageProducts: true,
-      canManageBanners: true,
-      canManageCoupons: true,
-      canManageOffers: true,
-      canDeleteProducts: true,
-      canRestoreProducts: true,
-      canViewActivityLogs: true,
-      createdAt: now,
-      updatedAt: now,
+      isActive: isActive,
+      canAccessAdminPanel: canAccessAdminPanel,
+      canManageAdmins: canManageAdmins,
+      canManageAdminInvites: canManageAdminInvites,
+      canManageAdminPermissions: canManageAdminPermissions,
+      canManageUsers: canManageUsers,
+      canManageCategories: canManageCategories,
+      canManageBrands: canManageBrands,
+      canManageProducts: canManageProducts,
+      canManageBanners: canManageBanners,
+      canManageCoupons: canManageCoupons,
+      canManageOffers: canManageOffers,
+      canDeleteProducts: canDeleteProducts,
+      canRestoreProducts: canRestoreProducts,
+      canViewActivityLogs: canViewActivityLogs,
       createdByUid: actorUid,
       updatedByUid: actorUid,
+      createdAt: createdAt ?? now,
+      updatedAt: updatedAt ?? now,
     );
   }
 
@@ -141,10 +166,10 @@ class MBAdminPermission {
     bool? canDeleteProducts,
     bool? canRestoreProducts,
     bool? canViewActivityLogs,
-    DateTime? createdAt,
-    DateTime? updatedAt,
     String? createdByUid,
     String? updatedByUid,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return MBAdminPermission(
       uid: uid ?? this.uid,
@@ -166,15 +191,15 @@ class MBAdminPermission {
       canDeleteProducts: canDeleteProducts ?? this.canDeleteProducts,
       canRestoreProducts: canRestoreProducts ?? this.canRestoreProducts,
       canViewActivityLogs: canViewActivityLogs ?? this.canViewActivityLogs,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
       createdByUid: createdByUid ?? this.createdByUid,
       updatedByUid: updatedByUid ?? this.updatedByUid,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    return <String, dynamic>{
       'uid': uid,
       'role': role,
       'isActive': isActive,
@@ -192,47 +217,77 @@ class MBAdminPermission {
       'canDeleteProducts': canDeleteProducts,
       'canRestoreProducts': canRestoreProducts,
       'canViewActivityLogs': canViewActivityLogs,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
       'createdByUid': createdByUid,
       'updatedByUid': updatedByUid,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
   factory MBAdminPermission.fromMap(Map<String, dynamic>? map) {
-    if (map == null) return MBAdminPermission.empty();
+    if (map == null) {
+      return MBAdminPermission.empty();
+    }
 
     return MBAdminPermission(
       uid: (map['uid'] ?? '').toString(),
       role: (map['role'] ?? 'admin').toString(),
-      isActive: map['isActive'] ?? true,
-      canAccessAdminPanel: map['canAccessAdminPanel'] ?? false,
-      canManageAdmins: map['canManageAdmins'] ?? false,
-      canManageAdminInvites: map['canManageAdminInvites'] ?? false,
-      canManageAdminPermissions: map['canManageAdminPermissions'] ?? false,
-      canManageUsers: map['canManageUsers'] ?? false,
-      canManageCategories: map['canManageCategories'] ?? false,
-      canManageBrands: map['canManageBrands'] ?? false,
-      canManageProducts: map['canManageProducts'] ?? false,
-      canManageBanners: map['canManageBanners'] ?? false,
-      canManageCoupons: map['canManageCoupons'] ?? false,
-      canManageOffers: map['canManageOffers'] ?? false,
-      canDeleteProducts: map['canDeleteProducts'] ?? false,
-      canRestoreProducts: map['canRestoreProducts'] ?? false,
-      canViewActivityLogs: map['canViewActivityLogs'] ?? false,
-      createdAt: map['createdAt'] == null
-          ? null
-          : DateTime.tryParse(map['createdAt'].toString()),
-      updatedAt: map['updatedAt'] == null
-          ? null
-          : DateTime.tryParse(map['updatedAt'].toString()),
+      isActive: _asBool(map['isActive'], defaultValue: true),
+      canAccessAdminPanel:
+      _asBool(map['canAccessAdminPanel'], defaultValue: false),
+      canManageAdmins: _asBool(map['canManageAdmins']),
+      canManageAdminInvites: _asBool(map['canManageAdminInvites']),
+      canManageAdminPermissions: _asBool(map['canManageAdminPermissions']),
+      canManageUsers: _asBool(map['canManageUsers']),
+      canManageCategories: _asBool(map['canManageCategories']),
+      canManageBrands: _asBool(map['canManageBrands']),
+      canManageProducts: _asBool(map['canManageProducts']),
+      canManageBanners: _asBool(map['canManageBanners']),
+      canManageCoupons: _asBool(map['canManageCoupons']),
+      canManageOffers: _asBool(map['canManageOffers']),
+      canDeleteProducts: _asBool(map['canDeleteProducts']),
+      canRestoreProducts: _asBool(map['canRestoreProducts']),
+      canViewActivityLogs: _asBool(map['canViewActivityLogs']),
       createdByUid: (map['createdByUid'] ?? '').toString(),
       updatedByUid: (map['updatedByUid'] ?? '').toString(),
+      createdAt: _parseDate(map['createdAt']),
+      updatedAt: _parseDate(map['updatedAt']),
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory MBAdminPermission.fromJson(String source) =>
-      MBAdminPermission.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory MBAdminPermission.fromJson(String source) {
+    return MBAdminPermission.fromMap(
+      json.decode(source) as Map<String, dynamic>,
+    );
+  }
+
+  static bool _asBool(dynamic value, {bool defaultValue = false}) {
+    if (value is bool) return value;
+
+    if (value is num) {
+      return value != 0;
+    }
+
+    if (value is String) {
+      final String normalized = value.trim().toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+
+    return defaultValue;
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+
+    if (value is DateTime) return value;
+
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+
+    return null;
+  }
 }

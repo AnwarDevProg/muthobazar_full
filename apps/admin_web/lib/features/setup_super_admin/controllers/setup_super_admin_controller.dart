@@ -14,7 +14,7 @@ class SetupSuperAdminController extends GetxController {
 
   Future<void> createFirstSuperAdmin({
     required String fullName,
-    required String email,
+    required String phoneNumber,
   }) async {
     if (isSubmitting.value) return;
 
@@ -23,7 +23,7 @@ class SetupSuperAdminController extends GetxController {
 
       await _service.bootstrapFirstSuperAdmin(
         fullName: fullName,
-        email: email,
+        phoneNumber: phoneNumber,
       );
 
       MBNotification.success(

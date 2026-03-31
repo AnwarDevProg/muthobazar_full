@@ -18,6 +18,8 @@ C.
 |   +---lib
 |   |   +---auth
 |   |   |   +---constants
+|   |   |   +---controllers
+|   |   |   |   \---base_phone_auth_controller.dart
 |   |   |   +---guards
 |   |   |   |   \---mb_auth_guard_service.dart
 |   |   |   +---middleware_helpers
@@ -58,6 +60,8 @@ C.
 |   |   |   +---mb_admin_invite.dart
 |   |   |   \---mb_admin_permission.dart
 |   |   +---analytics
+|   |   +---auth
+|   |   |   \---phone_auth_eligibility_result.dart
 |   |   +---catalog
 |   |   |   +---mb_brand.dart
 |   |   |   +---mb_category.dart
@@ -107,10 +111,15 @@ C.
 |   |   |   +---admin_brand_repository.dart
 |   |   |   +---admin_category_repository.dart
 |   |   |   +---admin_invite_repository.dart
+|   |   |   +---admin_offer_repository.dart
 |   |   |   +---admin_product_repository.dart
+|   |   |   +---admin_promo_repository.dart
 |   |   |   +---admin_setup_repository.dart
-|   |   |   \---admin_user_repository.dart
+|   |   |   +---admin_user_repository.dart
+|   |   |   \---admin_web_phone_auth_repository.dart
 |   |   +---analytics
+|   |   +---auth
+|   |   |   \---phone_auth_eligibility_repository.dart
 |   |   +---base
 |   |   +---catalog
 |   |   +---customer

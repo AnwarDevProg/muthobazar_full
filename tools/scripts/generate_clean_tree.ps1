@@ -120,3 +120,5 @@ Write-Host (Resolve-Path -LiteralPath $OutputFile) -ForegroundColor Yellow
 #powershell -ExecutionPolicy Bypass -File ".\tools\scripts\generate_clean_tree.ps1" -RootPath ".\apps\customer_app\lib" -OutputFile "customer_lib_structure_clean.txt"
 #powershell -ExecutionPolicy Bypass -File ".\tools\scripts\generate_clean_tree.ps1" -RootPath ".\apps\admin_web\lib" -OutputFile "adminWeb_lib_structure_clean.txt"
 #powershell -ExecutionPolicy Bypass -File ".\tools\scripts\generate_clean_tree.ps1" -RootPath ".\packages" -OutputFile "packages_structure_clean.txt"
+#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\generate_clean_tree.ps1" -RootPath ".\firebase" -OutputFile "firebase_structure_clean.txt"
+#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\generate_clean_tree.ps1" -RootPath ".\tools" -OutputFile "tools_structure_clean.txt"

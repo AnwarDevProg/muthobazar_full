@@ -107,7 +107,7 @@ class _BannersHeader extends StatelessWidget {
               MBSpacing.w(MBSpacing.md),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: controller.statusFilter.value,
+                  initialValue: controller.statusFilter.value,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -128,7 +128,7 @@ class _BannersHeader extends StatelessWidget {
               MBSpacing.w(MBSpacing.md),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: controller.targetTypeFilter.value,
+                  initialValue: controller.targetTypeFilter.value,
                   decoration: const InputDecoration(
                     labelText: 'Target Type',
                     border: OutlineInputBorder(),

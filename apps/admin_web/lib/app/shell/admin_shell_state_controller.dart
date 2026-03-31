@@ -6,9 +6,11 @@ class AdminShellStateController extends GetxController {
   final RxBool isSidebarCollapsed = false.obs;
 
   void setRoute(String route) {
-    if (currentRoute.value == route) return;
+    if (Get.currentRoute == route) return;
+
     currentRoute.value = route;
-    Get.rootDelegate.toNamed(route);
+
+    Get.offNamed(route); // ✅ FIXED
   }
 
   void toggleSidebar() {
@@ -41,7 +43,7 @@ class AdminShellStateController extends GetxController {
         return 'Banners';
       case AdminWebRoutes.offers:
         return 'Offers';
-      case AdminWebRoutes.coupons:
+      case AdminWebRoutes.promos:
         return 'Coupons';
       case AdminWebRoutes.products:
         return 'Products';

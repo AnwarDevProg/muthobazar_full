@@ -305,7 +305,7 @@ class _AdminPermissionEditorDialogState
 
     setState(() {
       _permission = permission ??
-          MBAdminPermission.standardAdmin(
+          MBAdminPermission.admin(
             uid: widget.uid,
             actorUid: widget.uid,
           );

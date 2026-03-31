@@ -212,7 +212,7 @@ class _AdminBannerFormDialogState extends State<AdminBannerFormDialog> {
                           ),
                           MBSpacing.h(MBSpacing.md),
                           DropdownButtonFormField<String>(
-                            value: _targetType,
+                            initialValue: _targetType,
                             decoration: const InputDecoration(
                               labelText: 'Target Type',
                               border: OutlineInputBorder(),

@@ -24,6 +24,9 @@ export 'admin/admin_promo_repository.dart';
 export 'admin/admin_offer_repository.dart';
 
 export 'admin/purchases/mobile_admin_purchase_repository.dart';
+export 'admin/admin_web_phone_auth_repository.dart';
+export 'auth/phone_auth_eligibility_repository.dart';
+
 
 
 

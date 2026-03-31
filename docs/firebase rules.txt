@@ -1,0 +1,424 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // Base helpers
+    // =========================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // =========================================================
+    // Bootstrap helpers
+    // =========================================================
+
+    function bootstrapDocPath() {
+      return /databases/$(database)/documents/system/bootstrap;
+    }
+
+    function bootstrapDocExists() {
+      return exists(bootstrapDocPath());
+    }
+
+    function bootstrapDoc() {
+      return get(bootstrapDocPath()).data;
+    }
+
+    function bootstrapOpen() {
+      return bootstrapDocExists()
+        && bootstrapDoc().allowFirstSuperAdminSetup == true
+        && bootstrapDoc().bootstrapCompleted == false;
+    }
+
+    function isBootstrappingSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validBootstrapWrite(uid) {
+      return bootstrapOpen()
+        && isBootstrappingSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'super_admin'
+        && request.resource.data.isActive == true
+        && request.resource.data.canAccessAdminPanel == true
+        && request.resource.data.canManageAdmins == true
+        && request.resource.data.canManageAdminInvites == true
+        && request.resource.data.canManageAdminPermissions == true
+        && request.resource.data.canManageUsers == true
+        && request.resource.data.canManageCategories == true
+        && request.resource.data.canManageBrands == true
+        && request.resource.data.canManageProducts == true
+        && request.resource.data.canManageBanners == true
+        && request.resource.data.canManageCoupons == true
+        && request.resource.data.canManageOffers == true
+        && request.resource.data.canDeleteProducts == true
+        && request.resource.data.canRestoreProducts == true
+        && request.resource.data.canViewActivityLogs == true;
+    }
+
+    function validBootstrapAdminProfile(uid) {
+      return bootstrapOpen()
+        && isBootstrappingSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'super_admin';
+    }
+
+    function validBootstrapFinalize() {
+      return bootstrapOpen()
+        && signedIn()
+        && request.resource.data.allowFirstSuperAdminSetup == false
+        && request.resource.data.bootstrapCompleted == true
+        && request.resource.data.firstSuperAdminUid == request.auth.uid;
+    }
+
+    // =========================================================
+    // Admin permission helpers
+    // =========================================================
+
+    function adminPermissionDoc(uid) {
+      return /databases/$(database)/documents/admin_permissions/$(uid);
+    }
+
+    function hasAdminPermissionDoc() {
+      return signedIn() && exists(adminPermissionDoc(request.auth.uid));
+    }
+
+    function adminPermission() {
+      return get(adminPermissionDoc(request.auth.uid)).data;
+    }
+
+    function isActiveAdmin() {
+      return hasAdminPermissionDoc()
+        && adminPermission().isActive == true
+        && adminPermission().canAccessAdminPanel == true;
+    }
+
+    function isSuperAdmin() {
+      return isActiveAdmin()
+        && adminPermission().role == 'super_admin';
+    }
+
+    function canManageUsers() {
+      return isActiveAdmin() && adminPermission().canManageUsers == true;
+    }
+
+    function canManageCategories() {
+      return isActiveAdmin() && adminPermission().canManageCategories == true;
+    }
+
+    function canManageBrands() {
+      return isActiveAdmin() && adminPermission().canManageBrands == true;
+    }
+
+    function canManageProducts() {
+      return isActiveAdmin() && adminPermission().canManageProducts == true;
+    }
+
+    function canManageBanners() {
+      return isActiveAdmin() && adminPermission().canManageBanners == true;
+    }
+
+    function canManageCoupons() {
+      return isActiveAdmin() && adminPermission().canManageCoupons == true;
+    }
+
+    function canManageOffers() {
+      return isActiveAdmin() && adminPermission().canManageOffers == true;
+    }
+
+    function canManageAdmins() {
+      return isActiveAdmin() && adminPermission().canManageAdmins == true;
+    }
+
+    function canManageAdminInvites() {
+      return isActiveAdmin() && adminPermission().canManageAdminInvites == true;
+    }
+
+    function canManageAdminPermissions() {
+      return isActiveAdmin() && adminPermission().canManageAdminPermissions == true;
+    }
+
+    function canDeleteProducts() {
+      return isActiveAdmin() && adminPermission().canDeleteProducts == true;
+    }
+
+    function canRestoreProducts() {
+      return isActiveAdmin() && adminPermission().canRestoreProducts == true;
+    }
+
+    function canViewActivityLogs() {
+      return isActiveAdmin() && adminPermission().canViewActivityLogs == true;
+    }
+
+    // =========================================================
+    // Phone helpers
+    // =========================================================
+
+    function phoneIndexDoc(phone) {
+      return /databases/$(database)/documents/phone_index/$(phone);
+    }
+
+    function phoneIndexExists(phone) {
+      return exists(phoneIndexDoc(phone));
+    }
+
+    function existingPhoneUid(phone) {
+      return get(phoneIndexDoc(phone)).data.Uid;
+    }
+
+    function incomingUidMatchesAuth() {
+      return signedIn() && request.resource.data.Uid == request.auth.uid;
+    }
+
+    function incomingPhoneMatchesDocId(phone) {
+      return request.resource.data.PhoneNumber == phone;
+    }
+
+    function validBdPhone(phone) {
+      return phone is string
+        && phone.matches('^01[3-9][0-9]{8}$');
+    }
+
+    function validPhoneIndexKeys() {
+      return request.resource.data.keys().hasOnly([
+        'Uid',
+        'PhoneNumber',
+        'PhoneNumberE164',
+        'UpdatedAt'
+      ]);
+    }
+
+    function validPhoneIndexPayload(phone) {
+      return validPhoneIndexKeys()
+        && incomingUidMatchesAuth()
+        && incomingPhoneMatchesDocId(phone)
+        && validBdPhone(phone)
+        && (
+          !('PhoneNumberE164' in request.resource.data)
+          || request.resource.data.PhoneNumberE164 is string
+        );
+    }
+
+    // =========================================================
+    // System
+    // =========================================================
+
+    match /system/bootstrap {
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Create only from console/admin SDK, not client
+      allow create: if false;
+
+      // One-time finalize by the first signed-in bootstrapper
+      allow update: if validBootstrapFinalize();
+
+      // Never delete from client
+      allow delete: if false;
+    }
+
+    // =========================================================
+    // Users
+    // =========================================================
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || canManageUsers();
+
+      allow create, update: if isSelf(userId)
+        && request.resource.data.keys().hasOnly([
+          'FirstName',
+          'LastName',
+          'Email',
+          'PhoneNumber',
+          'PhoneNumberE164',
+          'ProfilePicture',
+          'Gender',
+          'DOB',
+          'Role',
+          'AccountStatus',
+          'IsGuest',
+          'DefaultAddressId',
+          'Addresses',
+          'CreatedAt',
+          'UpdatedAt',
+          'LastLoginAt'
+        ]);
+
+      allow update: if canManageUsers();
+
+      allow delete: if isSelf(userId) || isSuperAdmin();
+
+      match /cart/{cartItemId} {
+        allow read, write: if isSelf(userId);
+      }
+
+      match /addresses/{addressId} {
+        allow read, write: if isSelf(userId);
+      }
+    }
+
+    // =========================================================
+    // Phone index / history
+    // =========================================================
+
+    match /phone_index/{phone} {
+      allow get: if validBdPhone(phone);
+      allow list: if false;
+
+      allow create: if signedIn()
+        && validPhoneIndexPayload(phone)
+        && !phoneIndexExists(phone);
+
+      allow update: if signedIn()
+        && phoneIndexExists(phone)
+        && existingPhoneUid(phone) == request.auth.uid
+        && validPhoneIndexPayload(phone);
+
+      allow delete: if signedIn()
+        && phoneIndexExists(phone)
+        && existingPhoneUid(phone) == request.auth.uid;
+    }
+
+    match /phone_history/{historyId} {
+      allow read: if signedIn() && resource.data.Uid == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.Uid == request.auth.uid
+        && request.resource.data.OldPhoneNumber is string
+        && request.resource.data.NewPhoneNumber is string
+        && request.resource.data.ChangeType == 'user_phone_update'
+        && request.resource.data.Sequence is int;
+
+      allow update, delete: if false;
+    }
+
+    // =========================================================
+    // Admin security collections
+    // =========================================================
+
+    match /admin_permissions/{uid} {
+      allow get: if isSelf(uid) || canManageAdminPermissions();
+      allow list: if canManageAdminPermissions() || isSuperAdmin();
+
+      // One-time self-bootstrap only when bootstrap doc is open
+      allow create: if validBootstrapWrite(uid) || isSuperAdmin();
+
+      allow update: if canManageAdminPermissions() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isSelf(uid) || canManageAdmins();
+      allow list: if canManageAdmins() || isSuperAdmin();
+
+      // One-time self-bootstrap only when bootstrap doc is open
+      allow create: if validBootstrapAdminProfile(uid) || canManageAdmins() || isSuperAdmin();
+
+      allow update: if canManageAdmins() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admin_invites/{inviteId} {
+      allow read: if canManageAdminInvites() || isSuperAdmin();
+      allow create: if canManageAdminInvites() || isSuperAdmin();
+      allow update: if canManageAdminInvites() || isSuperAdmin();
+      allow delete: if canManageAdminInvites() || isSuperAdmin();
+    }
+
+    match /admin_activity_logs/{logId} {
+      allow read: if canViewActivityLogs() || isSuperAdmin();
+      allow create: if isActiveAdmin();
+      allow update, delete: if false;
+    }
+
+    // =========================================================
+    // Catalog
+    // =========================================================
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if canManageProducts();
+      allow delete: if canDeleteProducts() || isSuperAdmin();
+    }
+
+    match /quarantine_products/{productId} {
+      allow read: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
+      allow create: if canDeleteProducts() || canManageProducts() || isSuperAdmin();
+      allow update: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
+      allow delete: if canDeleteProducts() || isSuperAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if canManageCategories() || isSuperAdmin();
+    }
+
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create, update, delete: if canManageBrands() || isSuperAdmin();
+    }
+
+    // =========================================================
+    // Marketing
+    // =========================================================
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if canManageBanners() || isSuperAdmin();
+    }
+
+    match /offers/{offerId} {
+      allow read: if true;
+      allow create, update, delete: if canManageOffers() || isSuperAdmin();
+    }
+
+    match /promos/{promoId} {
+      allow read: if canManageCoupons() || isSuperAdmin();
+      allow create, update, delete: if canManageCoupons() || isSuperAdmin();
+    }
+
+    match /user_promos/{promoId} {
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid)
+        || canManageCoupons()
+        || isSuperAdmin();
+
+      allow create, update, delete: if canManageCoupons() || isSuperAdmin();
+    }
+
+    // =========================================================
+    // Orders
+    // =========================================================
+
+    match /orders/{orderId} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.Uid == request.auth.uid
+        || isActiveAdmin()
+      );
+
+      allow create: if signedIn();
+
+      allow update: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.Uid == request.auth.uid
+        || isActiveAdmin()
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================
+    // Catch all
+    // =========================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

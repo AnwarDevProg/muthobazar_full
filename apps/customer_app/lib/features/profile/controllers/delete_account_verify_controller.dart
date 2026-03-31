@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:customer_app/app/routes/customer_app_routes.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_ui/shared_ui.dart';
-import '../../auth/controllers/base_phone_auth_controller.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 import 'profile_controller.dart';
 

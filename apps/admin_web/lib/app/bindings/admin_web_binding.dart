@@ -12,19 +12,19 @@ class AdminWebBinding extends Bindings {
       permanent: true,
     );
 
-    Get.put<AdminWebBootstrapService>(
-      AdminWebBootstrapService(),
-      permanent: true,
+    Get.lazyPut<AdminWebBootstrapService>(
+          () => AdminWebBootstrapService(),
+      fenix: true,
     );
 
-    Get.put<AdminPermissionGateService>(
-      AdminPermissionGateService(),
-      permanent: true,
+    Get.lazyPut<AdminPermissionGateService>(
+          () => AdminPermissionGateService(),
+      fenix: true,
     );
 
-    Get.put<AdminShellStateController>(
-      AdminShellStateController(),
-      permanent: true,
+    Get.lazyPut<AdminShellStateController>(
+          () => AdminShellStateController(),
+      fenix: true,
     );
   }
 }

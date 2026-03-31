@@ -38,7 +38,6 @@ C.
 |   |   +---constants
 |   |   |   \---auth_legal_text.dart
 |   |   +---controllers
-|   |   |   +---base_phone_auth_controller.dart
 |   |   |   +---login_controller.dart
 |   |   |   \---register_controller.dart
 |   |   +---helpers

@@ -3,7 +3,6 @@
 // Pure UI widget for phone OTP register form.
 
 import 'dart:ui';
-
 import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

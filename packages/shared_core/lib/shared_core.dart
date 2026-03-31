@@ -17,6 +17,7 @@ export 'utils/mb_repository_load_result.dart';
 export 'auth/services/auth_profile_redirect_resolver.dart';
 export 'auth/services/auth_profile_redirect_decision.dart';
 export 'auth/services/auth_profile_redirect_result.dart';
+export 'auth/controllers/base_phone_auth_controller.dart';
 
 
 

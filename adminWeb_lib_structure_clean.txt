@@ -7,6 +7,7 @@ C.
 |   |   +---admin_user_binding.dart
 |   |   +---admin_web_binding.dart
 |   |   +---audit_logs_binding.dart
+|   |   +---banners_binding.dart
 |   |   +---brands_binding.dart
 |   |   +---categories_binding.dart
 |   |   +---complaints_binding.dart
@@ -68,6 +69,7 @@ C.
 |   |   \---admin_startup_redirect_controller.dart
 |   +---widgets
 |   |   +---common
+|   |   |   \---admin_feature_placeholder_page.dart
 |   |   +---form
 |   |   +---layout
 |   |   \---table
@@ -89,7 +91,6 @@ C.
 |   |   +---pages
 |   |   |   +---admin_login_page.dart
 |   |   |   \---admin_register_page.dart
-|   |   +---repositories
 |   |   \---widgets
 |   |       \---admin_auth_shell.dart
 |   +---banners
@@ -145,6 +146,10 @@ C.
 |   |   \---widgets
 |   |       +---admin_offer_form_dialog.dart
 |   |       \---admin_promo_form_dialog.dart
+|   +---offer
+|   |   +---controllers
+|   |   \---pages
+|   |       \---admin_offer_page.dart
 |   +---orders
 |   +---packing
 |   +---picking
@@ -163,15 +168,6 @@ C.
 |   |   |   \---admin_profile_page.dart
 |   |   \---widgets
 |   +---purchase_receiving
-|   +---purchases
-|   |   +---bindings
-|   |   |   \---mobile_admin_purchase_binding.dart
-|   |   +---controllers
-|   |   |   \---mobile_admin_purchase_controller.dart
-|   |   +---models
-|   |   |   \---mobile_admin_purchase_model.dart
-|   |   \---pages
-|   |       \---mobile_admin_purchase_list_page.dart
 |   +---refunds
 |   +---reports
 |   +---returns

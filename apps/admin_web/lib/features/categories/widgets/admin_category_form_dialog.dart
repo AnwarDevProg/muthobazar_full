@@ -28,13 +28,14 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
   late final TextEditingController _imageUrlController;
   late final TextEditingController _iconUrlController;
   late final TextEditingController _slugController;
-  late final TextEditingController _parentIdController;
   late final TextEditingController _sortOrderController;
   late final TextEditingController _productsCountController;
 
   bool _isFeatured = false;
   bool _showOnHome = false;
   bool _isActive = true;
+  String? _selectedParentId;
+  String? _slugErrorText;
 
   bool get isEdit => widget.category != null;
 
@@ -50,12 +51,9 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         TextEditingController(text: category?.descriptionEn ?? '');
     _descriptionBnController =
         TextEditingController(text: category?.descriptionBn ?? '');
-    _imageUrlController =
-        TextEditingController(text: category?.imageUrl ?? '');
+    _imageUrlController = TextEditingController(text: category?.imageUrl ?? '');
     _iconUrlController = TextEditingController(text: category?.iconUrl ?? '');
     _slugController = TextEditingController(text: category?.slug ?? '');
-    _parentIdController =
-        TextEditingController(text: category?.parentId ?? '');
     _sortOrderController =
         TextEditingController(text: '${category?.sortOrder ?? 0}');
     _productsCountController =
@@ -64,10 +62,50 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     _isFeatured = category?.isFeatured ?? false;
     _showOnHome = category?.showOnHome ?? false;
     _isActive = category?.isActive ?? true;
+    _selectedParentId = category?.parentId;
+
+    _nameEnController.addListener(_handleNameChanged);
+    _imageUrlController.addListener(_handleImageChanged);
+
+    if (!isEdit && _slugController.text.trim().isEmpty) {
+      _slugController.text = _generateSlug(_nameEnController.text);
+    }
+  }
+
+  void _handleNameChanged() {
+    if (!mounted) return;
+
+    if (!isEdit) {
+      final nextSlug = _generateSlug(_nameEnController.text);
+      if (_slugController.text != nextSlug) {
+        _slugController.text = nextSlug;
+        _slugErrorText = null;
+      }
+    }
+
+    setState(() {});
+  }
+
+  void _handleImageChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  String _generateSlug(String input) {
+    return input
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'[\s_-]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
   }
 
   @override
   void dispose() {
+    _nameEnController.removeListener(_handleNameChanged);
+    _imageUrlController.removeListener(_handleImageChanged);
+
     _nameEnController.dispose();
     _nameBnController.dispose();
     _descriptionEnController.dispose();
@@ -75,7 +113,6 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     _imageUrlController.dispose();
     _iconUrlController.dispose();
     _slugController.dispose();
-    _parentIdController.dispose();
     _sortOrderController.dispose();
     _productsCountController.dispose();
     super.dispose();
@@ -83,14 +120,13 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final AdminCategoryController controller =
-    Get.find<AdminCategoryController>();
+    final controller = Get.find<AdminCategoryController>();
 
     return Dialog(
       insetPadding: const EdgeInsets.all(32),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          maxWidth: 860,
+          maxWidth: 920,
           maxHeight: 760,
         ),
         child: Obx(
@@ -126,6 +162,7 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
                       child: Column(
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: MBTextField(
@@ -150,6 +187,7 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
                           ),
                           MBSpacing.h(MBSpacing.md),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: MBTextField(
@@ -170,11 +208,52 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
                           ),
                           MBSpacing.h(MBSpacing.md),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: MBTextField(
-                                  controller: _imageUrlController,
-                                  labelText: 'Image URL',
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    MBTextField(
+                                      controller: _imageUrlController,
+                                      labelText: 'Image URL',
+                                    ),
+                                    if (_imageUrlController.text
+                                        .trim()
+                                        .isNotEmpty) ...[
+                                      MBSpacing.h(MBSpacing.sm),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          MBRadius.md,
+                                        ),
+                                        child: Image.network(
+                                          _imageUrlController.text.trim(),
+                                          height: 100,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                                height: 100,
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  color: MBColors.background,
+                                                  borderRadius:
+                                                  BorderRadius.circular(
+                                                    MBRadius.md,
+                                                  ),
+                                                  border: Border.all(
+                                                    color: MBColors.border
+                                                        .withValues(alpha: 0.9),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  'Invalid image URL',
+                                                ),
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                               MBSpacing.w(MBSpacing.md),
@@ -188,24 +267,81 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
                           ),
                           MBSpacing.h(MBSpacing.md),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: MBTextField(
                                   controller: _slugController,
                                   labelText: 'Slug',
+                                  enabled: false,
                                 ),
                               ),
                               MBSpacing.w(MBSpacing.md),
                               Expanded(
-                                child: MBTextField(
-                                  controller: _parentIdController,
-                                  labelText: 'Parent Category ID',
-                                ),
+                                child: Obx(() {
+                                  final parentOptions = controller.categories
+                                      .where((cat) => cat.id != widget.category?.id)
+                                      .toList()
+                                    ..sort(
+                                          (a, b) => a.nameEn
+                                          .toLowerCase()
+                                          .compareTo(b.nameEn.toLowerCase()),
+                                    );
+
+                                  final hasSelectedParent = _selectedParentId != null &&
+                                      parentOptions.any(
+                                            (cat) => cat.id == _selectedParentId,
+                                      );
+
+                                  final dropdownValue =
+                                  hasSelectedParent ? _selectedParentId : null;
+
+                                  return DropdownButtonFormField<String>(
+                                    value: dropdownValue,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Parent Category',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem<String>(
+                                        value: null,
+                                        child: Text('None'),
+                                      ),
+                                      ...parentOptions.map(
+                                            (cat) => DropdownMenuItem<String>(
+                                          value: cat.id,
+                                          child: Text(cat.nameEn),
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedParentId = value;
+                                      });
+                                    },
+                                  );
+                                }),
                               ),
                             ],
                           ),
+                          if (_slugErrorText != null) ...[
+                            MBSpacing.h(MBSpacing.sm),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _slugErrorText!,
+                                    style: MBTextStyles.body.copyWith(
+                                      color: MBColors.error,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           MBSpacing.h(MBSpacing.md),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: MBTextField(
@@ -301,8 +437,20 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final AdminCategoryController controller =
-    Get.find<AdminCategoryController>();
+    final controller = Get.find<AdminCategoryController>();
+
+    final slug = _slugController.text.trim();
+    final slugAvailable = await controller.isSlugAvailable(
+      slug: slug,
+      excludeCategoryId: widget.category?.id,
+    );
+
+    if (!slugAvailable) {
+      setState(() {
+        _slugErrorText = 'This slug already exists. Change the English name to generate another slug.';
+      });
+      return;
+    }
 
     final now = DateTime.now();
     final existing = widget.category;
@@ -315,10 +463,8 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
       descriptionBn: _descriptionBnController.text.trim(),
       imageUrl: _imageUrlController.text.trim(),
       iconUrl: _iconUrlController.text.trim(),
-      slug: _slugController.text.trim(),
-      parentId: _parentIdController.text.trim().isEmpty
-          ? null
-          : _parentIdController.text.trim(),
+      slug: slug,
+      parentId: _selectedParentId,
       isFeatured: _isFeatured,
       showOnHome: _showOnHome,
       isActive: _isActive,
@@ -328,14 +474,18 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
       updatedAt: now,
     );
 
-    if (existing == null) {
-      await controller.createCategory(category);
-    } else {
-      await controller.updateCategory(category);
-    }
+    try {
+      if (existing == null) {
+        await controller.createCategory(category);
+      } else {
+        await controller.updateCategory(category);
+      }
 
-    if (mounted) {
-      Get.back();
+      if (mounted) {
+        Get.back();
+      }
+    } catch (_) {
+      // Snackbar is already shown by controller.
     }
   }
 }

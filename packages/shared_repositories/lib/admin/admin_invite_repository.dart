@@ -184,7 +184,7 @@ class AdminInviteRepository {
       uid: user.id,
       actorUid: invite.invitedBy,
     )
-        : MBAdminPermission.standardAdmin(
+        : MBAdminPermission.admin(
       uid: user.id,
       actorUid: invite.invitedBy,
     );

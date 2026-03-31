@@ -1,5 +1,6 @@
 import 'package:admin_web/app/bindings/admin_access_binding.dart';
 import 'package:admin_web/app/bindings/admin_user_binding.dart';
+import 'package:admin_web/app/bindings/banners_binding.dart';
 import 'package:admin_web/app/bindings/brands_binding.dart';
 import 'package:admin_web/app/bindings/categories_binding.dart';
 import 'package:admin_web/app/bindings/dashboard_binding.dart';
@@ -12,13 +13,14 @@ import 'package:admin_web/app/routes/admin_web_routes.dart';
 import 'package:admin_web/app/startup/admin_launch_router_page.dart';
 import 'package:admin_web/app/widgets/common/admin_feature_placeholder_page.dart';
 import 'package:admin_web/features/admin_access/pages/admin_permissions_page.dart';
+import 'package:admin_web/features/audit_logs/pages/admin_activity_logs_page.dart';
 import 'package:admin_web/features/auth/pages/admin_login_page.dart';
 import 'package:admin_web/features/auth/pages/admin_register_page.dart';
 import 'package:admin_web/features/banners/pages/admin_banners_page.dart';
 import 'package:admin_web/features/brands/pages/admin_brands_page.dart';
+import 'package:admin_web/features/categories/controllers/admin_category_controller.dart';
 import 'package:admin_web/features/categories/pages/admin_categories_page.dart';
 import 'package:admin_web/features/dashboard/pages/admin_dashboard_page.dart';
-import 'package:admin_web/features/invites/pages/admin_invites_page.dart';
 import 'package:admin_web/features/marketing/pages/admin_offers_page.dart';
 import 'package:admin_web/features/marketing/pages/admin_promos_page.dart';
 import 'package:admin_web/features/products/pages/admin_products_page.dart';
@@ -41,6 +43,16 @@ class AdminWebPages {
       page: () => const AdminLoginPage(),
       middlewares: <GetMiddleware>[
         AdminGuestOnlyMiddleware(),
+      ],
+    ),
+    GetPage(
+      name: AdminWebRoutes.auditLogs,
+      page: () => const AdminActivityLogsPage(),
+      bindings: [
+        AdminAccessBinding(),
+      ],
+      middlewares: <GetMiddleware>[
+        AdminAuthMiddleware(),
       ],
     ),
     GetPage(
@@ -79,16 +91,22 @@ class AdminWebPages {
     ),
     GetPage(
       name: AdminWebRoutes.categories,
-      page: () => const AdminCategoriesPage(),
-      binding: CategoriesBinding(),
-      middlewares: <GetMiddleware>[
-        AdminAuthMiddleware(),
-      ],
+      page: () {
+        print("🔥 ROUTE: CATEGORIES PAGE LOADED");
+        return const AdminCategoriesPage();
+      },
+      binding: BindingsBuilder(() {
+        print("🔥 BINDING: CATEGORY CONTROLLER REGISTER");
+        Get.put(AdminCategoryController());
+      }),
     ),
     GetPage(
       name: AdminWebRoutes.brands,
       page: () => const AdminBrandsPage(),
-      binding: BrandsBinding(),
+      bindings: [
+        BrandsBinding(),
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -96,6 +114,10 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.banners,
       page: () => const AdminBannersPage(),
+      bindings: [
+        BannersBinding(),
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -103,6 +125,9 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.promos,
       page: () => const AdminPromosPage(),
+      bindings: [
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -110,6 +135,9 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.offers,
       page: () => const AdminOffersPage(),
+      bindings: [
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -117,7 +145,10 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.products,
       page: () => const AdminProductsPage(),
-      binding: ProductsBinding(),
+      bindings: [
+        ProductsBinding(),
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -125,7 +156,10 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.quarantineProducts,
       page: () => const AdminQuarantineProductsPage(),
-      binding: ProductsBinding(),
+      bindings: [
+        ProductsBinding(),
+        AdminAccessBinding(),
+      ],
       middlewares: <GetMiddleware>[
         AdminAuthMiddleware(),
       ],
@@ -150,21 +184,12 @@ class AdminWebPages {
         SuperAdminOnlyMiddleware(),
       ],
     ),
-    GetPage(
-      name: AdminWebRoutes.invites,
-      page: () => const AdminInvitesPage(),
-      middlewares: <GetMiddleware>[
-        SuperAdminOnlyMiddleware(),
-      ],
-    ),
 
-    // Placeholder pages
     ..._placeholderPages(),
   ];
 
   static List<GetPage<dynamic>> _placeholderPages() {
     final placeholders = <MapEntry<String, String>>[
-      const MapEntry(AdminWebRoutes.auditLogs, 'Audit Logs'),
       const MapEntry(AdminWebRoutes.orders, 'Orders'),
       const MapEntry(AdminWebRoutes.inventory, 'Inventory'),
       const MapEntry(AdminWebRoutes.finance, 'Finance'),

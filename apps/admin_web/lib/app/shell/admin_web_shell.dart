@@ -46,10 +46,7 @@ class AdminWebShell extends GetView<AdminShellStateController> {
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(MBRadius.xl),
-                        child: child,
-                      ),
+                      child: child,
                     ),
                   ),
                 ],
@@ -139,7 +136,8 @@ class _AdminSidebar extends GetView<AdminShellStateController> {
                       icon: Icons.inventory_2_outlined,
                       collapsed: collapsed,
                       isGroupActive: controller.isProductsSectionActive(),
-                      onMainTap: () => controller.setRoute(AdminWebRoutes.products),
+                      onMainTap: () =>
+                          controller.setRoute(AdminWebRoutes.products),
                       children: const [
                         _SidebarSubItemConfig(
                           label: 'All Products',
@@ -166,7 +164,7 @@ class _AdminSidebar extends GetView<AdminShellStateController> {
                     _SidebarItem(
                       label: 'Coupons',
                       icon: Icons.confirmation_number_outlined,
-                      route: AdminWebRoutes.coupons,
+                      route: AdminWebRoutes.promos,
                       collapsed: collapsed,
                     ),
                     MBSpacing.h(MBSpacing.md),
@@ -372,7 +370,8 @@ class _SidebarItem extends GetView<AdminShellStateController> {
                     overflow: TextOverflow.ellipsis,
                     style: MBTextStyles.bodyMedium.copyWith(
                       color: Colors.white,
-                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight:
+                      isActive ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -433,79 +432,77 @@ class _SidebarExpandableGroup extends GetView<AdminShellStateController> {
       );
     }
 
-    return Obx(() {
-      final bool expanded = isGroupActive;
+    final bool expanded = isGroupActive;
 
-      return Container(
-        margin: const EdgeInsets.only(bottom: MBSpacing.sm),
-        decoration: BoxDecoration(
-          color: isGroupActive
-              ? Colors.white.withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: onMainTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: MBSpacing.md,
-                  vertical: MBSpacing.md,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      icon,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    MBSpacing.w(MBSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: MBTextStyles.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: isGroupActive
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: MBSpacing.sm),
+      decoration: BoxDecoration(
+        color: isGroupActive
+            ? Colors.white.withValues(alpha: 0.12)
+            : Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onMainTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: MBSpacing.md,
+                vertical: MBSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  MBSpacing.w(MBSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: MBTextStyles.bodyMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: isGroupActive
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
-                    Icon(
-                      expanded
-                          ? Icons.keyboard_arrow_down_rounded
-                          : Icons.keyboard_arrow_right_rounded,
-                      color: Colors.white,
-                    ),
-                  ],
-                ),
+                  ),
+                  Icon(
+                    expanded
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.keyboard_arrow_right_rounded,
+                    color: Colors.white,
+                  ),
+                ],
               ),
             ),
-            if (expanded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  MBSpacing.md,
-                  0,
-                  MBSpacing.md,
-                  MBSpacing.sm,
-                ),
-                child: Column(
-                  children: children
-                      .map(
-                        (item) => _SidebarSubItem(
-                      label: item.label,
-                      route: item.route,
-                    ),
-                  )
-                      .toList(),
-                ),
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                MBSpacing.md,
+                0,
+                MBSpacing.md,
+                MBSpacing.sm,
               ),
-          ],
-        ),
-      );
-    });
+              child: Column(
+                children: children
+                    .map(
+                      (item) => _SidebarSubItem(
+                    label: item.label,
+                    route: item.route,
+                  ),
+                )
+                    .toList(),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 

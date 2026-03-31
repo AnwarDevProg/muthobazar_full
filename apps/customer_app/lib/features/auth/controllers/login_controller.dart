@@ -1,15 +1,14 @@
 // Login Controller
 // ----------------
-
 import 'package:customer_app/app/startup/customer_auth_redirect_service.dart';
 import 'package:customer_app/features/auth/helpers/firestore_auth_debug_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'base_phone_auth_controller.dart';
+import 'package:shared_repositories/auth/phone_auth_eligibility_repository.dart';
 
 class LoginController extends BasePhoneAuthController {
   LoginController({
@@ -94,13 +93,24 @@ class LoginController extends BasePhoneAuthController {
     notifyListeners();
 
     try {
-      final bool phoneExists = await _repository.isPhoneRegistered(rawPhone);
+      final eligibilityRepo = PhoneAuthEligibilityRepository();
 
-      if (!phoneExists) {
+      final result = await eligibilityRepo.checkEligibility(
+        phoneNumber: rawPhone,
+        app: 'customer_app',
+        intent: 'login',
+      );
+
+      if (!result.allowSendOtp) {
         setLoading(false);
         finishOtpRequest();
         notifyListeners();
-        onUnregisteredUser();
+
+        if (result.code == 'CUSTOMER_LOGIN_NOT_REGISTERED') {
+          onUnregisteredUser();
+        } else {
+          onError('Login Not Allowed', result.message);
+        }
         return;
       }
 
@@ -228,11 +238,17 @@ class LoginController extends BasePhoneAuthController {
       final String rawPhone =
       _repository.normalizePhoneInput(phoneController.text);
 
-      final bool phoneExists = await _repository.isPhoneRegistered(rawPhone);
+      final eligibilityRepo = PhoneAuthEligibilityRepository();
 
-      if (!phoneExists) {
+      final result = await eligibilityRepo.checkEligibility(
+        phoneNumber: rawPhone,
+        app: 'customer_app',
+        intent: 'login',
+      );
+
+      if (!result.allowSendOtp) {
         await _cleanupUnexpectedAuthUser(user);
-        otpErrorText = 'This number is no longer registered. Please register.';
+        otpErrorText = result.message;
         onError('Account Not Found', otpErrorText!);
         return;
       }

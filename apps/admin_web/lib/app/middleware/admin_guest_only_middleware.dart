@@ -5,21 +5,21 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
 class AdminGuestOnlyMiddleware extends GetMiddleware {
-  AdminGuestOnlyMiddleware({this.priority = 0});
+  AdminGuestOnlyMiddleware({int? priority}) {
+    this.priority = priority ?? 0;
+  }
 
   @override
-  final int priority;
+  int? priority;
 
-  final AdminWebSessionService _sessionService =
-  Get.find<AdminWebSessionService>();
+  AdminWebSessionService get _sessionService =>
+      Get.find<AdminWebSessionService>();
 
-  final AdminWebBootstrapService _bootstrapService =
-  Get.find<AdminWebBootstrapService>();
+  AdminWebBootstrapService get _bootstrapService =>
+      Get.find<AdminWebBootstrapService>();
 
   @override
   RouteSettings? redirect(String? route) {
-    // Keep sync redirect lightweight.
-    // Real routing decision happens in redirectDelegate.
     return null;
   }
 
@@ -31,17 +31,6 @@ class AdminGuestOnlyMiddleware extends GetMiddleware {
       return await super.redirectDelegate(route);
     }
 
-    // ==========================================================
-    // BOOTSTRAP-ONLY: FIRST SUPER ADMIN SETUP REDIRECT
-    // ----------------------------------------------------------
-    // If bootstrap is still open and a user is already signed in,
-    // do not leave them on login/register pages. Send them to the
-    // one-time setup page.
-    //
-    // Safe future removal:
-    // - remove this block
-    // - leave normal guest-only behavior intact
-    // ==========================================================
     final bool needsSetup =
     await _bootstrapService.shouldShowSuperAdminSetup();
 

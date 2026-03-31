@@ -8,6 +8,8 @@ export 'admin/mb_admin_permission.dart';
 export 'admin/purchases/admin_purchase_model.dart';
 
 
+export 'auth/phone_auth_eligibility_result.dart';
+
 export 'catalog/mb_brand.dart';
 export 'catalog/mb_category.dart';
 export 'catalog/mb_product.dart';

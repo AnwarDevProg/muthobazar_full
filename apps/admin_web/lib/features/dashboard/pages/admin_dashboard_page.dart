@@ -1,5 +1,5 @@
-import 'package:admin_web/app/shell/admin_web_shell.dart';
 import 'package:admin_web/app/routes/admin_web_routes.dart';
+import 'package:admin_web/app/shell/admin_web_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -15,10 +15,7 @@ class AdminDashboardPage extends GetView<AdminManagementController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 🔥 PAGE HEADER (NEW)
-          _DashboardPageHeader(),
-
-          /// 🔥 BODY
+          const _DashboardPageHeader(),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -46,31 +43,23 @@ class AdminDashboardPage extends GetView<AdminManagementController> {
                             ),
                           ),
                           MBSpacing.h(MBSpacing.xl),
-
                           const _SectionHeader(
                             title: 'Quick Overview',
                             subtitle:
                             'Important access and control information at a glance.',
                           ),
                           MBSpacing.h(MBSpacing.md),
-
-                          Obx(() => _ResponsiveStatsGrid(controller: controller)),
-
+                          _ResponsiveStatsGrid(controller: controller),
                           MBSpacing.h(MBSpacing.xl),
-
-                          Obx(() => _ResponsiveMainGrid(controller: controller)),
-
+                          _ResponsiveMainGrid(controller: controller),
                           MBSpacing.h(MBSpacing.xl),
-
                           const _SectionHeader(
                             title: 'Recommended Next Actions',
                             subtitle:
                             'Suggested admin tasks based on your current access.',
                           ),
                           MBSpacing.h(MBSpacing.md),
-
-                          Obx(
-                                  () => _ResponsiveActionsGrid(controller: controller)),
+                          _ResponsiveActionsGrid(controller: controller),
                         ],
                       ),
                     ),
@@ -105,32 +94,40 @@ class _ResponsiveStatsGrid extends StatelessWidget {
             (constraints.maxWidth - ((columns - 1) * MBSpacing.md)) / columns;
 
         final items = <Widget>[
-          _AdminStatCard(
-            title: 'Admin Access',
-            value: controller.canAccessAdminPanel ? 'Allowed' : 'Denied',
-            icon: Icons.verified_user_outlined,
-            accentColor: controller.canAccessAdminPanel
-                ? MBColors.success
-                : MBColors.error,
+          Obx(
+                () => _AdminStatCard(
+              title: 'Admin Access',
+              value: controller.canAccessAdminPanel ? 'Allowed' : 'Denied',
+              icon: Icons.verified_user_outlined,
+              accentColor: controller.canAccessAdminPanel
+                  ? MBColors.success
+                  : MBColors.error,
+            ),
           ),
-          _AdminStatCard(
-            title: 'Role',
-            value: controller.adminRole,
-            icon: Icons.badge_outlined,
-            accentColor: MBColors.primaryOrange,
+          Obx(
+                () => _AdminStatCard(
+              title: 'Role',
+              value: controller.adminRole,
+              icon: Icons.badge_outlined,
+              accentColor: MBColors.primaryOrange,
+            ),
           ),
-          _AdminStatCard(
-            title: 'Enabled Permissions',
-            value: controller.enabledPermissionCount.toString(),
-            icon: Icons.shield_outlined,
-            accentColor: MBColors.primaryOrange,
+          Obx(
+                () => _AdminStatCard(
+              title: 'Enabled Permissions',
+              value: controller.enabledPermissionCount.toString(),
+              icon: Icons.shield_outlined,
+              accentColor: MBColors.primaryOrange,
+            ),
           ),
-          _AdminStatCard(
-            title: 'Mode',
-            value: controller.isSuperAdmin ? 'Super Admin' : 'Admin',
-            icon: Icons.admin_panel_settings_outlined,
-            accentColor:
-            controller.isSuperAdmin ? MBColors.success : MBColors.textMuted,
+          Obx(
+                () => _AdminStatCard(
+              title: 'Mode',
+              value: controller.isSuperAdmin ? 'Super Admin' : 'Admin',
+              icon: Icons.admin_panel_settings_outlined,
+              accentColor:
+              controller.isSuperAdmin ? MBColors.success : MBColors.textMuted,
+            ),
           ),
         ];
 
@@ -220,56 +217,66 @@ class _ResponsiveActionsGrid extends StatelessWidget {
             'Keep your personal info and profile picture updated for admin records.',
             onTap: () => Get.toNamed(AdminWebRoutes.profile),
           ),
-          _ActionHintCard(
-            icon: Icons.inventory_2_outlined,
-            title: 'Manage Products',
-            subtitle: controller.accessController.canManageProducts
-                ? 'Review, update, and organize product listings.'
-                : 'Product management is not enabled for this account.',
-            onTap: controller.accessController.canManageProducts
-                ? () => Get.toNamed(AdminWebRoutes.products)
-                : null,
+          Obx(
+                () => _ActionHintCard(
+              icon: Icons.inventory_2_outlined,
+              title: 'Manage Products',
+              subtitle: controller.accessController.canManageProducts
+                  ? 'Review, update, and organize product listings.'
+                  : 'Product management is not enabled for this account.',
+              onTap: controller.accessController.canManageProducts
+                  ? () => Get.toNamed(AdminWebRoutes.products)
+                  : null,
+            ),
           ),
-          _ActionHintCard(
-            icon: Icons.category_outlined,
-            title: 'Organize Catalog',
-            subtitle: controller.accessController.canManageCategories ||
-                controller.accessController.canManageBrands
-                ? 'Maintain category and brand structure for a cleaner store.'
-                : 'Catalog organization permissions are currently restricted.',
-            onTap: controller.accessController.canManageCategories
-                ? () => Get.toNamed(AdminWebRoutes.categories)
-                : null,
+          Obx(
+                () => _ActionHintCard(
+              icon: Icons.category_outlined,
+              title: 'Organize Catalog',
+              subtitle: controller.accessController.canManageCategories ||
+                  controller.accessController.canManageBrands
+                  ? 'Maintain category and brand structure for a cleaner store.'
+                  : 'Catalog organization permissions are currently restricted.',
+              onTap: controller.accessController.canManageCategories
+                  ? () => Get.toNamed(AdminWebRoutes.categories)
+                  : null,
+            ),
           ),
-          _ActionHintCard(
-            icon: Icons.campaign_outlined,
-            title: 'Marketing Control',
-            subtitle: controller.accessController.canManageBanners
-                ? 'Control banners, promos, and offers from one place.'
-                : 'Marketing permissions are not enabled for this account.',
-            onTap: controller.accessController.canManageBanners
-                ? () => Get.toNamed(AdminWebRoutes.banners)
-                : null,
+          Obx(
+                () => _ActionHintCard(
+              icon: Icons.campaign_outlined,
+              title: 'Marketing Control',
+              subtitle: controller.accessController.canManageBanners
+                  ? 'Control banners, promos, and offers from one place.'
+                  : 'Marketing permissions are not enabled for this account.',
+              onTap: controller.accessController.canManageBanners
+                  ? () => Get.toNamed(AdminWebRoutes.banners)
+                  : null,
+            ),
           ),
-          _ActionHintCard(
-            icon: Icons.people_alt_outlined,
-            title: 'User Management',
-            subtitle: controller.accessController.canManageUsers
-                ? 'Review customer and admin-accessible user accounts.'
-                : 'User management is not enabled for this account.',
-            onTap: controller.accessController.canManageUsers
-                ? () => Get.toNamed(AdminWebRoutes.users)
-                : null,
+          Obx(
+                () => _ActionHintCard(
+              icon: Icons.people_alt_outlined,
+              title: 'User Management',
+              subtitle: controller.accessController.canManageUsers
+                  ? 'Review customer and admin-accessible user accounts.'
+                  : 'User management is not enabled for this account.',
+              onTap: controller.accessController.canManageUsers
+                  ? () => Get.toNamed(AdminWebRoutes.users)
+                  : null,
+            ),
           ),
-          _ActionHintCard(
-            icon: Icons.history_rounded,
-            title: 'Audit Activity',
-            subtitle: controller.accessController.canViewActivityLogs
-                ? 'Use activity logs to review changes and admin actions.'
-                : 'Activity log visibility is not enabled for this account.',
-            onTap: controller.accessController.canViewActivityLogs
-                ? () => Get.toNamed(AdminWebRoutes.auditLogs)
-                : null,
+          Obx(
+                () => _ActionHintCard(
+              icon: Icons.history_rounded,
+              title: 'Audit Activity',
+              subtitle: controller.accessController.canViewActivityLogs
+                  ? 'Use activity logs to review changes and admin actions.'
+                  : 'Activity log visibility is not enabled for this account.',
+              onTap: controller.accessController.canViewActivityLogs
+                  ? () => Get.toNamed(AdminWebRoutes.auditLogs)
+                  : null,
+            ),
           ),
         ];
 
@@ -521,8 +528,6 @@ class _PermissionSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adminController = controller.accessController;
-
     return MBCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,54 +546,78 @@ class _PermissionSummaryCard extends StatelessWidget {
             ),
           ),
           MBSpacing.h(MBSpacing.md),
-          _PermissionRow(
-            label: 'Access admin panel',
-            enabled: adminController.canAccessAdminPanel,
+          Obx(
+                () => _PermissionRow(
+              label: 'Access admin panel',
+              enabled: controller.accessController.canAccessAdminPanel,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage admins',
-            enabled: adminController.canManageAdmins,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage admins',
+              enabled: controller.accessController.canManageAdmins,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage admin invites',
-            enabled: adminController.canManageAdminInvites,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage admin invites',
+              enabled: controller.accessController.canManageAdminInvites,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage admin permissions',
-            enabled: adminController.canManageAdminPermissions,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage admin permissions',
+              enabled: controller.accessController.canManageAdminPermissions,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage users',
-            enabled: adminController.canManageUsers,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage users',
+              enabled: controller.accessController.canManageUsers,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage categories',
-            enabled: adminController.canManageCategories,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage categories',
+              enabled: controller.accessController.canManageCategories,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage brands',
-            enabled: adminController.canManageBrands,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage brands',
+              enabled: controller.accessController.canManageBrands,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage products',
-            enabled: adminController.canManageProducts,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage products',
+              enabled: controller.accessController.canManageProducts,
+            ),
           ),
-          _PermissionRow(
-            label: 'Manage banners',
-            enabled: adminController.canManageBanners,
+          Obx(
+                () => _PermissionRow(
+              label: 'Manage banners',
+              enabled: controller.accessController.canManageBanners,
+            ),
           ),
-          _PermissionRow(
-            label: 'Delete products',
-            enabled: adminController.canDeleteProducts,
+          Obx(
+                () => _PermissionRow(
+              label: 'Delete products',
+              enabled: controller.accessController.canDeleteProducts,
+            ),
           ),
-          _PermissionRow(
-            label: 'Restore products',
-            enabled: adminController.canRestoreProducts,
+          Obx(
+                () => _PermissionRow(
+              label: 'Restore products',
+              enabled: controller.accessController.canRestoreProducts,
+            ),
           ),
-          _PermissionRow(
-            label: 'View activity logs',
-            enabled: adminController.canViewActivityLogs,
-            isLast: true,
+          Obx(
+                () => _PermissionRow(
+              label: 'View activity logs',
+              enabled: controller.accessController.canViewActivityLogs,
+              isLast: true,
+            ),
           ),
         ],
       ),
@@ -605,8 +634,6 @@ class _AdminHighlightsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adminController = controller.accessController;
-
     return MBCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,30 +645,42 @@ class _AdminHighlightsCard extends StatelessWidget {
             ),
           ),
           MBSpacing.h(MBSpacing.sm),
-          _HighlightTile(
-            title: 'Enabled Permissions',
-            value: controller.enabledPermissionCount.toString(),
-            icon: Icons.shield_outlined,
+          Obx(
+                () => _HighlightTile(
+              title: 'Enabled Permissions',
+              value: controller.enabledPermissionCount.toString(),
+              icon: Icons.shield_outlined,
+            ),
           ),
           MBSpacing.h(MBSpacing.sm),
-          _HighlightTile(
-            title: 'Role Type',
-            value: adminController.isSuperAdmin ? 'Super Admin' : 'Admin',
-            icon: Icons.badge_outlined,
+          Obx(
+                () => _HighlightTile(
+              title: 'Role Type',
+              value: controller.accessController.isSuperAdmin
+                  ? 'Super Admin'
+                  : 'Admin',
+              icon: Icons.badge_outlined,
+            ),
           ),
           MBSpacing.h(MBSpacing.sm),
-          _HighlightTile(
-            title: 'Catalog Control',
-            value:
-            adminController.canManageProducts ? 'Available' : 'Restricted',
-            icon: Icons.inventory_2_outlined,
+          Obx(
+                () => _HighlightTile(
+              title: 'Catalog Control',
+              value: controller.accessController.canManageProducts
+                  ? 'Available'
+                  : 'Restricted',
+              icon: Icons.inventory_2_outlined,
+            ),
           ),
           MBSpacing.h(MBSpacing.sm),
-          _HighlightTile(
-            title: 'Audit Visibility',
-            value:
-            adminController.canViewActivityLogs ? 'Enabled' : 'Disabled',
-            icon: Icons.history_rounded,
+          Obx(
+                () => _HighlightTile(
+              title: 'Audit Visibility',
+              value: controller.accessController.canViewActivityLogs
+                  ? 'Enabled'
+                  : 'Disabled',
+              icon: Icons.history_rounded,
+            ),
           ),
         ],
       ),
@@ -817,8 +856,9 @@ class _PermissionRow extends StatelessWidget {
   }
 }
 
-
 class _DashboardPageHeader extends StatelessWidget {
+  const _DashboardPageHeader();
+
   @override
   Widget build(BuildContext context) {
     return Container(

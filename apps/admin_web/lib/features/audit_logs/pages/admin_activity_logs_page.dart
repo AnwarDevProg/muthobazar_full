@@ -19,7 +19,7 @@ class AdminActivityLogsPage extends StatelessWidget {
       body: Row(
         children: [
           _SidebarProxy(
-            currentRoute: AppRoutes.adminActivityLogs,
+            currentRoute: AdminWebRoutes.auditLogs,
             isSuperAdmin: accessController.isSuperAdmin,
           ),
           Expanded(
@@ -257,14 +257,13 @@ class _SidebarProxy extends StatelessWidget {
             children: [
               _ProxyTile(
                 label: 'Dashboard',
-                selected: currentRoute == AppRoutes.adminDashboard ||
-                    currentRoute == AppRoutes.adminShell,
-                onTap: () => Get.offNamed(AppRoutes.adminShell),
+                selected: currentRoute == AdminWebRoutes.dashboard,
+                  onTap: () => Get.offNamed(AdminWebRoutes.dashboard),
               ),
               _ProxyTile(
                 label: 'Activity Logs',
-                selected: currentRoute == AppRoutes.adminActivityLogs,
-                onTap: () => Get.offNamed(AppRoutes.adminActivityLogs),
+                selected: currentRoute == AdminWebRoutes.auditLogs,
+                onTap: () => Get.offNamed(AdminWebRoutes.auditLogs),
               ),
             ],
           ),

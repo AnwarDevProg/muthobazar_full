@@ -1,7 +1,7 @@
+import 'package:customer_app/features/auth/constants/auth_legal_text.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_ui/shared_ui.dart';
-import '../constant/auth_legal_text.dart';
 import 'legal_document_sheet.dart';
 
 class AuthTermsCheckbox extends StatelessWidget {

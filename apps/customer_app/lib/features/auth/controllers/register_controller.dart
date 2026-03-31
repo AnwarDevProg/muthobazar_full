@@ -2,12 +2,8 @@ import 'package:customer_app/app/startup/customer_auth_redirect_service.dart';
 import 'package:customer_app/features/auth/helpers/firestore_auth_debug_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-
-import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'base_phone_auth_controller.dart';
 
 class RegisterController extends BasePhoneAuthController {
   RegisterController({
@@ -121,14 +117,24 @@ class RegisterController extends BasePhoneAuthController {
     notifyListeners();
 
     try {
-      final bool exists =
-      await _repository.isPhoneAlreadyRegistered(normalizedPhone);
+      final eligibilityRepo = PhoneAuthEligibilityRepository();
 
-      if (exists) {
+      final result = await eligibilityRepo.checkEligibility(
+        phoneNumber: normalizedPhone,
+        app: 'customer_app',
+        intent: 'register',
+      );
+
+      if (!result.allowSendOtp) {
         setLoading(false);
         finishOtpRequest();
         notifyListeners();
-        onAlreadyRegistered();
+
+        if (result.code == 'CUSTOMER_REGISTER_ALREADY_EXISTS') {
+          onAlreadyRegistered();
+        } else {
+          onError('Registration Not Allowed', result.message);
+        }
         return;
       }
 
@@ -256,15 +262,17 @@ class RegisterController extends BasePhoneAuthController {
 
       final String phone = _repository.normalizePhoneInput(phoneController.text);
 
-      final bool alreadyExists =
-      await _repository.isPhoneAlreadyRegistered(phone);
+      final eligibilityRepo = PhoneAuthEligibilityRepository();
 
-      if (alreadyExists) {
+      final result = await eligibilityRepo.checkEligibility(
+        phoneNumber: phone,
+        app: 'customer_app',
+        intent: 'register',
+      );
+
+      if (!result.allowSendOtp) {
         await _safeSignOut();
-        onError(
-          'Already Registered',
-          'This phone number is already registered. Please login instead.',
-        );
+        onError('Registration Not Allowed', result.message);
         return;
       }
 

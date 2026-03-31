@@ -41,7 +41,8 @@ C.
 |   |   |   |   |   |   \---AndroidManifest.xml
 |   |   |   |   |   \---profile
 |   |   |   |   |       \---AndroidManifest.xml
-|   |   |   |   \---build.gradle.kts
+|   |   |   |   +---build.gradle.kts
+|   |   |   |   \---google-services.json
 |   |   |   +---gradle
 |   |   |   |   \---wrapper
 |   |   |   |       +---gradle-wrapper.jar
@@ -116,6 +117,206 @@ C.
 |   |   |   |   \---RunnerTests.swift
 |   |   |   \---.gitignore
 |   |   +---lib
+|   |   |   +---app
+|   |   |   |   +---bindings
+|   |   |   |   |   +---admin_access_binding.dart
+|   |   |   |   |   +---admin_user_binding.dart
+|   |   |   |   |   +---admin_web_binding.dart
+|   |   |   |   |   +---audit_logs_binding.dart
+|   |   |   |   |   +---banners_binding.dart
+|   |   |   |   |   +---brands_binding.dart
+|   |   |   |   |   +---categories_binding.dart
+|   |   |   |   |   +---complaints_binding.dart
+|   |   |   |   |   +---customer_segments_binding.dart
+|   |   |   |   |   +---customers_binding.dart
+|   |   |   |   |   +---daily_closing_binding.dart
+|   |   |   |   |   +---dashboard_binding.dart
+|   |   |   |   |   +---delivery_binding.dart
+|   |   |   |   |   +---delivery_settlements_binding.dart
+|   |   |   |   |   +---expenses_binding.dart
+|   |   |   |   |   +---finance_binding.dart
+|   |   |   |   |   +---inventory_binding.dart
+|   |   |   |   |   +---manual_orders_binding.dart
+|   |   |   |   |   +---marketing_binding.dart
+|   |   |   |   |   +---orders_binding.dart
+|   |   |   |   |   +---packing_binding.dart
+|   |   |   |   |   +---picking_binding.dart
+|   |   |   |   |   +---products_binding.dart
+|   |   |   |   |   +---profile_binding.dart
+|   |   |   |   |   +---purchase_receiving_binding.dart
+|   |   |   |   |   +---purchases_binding.dart
+|   |   |   |   |   +---refunds_binding.dart
+|   |   |   |   |   +---reports_binding.dart
+|   |   |   |   |   +---returns_binding.dart
+|   |   |   |   |   +---riders_binding.dart
+|   |   |   |   |   +---service_categories_binding.dart
+|   |   |   |   |   +---services_binding.dart
+|   |   |   |   |   +---settings_binding.dart
+|   |   |   |   |   +---slots_capacity_binding.dart
+|   |   |   |   |   +---stock_ledger_binding.dart
+|   |   |   |   |   +---substitutions_binding.dart
+|   |   |   |   |   +---suppliers_binding.dart
+|   |   |   |   |   +---technicians_binding.dart
+|   |   |   |   |   \---zones_binding.dart
+|   |   |   |   +---core
+|   |   |   |   |   +---constants
+|   |   |   |   |   +---extensions
+|   |   |   |   |   +---utils
+|   |   |   |   |   \---web_table
+|   |   |   |   +---middleware
+|   |   |   |   |   +---admin_auth_middleware.dart
+|   |   |   |   |   +---admin_guest_only_middleware.dart
+|   |   |   |   |   +---permission_guard_middleware.dart
+|   |   |   |   |   \---super_admin_only_middleware.dart
+|   |   |   |   +---routes
+|   |   |   |   |   +---admin_web_pages.dart
+|   |   |   |   |   \---admin_web_routes.dart
+|   |   |   |   +---services
+|   |   |   |   |   +---admin_permission_gate_service.dart
+|   |   |   |   |   +---admin_web_bootstrap_service.dart
+|   |   |   |   |   \---admin_web_session_service.dart
+|   |   |   |   +---shell
+|   |   |   |   |   +---admin_shell_state_controller.dart
+|   |   |   |   |   +---admin_sidebar.dart
+|   |   |   |   |   +---admin_topbar.dart
+|   |   |   |   |   \---admin_web_shell.dart
+|   |   |   |   +---startup
+|   |   |   |   |   +---admin_launch_router_page.dart
+|   |   |   |   |   \---admin_startup_redirect_controller.dart
+|   |   |   |   +---widgets
+|   |   |   |   |   +---common
+|   |   |   |   |   |   \---admin_feature_placeholder_page.dart
+|   |   |   |   |   +---form
+|   |   |   |   |   +---layout
+|   |   |   |   |   \---table
+|   |   |   |   \---app.dart
+|   |   |   +---features
+|   |   |   |   +---admin_access
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_access_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---admin_permissions_page.dart
+|   |   |   |   +---audit_logs
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_activity_log_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---admin_activity_logs_page.dart
+|   |   |   |   +---auth
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_auth_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---admin_login_page.dart
+|   |   |   |   |   |   \---admin_register_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_auth_shell.dart
+|   |   |   |   +---banners
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_banner_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_banners_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_banner_form_dialog.dart
+|   |   |   |   +---brands
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_brand_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_brands_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_brand_form_dialog.dart
+|   |   |   |   +---categories
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_category_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_categories_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_category_form_dialog.dart
+|   |   |   |   +---complaints
+|   |   |   |   +---customer_segments
+|   |   |   |   +---customers
+|   |   |   |   +---daily_closing
+|   |   |   |   +---dashboard
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_management_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---admin_dashboard_page.dart
+|   |   |   |   +---delivery
+|   |   |   |   +---delivery_settlements
+|   |   |   |   +---expenses
+|   |   |   |   +---finance
+|   |   |   |   +---inventory
+|   |   |   |   +---invites
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_invite_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_invites_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_invite_accept_dialog.dart
+|   |   |   |   +---manual_orders
+|   |   |   |   +---marketing
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   +---admin_offer_controller.dart
+|   |   |   |   |   |   \---admin_promo_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---admin_offers_page.dart
+|   |   |   |   |   |   \---admin_promos_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       +---admin_offer_form_dialog.dart
+|   |   |   |   |       \---admin_promo_form_dialog.dart
+|   |   |   |   +---offer
+|   |   |   |   |   +---controllers
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---admin_offer_page.dart
+|   |   |   |   +---orders
+|   |   |   |   +---packing
+|   |   |   |   +---picking
+|   |   |   |   +---products
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_product_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---admin_products_page.dart
+|   |   |   |   |   |   \---admin_quarantine_products_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_product_form_dialog.dart
+|   |   |   |   +---profile
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_profile_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_profile_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   +---purchase_receiving
+|   |   |   |   +---refunds
+|   |   |   |   +---reports
+|   |   |   |   +---returns
+|   |   |   |   +---riders
+|   |   |   |   +---service_categories
+|   |   |   |   +---services
+|   |   |   |   +---settings
+|   |   |   |   +---setup_super_admin
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---setup_super_admin_controller.dart
+|   |   |   |   |   +---helpers
+|   |   |   |   |   |   \---super_admin_bootstrap_guard.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---setup_super_admin_page.dart
+|   |   |   |   |   \---services
+|   |   |   |   |       \---setup_super_admin_service.dart
+|   |   |   |   +---slots_capacity
+|   |   |   |   +---stock_ledger
+|   |   |   |   +---substitutions
+|   |   |   |   +---suppliers
+|   |   |   |   +---technicians
+|   |   |   |   +---users
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---admin_user_controller.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_users_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---admin_user_form_dialog.dart
+|   |   |   |   \---zones
+|   |   |   +---l10n
+|   |   |   |   \---app_en.arb
+|   |   |   +---firebase_options.dart
+|   |   |   \---main.dart
 |   |   +---linux
 |   |   |   +---flutter
 |   |   |   |   +---CMakeLists.txt
@@ -205,6 +406,7 @@ C.
 |   |   +---.gitignore
 |   |   +---.metadata
 |   |   +---analysis_options.yaml
+|   |   +---firebase.json
 |   |   +---lib.zip
 |   |   +---pubspec.yaml
 |   |   \---README.md
@@ -344,7 +546,7 @@ C.
 |   |   |   |   +---bindings
 |   |   |   |   |   +---address_binding.dart
 |   |   |   |   |   \---customer_app_binding.dart
-|   |   |   |   +---constant
+|   |   |   |   +---constants
 |   |   |   |   +---middleware
 |   |   |   |   |   \---customer_auth_middleware.dart
 |   |   |   |   +---routes
@@ -353,27 +555,30 @@ C.
 |   |   |   |   +---shell
 |   |   |   |   |   \---customer_app_shell.dart
 |   |   |   |   \---startup
-|   |   |   |       +---account_blocked.dart
-|   |   |   |       +---complete_profile_page.dart
 |   |   |   |       +---customer_auth_redirect_service.dart
-|   |   |   |       +---customer_launch_router_page.dart
-|   |   |   |       +---force_update_page.dart
-|   |   |   |       +---onboarding_controller.dart
-|   |   |   |       \---onboarding_page.dart
-|   |   |   +---data
-|   |   |   |   \---dummy
+|   |   |   |       \---customer_launch_router_page.dart
 |   |   |   +---features
+|   |   |   |   +---account_status
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---account_blocked_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   +---address
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   \---address_controller.dart
-|   |   |   |   |   \---pages
-|   |   |   |   |       +---address_form_page.dart
-|   |   |   |   |       \---addresses_page.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---address_form_page.dart
+|   |   |   |   |   |   \---addresses_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   +---app_update
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---force_update_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   +---auth
-|   |   |   |   |   +---constant
+|   |   |   |   |   +---constants
 |   |   |   |   |   |   \---auth_legal_text.dart
 |   |   |   |   |   +---controllers
-|   |   |   |   |   |   +---base_phone_auth_controller.dart
 |   |   |   |   |   |   +---login_controller.dart
 |   |   |   |   |   |   \---register_controller.dart
 |   |   |   |   |   +---helpers
@@ -407,14 +612,20 @@ C.
 |   |   |   |   |       +---cart_item_tile.dart
 |   |   |   |   |       \---cart_section_card.dart
 |   |   |   |   +---categories
-|   |   |   |   |   \---pages
-|   |   |   |   |       \---categories_page.dart
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---categories_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   +---chat
-|   |   |   |   |   \---pages
-|   |   |   |   |       \---chat_page.dart
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---chat_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   +---checkout
-|   |   |   |   |   \---pages
-|   |   |   |   |       \---checkout_page.dart
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---checkout_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   +---home
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   +---home_controller.dart
@@ -438,6 +649,11 @@ C.
 |   |   |   |   |       +---home_cache_debug_section.dart
 |   |   |   |   |       +---home_renderer.dart
 |   |   |   |   |       \---mb_offer_details_page.dart
+|   |   |   |   +---onboarding
+|   |   |   |   |   +---controllers
+|   |   |   |   |   |   \---onboarding_controller.dart
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---onboarding_page.dart
 |   |   |   |   +---orders
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   \---order_controller.dart
@@ -452,17 +668,25 @@ C.
 |   |   |   |   |   |   +---delete_account_verify_controller.dart
 |   |   |   |   |   |   +---profile_controller.dart
 |   |   |   |   |   |   \---update_phone_controller.dart
-|   |   |   |   |   \---pages
-|   |   |   |   |       +---app_settings_page.dart
-|   |   |   |   |       +---delete_account_verify_page.dart
-|   |   |   |   |       +---edit_profile_page.dart
-|   |   |   |   |       +---help_center_page.dart
-|   |   |   |   |       +---my_coupons_page.dart
-|   |   |   |   |       +---profile_page.dart
-|   |   |   |   |       \---update_phone_page.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   +---app_settings_page.dart
+|   |   |   |   |   |   +---delete_account_verify_page.dart
+|   |   |   |   |   |   +---edit_profile_page.dart
+|   |   |   |   |   |   +---help_center_page.dart
+|   |   |   |   |   |   +---my_coupons_page.dart
+|   |   |   |   |   |   +---profile_page.dart
+|   |   |   |   |   |   \---update_phone_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   +---profile_completion
+|   |   |   |   |   +---controllers
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---complete_profile_page.dart
+|   |   |   |   |   \---widgets
 |   |   |   |   \---wishlist
-|   |   |   |       \---pages
-|   |   |   |           \---wishlist_page.dart
+|   |   |   |       +---controllers
+|   |   |   |       +---pages
+|   |   |   |       |   \---wishlist_page.dart
+|   |   |   |       \---widgets
 |   |   |   +---l10n
 |   |   |   +---firebase_options.dart
 |   |   |   \---main.dart
@@ -848,7 +1072,9 @@ C.
 |   |   +---staff_android_release.md
 |   |   \---staff_ios_release.md
 |   +---developement
-|   |   \---Final polished MuthoBazar project structure.md
+|   |   +---Final polished MuthoBazar project structure.md
+|   |   +---user, staff and admin structure.txt
+|   |   \---usermodel.md
 |   +---development
 |   |   +---branch_strategy.md
 |   |   +---code_style.md
@@ -865,16 +1091,20 @@ C.
 |   |   \---sample_documents.md
 |   +---git
 |   |   \---command.md
-|   \---ui
-|       +---admin_web_layout_rules.md
-|       +---customer_design_rules.md
-|       +---responsive_rules.md
-|       +---shared_ui_tokens.md
-|       \---staff_app_layout_rules.md
+|   +---ui
+|   |   +---admin_web_layout_rules.md
+|   |   +---customer_design_rules.md
+|   |   +---responsive_rules.md
+|   |   +---shared_ui_tokens.md
+|   |   \---staff_app_layout_rules.md
+|   +---firebase rules.txt
+|   \---first super admin creation.txt
 +---firebase
 |   +---emulators
 |   |   \---README.md
 |   +---functions
+|   |   +---lib
+|   |   |   \---index.js
 |   |   +---src
 |   |   |   +---admin
 |   |   |   +---auth
@@ -891,6 +1121,7 @@ C.
 |   |   |   \---index.ts
 |   |   +---.eslintrc.js
 |   |   +---package.json
+|   |   +---package-lock.json
 |   |   \---tsconfig.json
 |   +---tests
 |   |   +---firestore
@@ -922,6 +1153,8 @@ C.
 |   |   +---lib
 |   |   |   +---auth
 |   |   |   |   +---constants
+|   |   |   |   +---controllers
+|   |   |   |   |   \---base_phone_auth_controller.dart
 |   |   |   |   +---guards
 |   |   |   |   |   \---mb_auth_guard_service.dart
 |   |   |   |   +---middleware_helpers
@@ -962,6 +1195,8 @@ C.
 |   |   |   |   +---mb_admin_invite.dart
 |   |   |   |   \---mb_admin_permission.dart
 |   |   |   +---analytics
+|   |   |   +---auth
+|   |   |   |   \---phone_auth_eligibility_result.dart
 |   |   |   +---catalog
 |   |   |   |   +---mb_brand.dart
 |   |   |   |   +---mb_category.dart
@@ -1011,10 +1246,15 @@ C.
 |   |   |   |   +---admin_brand_repository.dart
 |   |   |   |   +---admin_category_repository.dart
 |   |   |   |   +---admin_invite_repository.dart
+|   |   |   |   +---admin_offer_repository.dart
 |   |   |   |   +---admin_product_repository.dart
+|   |   |   |   +---admin_promo_repository.dart
 |   |   |   |   +---admin_setup_repository.dart
-|   |   |   |   \---admin_user_repository.dart
+|   |   |   |   +---admin_user_repository.dart
+|   |   |   |   \---admin_web_phone_auth_repository.dart
 |   |   |   +---analytics
+|   |   |   +---auth
+|   |   |   |   \---phone_auth_eligibility_repository.dart
 |   |   |   +---base
 |   |   |   +---catalog
 |   |   |   +---customer
@@ -1158,23 +1398,25 @@ C.
 |   |   |   +---customer_feature.md
 |   |   |   \---staff_feature.md
 |   |   \---README.md
-|   +---scripts
-|   |   +---analyze_all.sh
-|   |   +---bootstrap_all.sh
-|   |   +---format_all.sh
-|   |   +---generate_clean_tree.ps1
-|   |   +---run_admin_web.sh
-|   |   +---run_customer.sh
-|   |   +---run_staff.sh
-|   |   +---setup_workspace.ps1
-|   |   +---setup_workspace.sh
-|   |   \---test_all.sh
-|   \---generate_structure.ps1
+|   \---scripts
+|       +---analyze_all.sh
+|       +---bootstrap_all.sh
+|       +---format_all.sh
+|       +---generate_clean_tree.ps1
+|       +---run_admin_web.sh
+|       +---run_customer.sh
+|       +---run_staff.sh
+|       +---setup_workspace.sh
+|       \---test_all.sh
 +---.gitignore
 +---.metadata
++---adminWeb_lib_structure_clean.txt
 +---analysis_options.yaml
++---customer_lib_structure_clean.txt
 +---Lib_structure.txt
 +---melos.yaml
++---package-lock.json
++---packages_structure_clean.txt
 +---pubspec.yaml
 +---README.md
 +---repo_structure.txt

@@ -1,0 +1,38 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase
+C.
++---emulators
+|   \---README.md
++---functions
+|   +---lib
+|   |   \---index.js
+|   +---src
+|   |   +---admin
+|   |   +---auth
+|   |   +---delivery
+|   |   +---finance
+|   |   +---inventory
+|   |   +---marketing
+|   |   +---orders
+|   |   +---purchases
+|   |   +---services
+|   |   +---support
+|   |   +---utils
+|   |   +---workflows
+|   |   \---index.ts
+|   +---.eslintrc.js
+|   +---package.json
+|   +---package-lock.json
+|   \---tsconfig.json
++---tests
+|   +---firestore
+|   |   \---.gitkeep
+|   +---functions
+|   |   \---.gitkeep
+|   \---storage
+|       \---.gitkeep
++---.firebaserc
++---firebase.json
++---firestore.indexes.json
++---firestore.rules
+\---storage.rules

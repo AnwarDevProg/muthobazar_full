@@ -1,9 +1,4 @@
-import 'dart:convert';
-
-// MB Category Model
-// -----------------
-// Bilingual product category model.
-// Supports home visibility, featured state, sorting, and future subcategories.
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MBCategory {
   final String id;
@@ -27,63 +22,80 @@ class MBCategory {
     required this.id,
     required this.nameEn,
     required this.nameBn,
-    this.descriptionEn = '',
-    this.descriptionBn = '',
-    this.imageUrl = '',
-    this.iconUrl = '',
-    this.slug = '',
+    required this.descriptionEn,
+    required this.descriptionBn,
+    required this.imageUrl,
+    required this.iconUrl,
+    required this.slug,
     this.parentId,
-    this.isFeatured = false,
-    this.showOnHome = false,
-    this.isActive = true,
-    this.sortOrder = 0,
-    this.productsCount = 0,
+    required this.isFeatured,
+    required this.showOnHome,
+    required this.isActive,
+    required this.sortOrder,
+    required this.productsCount,
     this.createdAt,
     this.updatedAt,
   });
 
-  static const MBCategory empty = MBCategory(
+  static const empty = MBCategory(
     id: '',
     nameEn: '',
     nameBn: '',
+    descriptionEn: '',
+    descriptionBn: '',
+    imageUrl: '',
+    iconUrl: '',
+    slug: '',
+    parentId: null,
+    isFeatured: false,
+    showOnHome: false,
+    isActive: true,
+    sortOrder: 0,
+    productsCount: 0,
+    createdAt: null,
+    updatedAt: null,
   );
 
-  MBCategory copyWith({
-    String? id,
-    String? nameEn,
-    String? nameBn,
-    String? descriptionEn,
-    String? descriptionBn,
-    String? imageUrl,
-    String? iconUrl,
-    String? slug,
-    String? parentId,
-    bool clearParentId = false,
-    bool? isFeatured,
-    bool? showOnHome,
-    bool? isActive,
-    int? sortOrder,
-    int? productsCount,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
+  // 🔥 FIXED PARSER
+  factory MBCategory.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return empty;
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+
+      if (value is String) {
+        return DateTime.tryParse(value);
+      }
+
+      return null;
+    }
+
+    int parseInt(dynamic value) {
+      if (value is int) return value;
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
     return MBCategory(
-      id: id ?? this.id,
-      nameEn: nameEn ?? this.nameEn,
-      nameBn: nameBn ?? this.nameBn,
-      descriptionEn: descriptionEn ?? this.descriptionEn,
-      descriptionBn: descriptionBn ?? this.descriptionBn,
-      imageUrl: imageUrl ?? this.imageUrl,
-      iconUrl: iconUrl ?? this.iconUrl,
-      slug: slug ?? this.slug,
-      parentId: clearParentId ? null : (parentId ?? this.parentId),
-      isFeatured: isFeatured ?? this.isFeatured,
-      showOnHome: showOnHome ?? this.showOnHome,
-      isActive: isActive ?? this.isActive,
-      sortOrder: sortOrder ?? this.sortOrder,
-      productsCount: productsCount ?? this.productsCount,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      id: (map['id'] ?? '').toString(),
+      nameEn: (map['nameEn'] ?? '').toString(),
+      nameBn: (map['nameBn'] ?? '').toString(),
+      descriptionEn: (map['descriptionEn'] ?? '').toString(),
+      descriptionBn: (map['descriptionBn'] ?? '').toString(),
+      imageUrl: (map['imageUrl'] ?? '').toString(),
+      iconUrl: (map['iconUrl'] ?? '').toString(),
+      slug: (map['slug'] ?? '').toString(),
+      parentId: map['parentId']?.toString(),
+      isFeatured: map['isFeatured'] ?? false,
+      showOnHome: map['showOnHome'] ?? false,
+      isActive: map['isActive'] ?? true,
+      sortOrder: parseInt(map['sortOrder']),
+      productsCount: parseInt(map['productsCount']),
+      createdAt: parseDate(map['createdAt']),
+      updatedAt: parseDate(map['updatedAt']),
     );
   }
 
@@ -103,73 +115,46 @@ class MBCategory {
       'isActive': isActive,
       'sortOrder': sortOrder,
       'productsCount': productsCount,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
     };
   }
 
-  factory MBCategory.fromMap(Map<String, dynamic>? map) {
-    if (map == null) return empty;
-
+  MBCategory copyWith({
+    String? id,
+    String? nameEn,
+    String? nameBn,
+    String? descriptionEn,
+    String? descriptionBn,
+    String? imageUrl,
+    String? iconUrl,
+    String? slug,
+    String? parentId,
+    bool? isFeatured,
+    bool? showOnHome,
+    bool? isActive,
+    int? sortOrder,
+    int? productsCount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
     return MBCategory(
-      id: (map['id'] ?? '').toString(),
-      nameEn: (map['nameEn'] ?? '').toString(),
-      nameBn: (map['nameBn'] ?? '').toString(),
-      descriptionEn: (map['descriptionEn'] ?? '').toString(),
-      descriptionBn: (map['descriptionBn'] ?? '').toString(),
-      imageUrl: (map['imageUrl'] ?? '').toString(),
-      iconUrl: (map['iconUrl'] ?? '').toString(),
-      slug: (map['slug'] ?? '').toString(),
-      parentId: map['parentId']?.toString(),
-      isFeatured: map['isFeatured'] ?? false,
-      showOnHome: map['showOnHome'] ?? false,
-      isActive: map['isActive'] ?? true,
-      sortOrder: (map['sortOrder'] ?? 0) is int
-          ? (map['sortOrder'] ?? 0) as int
-          : int.tryParse((map['sortOrder'] ?? '0').toString()) ?? 0,
-      productsCount: (map['productsCount'] ?? 0) is int
-          ? (map['productsCount'] ?? 0) as int
-          : int.tryParse((map['productsCount'] ?? '0').toString()) ?? 0,
-      createdAt: map['createdAt'] == null
-          ? null
-          : DateTime.tryParse(map['createdAt'].toString()),
-      updatedAt: map['updatedAt'] == null
-          ? null
-          : DateTime.tryParse(map['updatedAt'].toString()),
+      id: id ?? this.id,
+      nameEn: nameEn ?? this.nameEn,
+      nameBn: nameBn ?? this.nameBn,
+      descriptionEn: descriptionEn ?? this.descriptionEn,
+      descriptionBn: descriptionBn ?? this.descriptionBn,
+      imageUrl: imageUrl ?? this.imageUrl,
+      iconUrl: iconUrl ?? this.iconUrl,
+      slug: slug ?? this.slug,
+      parentId: parentId ?? this.parentId,
+      isFeatured: isFeatured ?? this.isFeatured,
+      showOnHome: showOnHome ?? this.showOnHome,
+      isActive: isActive ?? this.isActive,
+      sortOrder: sortOrder ?? this.sortOrder,
+      productsCount: productsCount ?? this.productsCount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-
-  // Legacy compatibility from old CategoryModelV2
-  factory MBCategory.fromLegacyMap(Map<String, dynamic>? map, {String? documentId}) {
-    if (map == null) return empty;
-
-    return MBCategory(
-      id: documentId ?? (map['Id'] ?? '').toString(),
-      nameEn: (map['Name'] ?? '').toString(),
-      nameBn: '',
-      imageUrl: (map['Image'] ?? '').toString(),
-      iconUrl: (map['Icon'] ?? '').toString(),
-      isFeatured: map['IsFeatured'] ?? false,
-      productsCount: (map['ProductsCount'] ?? 0) is int
-          ? (map['ProductsCount'] ?? 0) as int
-          : int.tryParse((map['ProductsCount'] ?? '0').toString()) ?? 0,
-    );
-  }
-
-  String toJson() => json.encode(toMap());
-
-  factory MBCategory.fromJson(String source) =>
-      MBCategory.fromMap(json.decode(source) as Map<String, dynamic>);
 }
-
-
-
-
-
-
-
-
-
-
-
-

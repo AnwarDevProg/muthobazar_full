@@ -5,16 +5,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
 class SuperAdminOnlyMiddleware extends GetMiddleware {
-  SuperAdminOnlyMiddleware({this.priority = 0});
+  SuperAdminOnlyMiddleware({int? priority}) {
+    this.priority = priority ?? 0;
+  }
 
   @override
-  final int priority;
+  int? priority;
 
-  final AdminWebSessionService _sessionService =
-  Get.find<AdminWebSessionService>();
+  AdminWebSessionService get _sessionService =>
+      Get.find<AdminWebSessionService>();
 
-  final AdminWebBootstrapService _bootstrapService =
-  Get.find<AdminWebBootstrapService>();
+  AdminWebBootstrapService get _bootstrapService =>
+      Get.find<AdminWebBootstrapService>();
 
   @override
   RouteSettings? redirect(String? route) {
@@ -33,16 +35,6 @@ class SuperAdminOnlyMiddleware extends GetMiddleware {
       return GetNavConfig.fromRoute(AdminWebRoutes.login);
     }
 
-    // ==========================================================
-    // BOOTSTRAP-ONLY: FIRST SUPER ADMIN SETUP REDIRECT
-    // ----------------------------------------------------------
-    // During initial bootstrap, super-admin protected pages should
-    // not open yet. Signed-in users should complete setup first.
-    //
-    // Safe future removal:
-    // - remove this block
-    // - keep remaining super-admin protection logic
-    // ==========================================================
     final bool needsSetup =
     await _bootstrapService.shouldShowSuperAdminSetup();
 
