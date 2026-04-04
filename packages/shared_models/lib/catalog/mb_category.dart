@@ -6,8 +6,14 @@ class MBCategory {
   final String nameBn;
   final String descriptionEn;
   final String descriptionBn;
+
   final String imageUrl;
   final String iconUrl;
+
+  // 🔥 NEW (IMPORTANT)
+  final String imagePath;
+  final String thumbPath;
+
   final String slug;
   final String? parentId;
   final bool isFeatured;
@@ -26,6 +32,8 @@ class MBCategory {
     required this.descriptionBn,
     required this.imageUrl,
     required this.iconUrl,
+    required this.imagePath,
+    required this.thumbPath,
     required this.slug,
     this.parentId,
     required this.isFeatured,
@@ -45,6 +53,8 @@ class MBCategory {
     descriptionBn: '',
     imageUrl: '',
     iconUrl: '',
+    imagePath: '',
+    thumbPath: '',
     slug: '',
     parentId: null,
     isFeatured: false,
@@ -56,47 +66,62 @@ class MBCategory {
     updatedAt: null,
   );
 
-  // 🔥 FIXED PARSER
-  factory MBCategory.fromMap(Map<String, dynamic>? map) {
+  factory MBCategory.fromMap(Map<String, dynamic>? map,
+      {String? documentId}) {
     if (map == null) return empty;
 
     DateTime? parseDate(dynamic value) {
       if (value == null) return null;
-
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-
-      if (value is String) {
-        return DateTime.tryParse(value);
-      }
-
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value);
       return null;
     }
 
     int parseInt(dynamic value) {
       if (value is int) return value;
-      return int.tryParse(value.toString()) ?? 0;
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    bool parseBool(dynamic value, {bool defaultValue = false}) {
+      if (value is bool) return value;
+      if (value is String) {
+        final v = value.toLowerCase();
+        if (v == 'true') return true;
+        if (v == 'false') return false;
+      }
+      return defaultValue;
     }
 
     return MBCategory(
-      id: (map['id'] ?? '').toString(),
+      id: documentId ?? (map['id'] ?? '').toString(),
       nameEn: (map['nameEn'] ?? '').toString(),
       nameBn: (map['nameBn'] ?? '').toString(),
       descriptionEn: (map['descriptionEn'] ?? '').toString(),
       descriptionBn: (map['descriptionBn'] ?? '').toString(),
       imageUrl: (map['imageUrl'] ?? '').toString(),
       iconUrl: (map['iconUrl'] ?? '').toString(),
+
+      // 🔥 NEW
+      imagePath: (map['imagePath'] ?? '').toString(),
+      thumbPath: (map['thumbPath'] ?? '').toString(),
+
       slug: (map['slug'] ?? '').toString(),
       parentId: map['parentId']?.toString(),
-      isFeatured: map['isFeatured'] ?? false,
-      showOnHome: map['showOnHome'] ?? false,
-      isActive: map['isActive'] ?? true,
+      isFeatured: parseBool(map['isFeatured']),
+      showOnHome: parseBool(map['showOnHome']),
+      isActive: parseBool(map['isActive'], defaultValue: true),
       sortOrder: parseInt(map['sortOrder']),
       productsCount: parseInt(map['productsCount']),
       createdAt: parseDate(map['createdAt']),
       updatedAt: parseDate(map['updatedAt']),
     );
+  }
+
+  factory MBCategory.fromDocument(
+      DocumentSnapshot<Map<String, dynamic>> doc) {
+    return MBCategory.fromMap(doc.data(), documentId: doc.id);
   }
 
   Map<String, dynamic> toMap() {
@@ -108,6 +133,11 @@ class MBCategory {
       'descriptionBn': descriptionBn,
       'imageUrl': imageUrl,
       'iconUrl': iconUrl,
+
+      // 🔥 NEW
+      'imagePath': imagePath,
+      'thumbPath': thumbPath,
+
       'slug': slug,
       'parentId': parentId,
       'isFeatured': isFeatured,
@@ -128,6 +158,8 @@ class MBCategory {
     String? descriptionBn,
     String? imageUrl,
     String? iconUrl,
+    String? imagePath,
+    String? thumbPath,
     String? slug,
     String? parentId,
     bool? isFeatured,
@@ -146,6 +178,8 @@ class MBCategory {
       descriptionBn: descriptionBn ?? this.descriptionBn,
       imageUrl: imageUrl ?? this.imageUrl,
       iconUrl: iconUrl ?? this.iconUrl,
+      imagePath: imagePath ?? this.imagePath,
+      thumbPath: thumbPath ?? this.thumbPath,
       slug: slug ?? this.slug,
       parentId: parentId ?? this.parentId,
       isFeatured: isFeatured ?? this.isFeatured,

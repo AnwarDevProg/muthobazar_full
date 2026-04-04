@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../theme/mb_colors.dart';
-import '../../../theme/mb_radius.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+
 
 
 class MBCard extends StatelessWidget {

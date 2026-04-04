@@ -34,6 +34,6 @@ git status
 git init
 git remote add origin https://github.com/AnwarDevProg/muthobazar_full.git
 git add .
-git commit -m "customer app ok, admin ongoing+ now in render phase + category"
+git commit -m "customer app ok, admin ongoing+ Category OK"
 git branch -M main
 git push -u origin main

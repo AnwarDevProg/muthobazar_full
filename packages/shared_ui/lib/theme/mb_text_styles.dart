@@ -6,16 +6,6 @@ class MBTextStyles {
 
   static const String fontFamily = 'Poppins';
 
-  //MBTextStyles.h1 → Important screen heading
-  // MBTextStyles.h2 → Page title
-  // MBTextStyles.h3 → Section title
-  // MBTextStyles.body → Normal text
-  // MBTextStyles.caption → Secondary info
-
-  // ========================
-  // HEADINGS (NEW)
-  // ========================
-
   static const TextStyle h1 = TextStyle(
     fontFamily: fontFamily,
     fontSize: 26,
@@ -39,10 +29,6 @@ class MBTextStyles {
     color: MBColors.textPrimary,
     height: 1.3,
   );
-
-  // ========================
-  // EXISTING
-  // ========================
 
   static const TextStyle hero = TextStyle(
     fontFamily: fontFamily,
@@ -68,10 +54,10 @@ class MBTextStyles {
     height: 1.3,
   );
 
-  static const TextStyle body = TextStyle(
+  static const TextStyle bodyLarge = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
     color: MBColors.textPrimary,
     height: 1.45,
   );
@@ -82,6 +68,22 @@ class MBTextStyles {
     fontWeight: FontWeight.w500,
     color: MBColors.textPrimary,
     height: 1.4,
+  );
+
+  static const TextStyle body = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    color: MBColors.textPrimary,
+    height: 1.45,
+  );
+
+  static const TextStyle bodySmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    color: MBColors.textSecondary,
+    height: 1.35,
   );
 
   static const TextStyle caption = TextStyle(
