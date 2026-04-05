@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:admin_web/app/services/admin_web_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/customer/mb_user_profile.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 import 'package:shared_services/shared_services.dart';
 import 'package:shared_ui/shared_ui.dart';
+
 import '../../admin_access/controllers/admin_access_controller.dart';
 import '../../profile/controllers/admin_profile_controller.dart';
 
@@ -187,11 +189,11 @@ class AdminUserController extends GetxController {
       );
 
       await _logAction(
-        'update_user',
-        updated,
-        'Updated user "${updated.displayNameForAdmin}"',
-        before,
-        updated,
+        action: 'update_user',
+        target: updated,
+        summary: 'Updated user "${updated.displayNameForAdmin}"',
+        before: before,
+        after: updated,
       );
 
       MBNotification.success(
@@ -211,12 +213,16 @@ class AdminUserController extends GetxController {
     try {
       await _repository.softBlockUser(uid: user.id);
 
-      await _logAction(
-        'block_user',
-        user,
-        'Blocked user "${user.displayNameForAdmin}"',
-        user,
+      final after = UserModel.normalized(
         user.copyWith(accountStatus: UserStatuses.blocked),
+      );
+
+      await _logAction(
+        action: 'block_user',
+        target: user,
+        summary: 'Blocked user "${user.displayNameForAdmin}"',
+        before: user,
+        after: after,
       );
 
       MBNotification.success(
@@ -234,12 +240,16 @@ class AdminUserController extends GetxController {
     try {
       await _repository.softDeactivateUser(uid: user.id);
 
-      await _logAction(
-        'deactivate_user',
-        user,
-        'Deactivated user "${user.displayNameForAdmin}"',
-        user,
+      final after = UserModel.normalized(
         user.copyWith(accountStatus: UserStatuses.inactive),
+      );
+
+      await _logAction(
+        action: 'deactivate_user',
+        target: user,
+        summary: 'Deactivated user "${user.displayNameForAdmin}"',
+        before: user,
+        after: after,
       );
 
       MBNotification.success(
@@ -257,12 +267,16 @@ class AdminUserController extends GetxController {
     try {
       await _repository.reactivateUser(uid: user.id);
 
-      await _logAction(
-        'reactivate_user',
-        user,
-        'Reactivated user "${user.displayNameForAdmin}"',
-        user,
+      final after = UserModel.normalized(
         user.copyWith(accountStatus: UserStatuses.active),
+      );
+
+      await _logAction(
+        action: 'reactivate_user',
+        target: user,
+        summary: 'Reactivated user "${user.displayNameForAdmin}"',
+        before: user,
+        after: after,
       );
 
       MBNotification.success(
@@ -325,26 +339,77 @@ class AdminUserController extends GetxController {
     return true;
   }
 
-  Future<void> _logAction(
-      String action,
-      UserModel target,
-      String summary,
-      UserModel? before,
-      UserModel? after,
-      ) async {
-    await AdminActivityLogger.log(
-      adminUid: currentAdminUid,
-      adminName: currentAdminName,
-      adminEmail: currentAdminEmail,
-      adminRole: currentAdminRole,
-      action: action,
-      targetType: 'user',
-      targetId: target.id,
-      targetTitle: target.displayNameForAdmin,
-      summary: summary,
-      beforeData: before?.toJson(),
-      afterData: after?.toJson(),
-    );
+  Future<void> _logAction({
+    required String action,
+    required UserModel target,
+    required String summary,
+    UserModel? before,
+    UserModel? after,
+  }) async {
+    try {
+      final session = Get.find<AdminWebSessionService>();
+      final access = Get.find<AdminAccessController>();
+      final profile = Get.find<AdminProfileController>();
+
+      final actorUid = session.currentUid.trim();
+      final actorName = profile.fullName.trim();
+      final actorPhone = (profile.currentUser.value?.phoneNumber ?? '').trim();
+      final actorRole = (access.permission.value?.role ?? 'admin').trim();
+
+      await AdminActivityLogger.log(
+        actorUid: actorUid,
+        actorName: actorName,
+        actorPhone: actorPhone,
+        actorRole: actorRole,
+        action: action,
+        module: 'users',
+        targetType: 'user',
+        targetId: target.id,
+        targetTitle: target.displayNameForAdmin.trim().isEmpty
+            ? 'Unnamed User'
+            : target.displayNameForAdmin,
+        reason: summary,
+        beforeData: _buildUserLogData(before),
+        afterData: _buildUserLogData(after),
+        metadata: {
+          'summary': summary,
+          'targetEmail': target.email,
+          'targetPhone': target.phoneNumber,
+          'targetRole': target.role,
+          'targetStatus': target.accountStatus,
+          'targetIsGuest': target.isGuest,
+          'performedByEmail': currentAdminEmail,
+        },
+        status: 'success',
+      );
+    } catch (_) {
+      // Do not break the main user-management flow if audit logging fails.
+    }
+  }
+
+  Map<String, dynamic>? _buildUserLogData(UserModel? user) {
+    if (user == null) return null;
+
+    return {
+      'id': user.id,
+      'firstName': user.firstName,
+      'lastName': user.lastName,
+      'fullName': user.fullName,
+      'displayNameForAdmin': user.displayNameForAdmin,
+      'email': user.email,
+      'phoneNumber': user.phoneNumber,
+      'gender': user.gender,
+      'dateOfBirth': user.dateOfBirth is DateTime
+          ? (user.dateOfBirth as DateTime).toIso8601String()
+          : user.dateOfBirth,
+      'role': user.role,
+      'accountStatus': user.accountStatus,
+      'isGuest': user.isGuest,
+      'isActive': user.isActive,
+      'isInactive': user.isInactive,
+      'isBlocked': user.isBlocked,
+      'profilePicture': user.profilePicture,
+    };
   }
 
   int _sortUsers(UserModel a, UserModel b) {

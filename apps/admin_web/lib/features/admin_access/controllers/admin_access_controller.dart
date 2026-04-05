@@ -172,16 +172,21 @@ class AdminAccessController extends GetxController {
       );
 
       await AdminActivityLogger.log(
-        adminUid: uid,
-        adminName: name,
-        adminEmail: email,
-        adminRole: 'super_admin',
-        action: 'create_admin_permission',
+        actorUid: uid,
+        actorName: name,
+        actorPhone: '', // not available yet
+        actorRole: 'super_admin',
+        action: 'admin.bootstrap_super_admin',
+        module: 'admin_access',
         targetType: 'admin_permission',
         targetId: uid,
         targetTitle: name,
-        summary: 'Initialized first super admin access for "$name"',
         afterData: superPermission.toMap(),
+        metadata: {
+          'email': email,
+          'source': 'bootstrap',
+        },
+        status: 'success',
       );
 
       permission.value = superPermission;
@@ -190,7 +195,21 @@ class AdminAccessController extends GetxController {
         title: 'Success',
         message: 'Super admin access initialized.',
       );
-    } catch (_) {
+    } catch (e) {
+      await AdminActivityLogger.log(
+        actorUid: uid,
+        actorName: name,
+        actorPhone: '',
+        actorRole: 'super_admin',
+        action: 'admin.bootstrap_super_admin',
+        module: 'admin_access',
+        targetType: 'admin_permission',
+        targetId: uid,
+        targetTitle: name,
+        status: 'failed',
+        reason: e.toString(),
+      );
+
       MBNotification.error(
         title: 'Error',
         message: 'Failed to initialize super admin access.',

@@ -10,3 +10,4 @@ export {
 } from "./category-product-count";
 export { reorderCategoryGroup } from "./categories/reorder-categories";
 export { fixCategoryGroupSort } from "./categories/fix-category-group-sort";
+export { logAdminAction } from "./admin/log-admin-action";

@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_models/admin/mb_admin_activity_log.dart';
 
-
-
 class AdminActivityLogRepository {
   AdminActivityLogRepository._();
 
@@ -11,66 +9,43 @@ class AdminActivityLogRepository {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference<Map<String, dynamic>> get activityLogsCollection =>
+  CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('admin_activity_logs');
 
-  Future<void> writeLog(MBAdminActivityLog log) async {
-    final doc =
-    log.id.trim().isEmpty ? activityLogsCollection.doc() : activityLogsCollection.doc(log.id);
-
-    final now = DateTime.now();
-
-    final payload = log.copyWith(
-      id: doc.id,
-      createdAt: now,
-    );
-
-    await doc.set(payload.toMap());
-  }
-
-  Stream<List<MBAdminActivityLog>> watchLogs({
-    int limit = 100,
+  // 🔥 MAIN STREAM FOR UI
+  Stream<List<MBAdminActivityLog>> watchActivityLogs({
+    int limit = 200,
   }) {
-    return activityLogsCollection
+    return _collection
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return MBAdminActivityLog.fromMap({
-          ...data,
-          'id': data['id'] ?? doc.id,
-        });
-      }).toList();
+      return snapshot.docs.map(_fromDoc).toList();
     });
   }
 
-  Future<List<MBAdminActivityLog>> fetchLogsOnce({
-    int limit = 100,
+  // 🔥 PAGINATION (KEEPED)
+  Future<List<MBAdminActivityLog>> fetchLogs({
+    int limit = 50,
   }) async {
-    final snapshot = await activityLogsCollection
+    final snapshot = await _collection
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .get();
 
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return MBAdminActivityLog.fromMap({
-        ...data,
-        'id': data['id'] ?? doc.id,
-      });
-    }).toList();
+    return snapshot.docs.map(_fromDoc).toList();
+  }
+
+  // 🔥 INTERNAL
+  MBAdminActivityLog _fromDoc(
+      DocumentSnapshot<Map<String, dynamic>> doc,
+      ) {
+    final data = doc.data() ?? {};
+
+    return MBAdminActivityLog.fromMap({
+      ...data,
+      'id': doc.id,
+    });
   }
 }
-
-
-
-
-
-
-
-
-
-
-

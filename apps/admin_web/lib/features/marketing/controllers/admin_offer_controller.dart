@@ -139,18 +139,8 @@ class AdminOfferController extends GetxController {
       isSaving.value = true;
       await _repository.createOffer(offer);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'create_offer',
-        targetType: 'offer',
-        targetId: offer.id,
-        targetTitle: offer.titleEn,
-        summary: 'Created offer "${offer.titleEn.isEmpty ? offer.id : offer.titleEn}"',
-        afterData: offer.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -176,19 +166,8 @@ class AdminOfferController extends GetxController {
 
       await _repository.updateOffer(offer);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'update_offer',
-        targetType: 'offer',
-        targetId: offer.id,
-        targetTitle: offer.titleEn,
-        summary: 'Updated offer "${offer.titleEn.isEmpty ? offer.id : offer.titleEn}"',
-        beforeData: before?.toMap(),
-        afterData: offer.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -214,18 +193,8 @@ class AdminOfferController extends GetxController {
 
       await _repository.deleteOffer(offerId);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'delete_offer',
-        targetType: 'offer',
-        targetId: offerId,
-        targetTitle: before?.titleEn ?? '',
-        summary: 'Deleted offer "${before?.titleEn.isEmpty ?? true ? offerId : before!.titleEn}"',
-        beforeData: before?.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -253,21 +222,8 @@ class AdminOfferController extends GetxController {
         isActive: updated.isActive,
       );
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'toggle_offer_active',
-        targetType: 'offer',
-        targetId: offer.id,
-        targetTitle: offer.titleEn,
-        summary: updated.isActive
-            ? 'Activated offer "${offer.titleEn.isEmpty ? offer.id : offer.titleEn}"'
-            : 'Deactivated offer "${offer.titleEn.isEmpty ? offer.id : offer.titleEn}"',
-        beforeData: offer.toMap(),
-        afterData: updated.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',

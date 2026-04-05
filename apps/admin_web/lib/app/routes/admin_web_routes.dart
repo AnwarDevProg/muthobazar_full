@@ -34,6 +34,7 @@ class AdminWebRoutes {
   static const String finance = '/finance';
   static const String inventory = '/inventory';
   static const String manualOrders = '/manual-orders';
+  static const String activityLogs = '/activity-logs';
   static const String orders = '/orders';
   static const String packing = '/packing';
   static const String picking = '/picking';

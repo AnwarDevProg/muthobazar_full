@@ -4,11 +4,6 @@ class MBColors {
   MBColors._();
 
   // Brand oranges
-  //static const Color primaryOrange = Color(0xFFE87322); // Dark orange
-  //static const Color secondaryOrange = Color(0xFFE87322);   // Bright orange
-  //static const Color deepOrange = Color(0xFFD85A14);
-
-
   static const Color primaryOrange = Color(0xFFE87322);
   static const Color secondaryOrange = Color(0xFFFF9A3D);
   static const Color deepOrange = Color(0xFFD85A14);
@@ -29,6 +24,7 @@ class MBColors {
   static const Color textPrimary = Color(0xFF222222);
   static const Color textSecondary = Color(0xFF7A7A7A);
   static const Color textMuted = Color(0xFF9E9E9E);
+  static const Color textHint = Color(0xFFB3B3B3);
   static const Color textOnPrimary = Colors.white;
 
   // Border / divider
@@ -47,14 +43,3 @@ class MBColors {
   // Disabled
   static const Color disabled = Color(0xFFCBCBCB);
 }
-
-
-
-
-
-
-
-
-
-
-

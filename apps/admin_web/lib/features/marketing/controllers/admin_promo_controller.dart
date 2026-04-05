@@ -123,18 +123,8 @@ class AdminPromoController extends GetxController {
       isSaving.value = true;
       await _repository.createPromo(promo);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'create_promo',
-        targetType: 'promo',
-        targetId: promo.id,
-        targetTitle: promo.code,
-        summary: 'Created promo "${promo.code}"',
-        afterData: promo.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -160,19 +150,8 @@ class AdminPromoController extends GetxController {
 
       await _repository.updatePromo(promo);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'update_promo',
-        targetType: 'promo',
-        targetId: promo.id,
-        targetTitle: promo.code,
-        summary: 'Updated promo "${promo.code}"',
-        beforeData: before?.toMap(),
-        afterData: promo.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -198,18 +177,8 @@ class AdminPromoController extends GetxController {
 
       await _repository.deletePromo(promoId);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'delete_promo',
-        targetType: 'promo',
-        targetId: promoId,
-        targetTitle: before?.code ?? '',
-        summary: 'Deleted promo "${before?.code ?? promoId}"',
-        beforeData: before?.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -234,21 +203,8 @@ class AdminPromoController extends GetxController {
         isActive: updated.isActive,
       );
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'toggle_promo_active',
-        targetType: 'promo',
-        targetId: promo.id,
-        targetTitle: promo.code,
-        summary: updated.isActive
-            ? 'Activated promo "${promo.code}"'
-            : 'Deactivated promo "${promo.code}"',
-        beforeData: promo.toMap(),
-        afterData: updated.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',

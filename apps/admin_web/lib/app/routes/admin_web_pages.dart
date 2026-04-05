@@ -1,8 +1,8 @@
 import 'package:admin_web/app/bindings/admin_access_binding.dart';
+import 'package:admin_web/app/bindings/admin_activity_logs_binding.dart';
 import 'package:admin_web/app/bindings/admin_user_binding.dart';
 import 'package:admin_web/app/bindings/banners_binding.dart';
 import 'package:admin_web/app/bindings/brands_binding.dart';
-import 'package:admin_web/app/bindings/categories_binding.dart';
 import 'package:admin_web/app/bindings/dashboard_binding.dart';
 import 'package:admin_web/app/bindings/products_binding.dart';
 import 'package:admin_web/app/bindings/profile_binding.dart';
@@ -183,6 +183,11 @@ class AdminWebPages {
       middlewares: <GetMiddleware>[
         SuperAdminOnlyMiddleware(),
       ],
+    ),
+    GetPage(
+      name: AdminWebRoutes.activityLogs,
+      page: () => const AdminActivityLogsPage(),
+      binding: AdminActivityLogsBinding(),
     ),
 
     ..._placeholderPages(),

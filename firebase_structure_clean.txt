@@ -5,10 +5,18 @@ C.
 |   \---README.md
 +---functions
 |   +---lib
+|   |   +---categories
+|   |   |   +---fix-category-group-sort.js
+|   |   |   \---reorder-categories.js
+|   |   +---category-product-count.js
+|   |   +---check-phone-auth-eligibility.js
 |   |   \---index.js
 |   +---src
 |   |   +---admin
 |   |   +---auth
+|   |   +---categories
+|   |   |   +---fix-category-group-sort.ts
+|   |   |   \---reorder-categories.ts
 |   |   +---delivery
 |   |   +---finance
 |   |   +---inventory
@@ -19,6 +27,8 @@ C.
 |   |   +---support
 |   |   +---utils
 |   |   +---workflows
+|   |   +---category-product-count.ts
+|   |   +---check-phone-auth-eligibility.ts
 |   |   \---index.ts
 |   +---.eslintrc.js
 |   +---package.json
@@ -32,7 +42,9 @@ C.
 |   \---storage
 |       \---.gitkeep
 +---.firebaserc
++---cors.json
 +---firebase.json
 +---firestore.indexes.json
 +---firestore.rules
++---function deploy code.md
 \---storage.rules

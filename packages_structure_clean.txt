@@ -38,6 +38,9 @@ C.
 |   |   |   +---image_helper.dart
 |   |   |   +---mb_cache_policy.dart
 |   |   |   \---mb_cache_state.dart
+|   |   +---media
+|   |   |   +---image_presets.dart
+|   |   |   \---mb_image_pipeline_service.dart
 |   |   +---services
 |   |   |   +---app_initializer.dart
 |   |   |   +---auth_rate_limit_storage.dart

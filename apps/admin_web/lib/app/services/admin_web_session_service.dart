@@ -1,5 +1,10 @@
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:shared_services/admin/admin_activity_logger.dart';
 
 class AdminWebSessionService {
   AdminWebSessionService({
@@ -23,6 +28,25 @@ class AdminWebSessionService {
   Stream<User?> authStateChanges() => _auth.authStateChanges();
 
   Future<void> signOut() async {
+    try {
+      final session = Get.find<AdminWebSessionService>();
+      final access = Get.find<AdminAccessController>();
+      final profile = Get.find<AdminProfileController>();
+
+      await AdminActivityLogger.log(
+        actorUid: session.currentUid,
+        actorName: profile.fullName,
+        actorPhone: profile.currentUser.value?.phoneNumber ?? '',
+        actorRole: access.permission.value?.role ?? 'admin',
+        action: 'auth.logout',
+        module: 'auth',
+        targetType: 'admin',
+        targetId: session.currentUid,
+        targetTitle: profile.fullName,
+        status: 'success',
+      );
+    } catch (_) {}
+
     await _auth.signOut();
   }
 

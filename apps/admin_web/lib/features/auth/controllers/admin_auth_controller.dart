@@ -1,5 +1,7 @@
 import 'package:admin_web/app/routes/admin_web_routes.dart';
 import 'package:admin_web/app/services/admin_web_session_service.dart';
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
+import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,6 +10,7 @@ import 'package:shared_repositories/shared_repositories.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_services/admin/admin_activity_logger.dart';
 
 class AdminAuthController extends BasePhoneAuthController {
   AdminAuthController({
@@ -322,6 +325,26 @@ class AdminAuthController extends BasePhoneAuthController {
         MBNotification.success(
           title: 'Login successful',
           message: 'Welcome to MuthoBazar Admin.',
+        );
+
+        final session = Get.find<AdminWebSessionService>();
+        final access = Get.find<AdminAccessController>();
+        final profile = Get.find<AdminProfileController>();
+
+        await AdminActivityLogger.log(
+          actorUid: session.currentUid,
+          actorName: profile.fullName,
+          actorPhone: profile.currentUser.value?.phoneNumber ?? '',
+          actorRole: access.permission.value?.role ?? 'admin',
+          action: 'auth.login',
+          module: 'auth',
+          targetType: 'admin',
+          targetId: session.currentUid,
+          targetTitle: profile.fullName,
+          metadata: {
+            'loginMethod': 'phone_otp',
+          },
+          status: 'success',
         );
 
         Get.offAllNamed(AdminWebRoutes.dashboard);

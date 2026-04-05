@@ -42,11 +42,6 @@ C.
 |   |   +---suppliers_binding.dart
 |   |   +---technicians_binding.dart
 |   |   \---zones_binding.dart
-|   +---core
-|   |   +---constants
-|   |   +---extensions
-|   |   +---utils
-|   |   \---web_table
 |   +---middleware
 |   |   +---admin_auth_middleware.dart
 |   |   +---admin_guest_only_middleware.dart
@@ -128,13 +123,6 @@ C.
 |   +---expenses
 |   +---finance
 |   +---inventory
-|   +---invites
-|   |   +---controllers
-|   |   |   \---admin_invite_controller.dart
-|   |   +---pages
-|   |   |   \---admin_invites_page.dart
-|   |   \---widgets
-|   |       \---admin_invite_accept_dialog.dart
 |   +---manual_orders
 |   +---marketing
 |   |   +---controllers

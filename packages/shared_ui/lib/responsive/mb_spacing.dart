@@ -1,13 +1,3 @@
-// MB Spacing System
-// -----------------
-// Unified spacing tokens and helpers.
-// Use these tokens instead of random spacing numbers in UI.
-//
-// Goals:
-// - keep design consistent
-// - lightly adapt spacing across device sizes
-// - support edge padding, gaps, sections, cards, and content blocks
-
 import 'package:flutter/widgets.dart';
 import 'mb_responsive.dart';
 
@@ -30,8 +20,11 @@ class MBSpacing {
   static const double sectionBreak = 56;
   static const double heroBreak = 64;
 
-  // Semantic spacing
+  // Fixed aliases for desktop/web-heavy admin layouts
+  static const double pageHorizontalFixed = 24;
+  static const double pageVerticalFixed = 16;
 
+  // Semantic spacing
   static double pageHorizontal(BuildContext context) => context.mbValue(
     mobile: 16,
     mobileSmall: 12,
@@ -104,8 +97,32 @@ class MBSpacing {
     tabletLarge: 58,
   );
 
-  // EdgeInsets helpers
+  // Admin/web helpers
+  static double adminPageHorizontal(BuildContext context) =>
+      context.mbValue(
+        mobile: 16,
+        mobileSmall: 12,
+        mobileLarge: 18,
+        tablet: 24,
+        tabletLarge: 24,
+      );
 
+  static double adminPageVertical(BuildContext context) =>
+      context.mbValue(
+        mobile: 16,
+        mobileSmall: 12,
+        mobileLarge: 16,
+        tablet: 16,
+        tabletLarge: 16,
+      );
+
+  static EdgeInsets adminPagePadding(BuildContext context) =>
+      EdgeInsets.symmetric(
+        horizontal: adminPageHorizontal(context),
+        vertical: adminPageVertical(context),
+      );
+
+  // EdgeInsets helpers
   static EdgeInsets pagePadding(BuildContext context) => EdgeInsets.symmetric(
     horizontal: pageHorizontal(context),
     vertical: pageVertical(context),
@@ -142,19 +159,6 @@ class MBSpacing {
   );
 
   // SizedBox helpers
-
   static SizedBox h(double value) => SizedBox(height: value);
-
   static SizedBox w(double value) => SizedBox(width: value);
 }
-
-
-
-
-
-
-
-
-
-
-

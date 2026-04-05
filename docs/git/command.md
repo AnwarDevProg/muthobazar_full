@@ -29,11 +29,11 @@ build
 pubspec.lock
 
 
-
+git config --global --add safe.directory C:/Users/1/AndroidStudioProjects/MuthoBazar
 git status
 git init
 git remote add origin https://github.com/AnwarDevProg/muthobazar_full.git
 git add .
-git commit -m "customer app ok, admin ongoing+ Category OK"
+git commit -m "customer app ok, admin ongoing+ Category OK and refining the admin app flow"
 git branch -M main
 git push -u origin main

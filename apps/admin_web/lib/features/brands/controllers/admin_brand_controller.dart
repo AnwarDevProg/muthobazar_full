@@ -144,19 +144,8 @@ class AdminBrandController extends GetxController {
     try {
       isSaving.value = true;
       await _repository.createBrand(brand);
-
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'create_brand',
-        targetType: 'brand',
-        targetId: brand.id,
-        targetTitle: brand.nameEn,
-        summary: 'Created brand "${brand.nameEn}"',
-        afterData: brand.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -182,19 +171,8 @@ class AdminBrandController extends GetxController {
 
       await _repository.updateBrand(brand);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'update_brand',
-        targetType: 'brand',
-        targetId: brand.id,
-        targetTitle: brand.nameEn,
-        summary: 'Updated brand "${brand.nameEn}"',
-        beforeData: before?.toMap(),
-        afterData: brand.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -220,18 +198,8 @@ class AdminBrandController extends GetxController {
 
       await _repository.deleteBrand(brandId);
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'delete_brand',
-        targetType: 'brand',
-        targetId: brandId,
-        targetTitle: before?.nameEn ?? '',
-        summary: 'Deleted brand "${before?.nameEn ?? brandId}"',
-        beforeData: before?.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
@@ -259,21 +227,8 @@ class AdminBrandController extends GetxController {
         isActive: updated.isActive,
       );
 
-      await AdminActivityLogger.log(
-        adminUid: _accessController.currentAdminUid,
-        adminName: _accessController.currentAdminName,
-        adminEmail: _accessController.currentAdminEmail,
-        adminRole: _accessController.permission.value?.role ?? '',
-        action: 'toggle_brand_active',
-        targetType: 'brand',
-        targetId: brand.id,
-        targetTitle: brand.nameEn,
-        summary: updated.isActive
-            ? 'Activated brand "${brand.nameEn}"'
-            : 'Deactivated brand "${brand.nameEn}"',
-        beforeData: brand.toMap(),
-        afterData: updated.toMap(),
-      );
+      /// Insert actual logger during development
+      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',

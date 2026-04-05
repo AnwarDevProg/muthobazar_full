@@ -270,19 +270,8 @@ class AdminManagementController extends GetxController {
     Map<String, dynamic>? beforeData,
     Map<String, dynamic>? afterData,
   }) async {
-    await AdminActivityLogger.log(
-      adminUid: currentAdminUid,
-      adminName: adminName,
-      adminEmail: adminEmail,
-      adminRole: adminRole,
-      action: action,
-      targetType: 'admin_permission',
-      targetId: targetId,
-      targetTitle: targetTitle,
-      summary: summary,
-      beforeData: beforeData,
-      afterData: afterData,
-    );
+    /// Insert actual logger during development
+    /// await AdminActivityLogger.log(      );
   }
 
   // =========================================================

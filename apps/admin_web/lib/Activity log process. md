@@ -1,0 +1,44 @@
+FINAL SOURCE (USE THIS COMBINATION)
+
+Inside any controller:
+
+
+first get admin info from
+import 'package:shared_services/admin/admin_activity_logger.dart';
+
+final session = Get.find<AdminWebSessionService>();
+final access = Get.find<AdminAccessController>();
+final profile = Get.find<AdminProfileController>();
+
+final actorUid = session.currentUid;
+final actorName = profile.fullName;
+final actorPhone = profile.currentUser.value?.phoneNumber ?? '';
+final actorRole = access.permission.value?.role ?? 'admin';
+
+
+
+then call activity logging, like this::
+
+await AdminActivityLogger.log(
+        actorUid: actorUid,
+        actorName: actorName,
+        actorPhone: actorPhone,
+        actorRole: actorRole,
+        action: isEdit ? 'category.update' : 'category.create',
+        module: 'catalog',
+        targetType: 'category',
+        targetId: category.id,
+        targetTitle:
+        category.nameEn.trim().isEmpty ? 'Unnamed Category' : category.nameEn,
+        beforeData: beforeData,
+        afterData: category.toMap(),
+        metadata: {
+          'parentId': category.parentId ?? '',
+          'sortOrder': category.sortOrder,
+          'isFeatured': category.isFeatured,
+          'showOnHome': category.showOnHome,
+          'isActive': category.isActive,
+          'productsCount': category.productsCount,
+        },
+        status: 'success',
+      );

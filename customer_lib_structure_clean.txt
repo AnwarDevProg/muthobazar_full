@@ -5,7 +5,6 @@ C.
 |   +---bindings
 |   |   +---address_binding.dart
 |   |   \---customer_app_binding.dart
-|   +---constants
 |   +---middleware
 |   |   \---customer_auth_middleware.dart
 |   +---routes
