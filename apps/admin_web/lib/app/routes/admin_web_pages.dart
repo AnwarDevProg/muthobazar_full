@@ -31,10 +31,6 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.login,
       page: () => const AdminLoginPage(),
-      bindings: [
-        AdminAccessBinding(),
-        ProfileBinding(),
-      ],
       middlewares: <GetMiddleware>[
         AdminGuestOnlyMiddleware(),
       ],
@@ -42,10 +38,6 @@ class AdminWebPages {
     GetPage(
       name: AdminWebRoutes.register,
       page: () => const AdminRegisterPage(),
-      bindings: [
-        AdminAccessBinding(),
-        ProfileBinding(),
-      ],
       middlewares: <GetMiddleware>[
         AdminGuestOnlyMiddleware(),
       ],
