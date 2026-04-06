@@ -8,7 +8,7 @@ import 'package:shared_ui/shared_ui.dart';
 import 'admin_shell_state_controller.dart';
 import 'admin_sidebar_config.dart';
 
-class AdminWebShell extends StatefulWidget {
+class AdminWebShell extends StatelessWidget {
   const AdminWebShell({
     super.key,
     required this.child,
@@ -17,86 +17,74 @@ class AdminWebShell extends StatefulWidget {
   final Widget child;
 
   @override
-  State<AdminWebShell> createState() => _AdminWebShellState();
-}
-
-class _AdminWebShellState extends State<AdminWebShell> {
-  late final AdminShellStateController controller;
-  String _lastSyncedRoute = '';
-
-  @override
-  void initState() {
-    super.initState();
-    controller = Get.find<AdminShellStateController>();
-    _scheduleRouteSync();
-  }
-
-  @override
-  void didUpdateWidget(covariant AdminWebShell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _scheduleRouteSync();
-  }
-
-  void _scheduleRouteSync() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      final route = Get.currentRoute.trim();
-      if (route.isEmpty) return;
-      if (_lastSyncedRoute == route) return;
-
-      _lastSyncedRoute = route;
-      controller.setRouteFromNavigation(route);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MBColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Row(
-              children: [
-                const _AdminSidebar(),
-                Expanded(
-                  child: Column(
-                    children: [
-                      const _AdminTopBar(),
-                      Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.fromLTRB(
-                            MBSpacing.lg,
-                            0,
-                            MBSpacing.lg,
-                            MBSpacing.lg,
+    if (_AdminWebShellScope.isActive(context)) {
+      return child;
+    }
+
+    return _AdminWebShellScope(
+      child: Scaffold(
+        backgroundColor: MBColors.background,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Row(
+                children: [
+                  const _AdminSidebar(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const _AdminTopBar(),
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.fromLTRB(
+                              MBSpacing.lg,
+                              0,
+                              MBSpacing.lg,
+                              MBSpacing.lg,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                              BorderRadius.circular(MBRadius.xl),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                  MBColors.shadow.withValues(alpha: 0.08),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: child,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(MBRadius.xl),
-                            boxShadow: [
-                              BoxShadow(
-                                color: MBColors.shadow.withValues(alpha: 0.08),
-                                blurRadius: 24,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: widget.child,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const _CommandPaletteOverlay(),
-          ],
+                ],
+              ),
+              const _CommandPaletteOverlay(),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _AdminWebShellScope extends InheritedWidget {
+  const _AdminWebShellScope({
+    required super.child,
+  });
+
+  static bool isActive(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_AdminWebShellScope>() !=
+        null;
+  }
+
+  @override
+  bool updateShouldNotify(_AdminWebShellScope oldWidget) => false;
 }
 
 class _AdminSidebar extends StatelessWidget {

@@ -57,7 +57,7 @@ class AdminShellStateController extends GetxController {
     }
 
     expandedGroupTitles.refresh();
-    update(['admin_sidebar']);
+    update(['admin_sidebar', 'admin_topbar', 'admin_content']);
   }
 
   Future<void> _restoreSidebarState() async {
@@ -83,7 +83,7 @@ class AdminShellStateController extends GetxController {
     }
 
     expandedGroupTitles.refresh();
-    update(['admin_sidebar']);
+    update(['admin_sidebar', 'admin_topbar', 'admin_content']);
   }
 
   Future<void> _persistSidebarState() async {
@@ -99,17 +99,11 @@ class AdminShellStateController extends GetxController {
   void setRoute(String route) {
     final String normalized = route.trim();
     if (normalized.isEmpty) return;
+    if (currentRoute.value == normalized) return;
 
     currentRoute.value = normalized;
     _pushRecentRoute(normalized);
-
-    update(['admin_sidebar', 'admin_topbar']);
-
-    if (Get.currentRoute == normalized) {
-      return;
-    }
-
-    Get.offNamed(normalized);
+    update(['admin_sidebar', 'admin_topbar', 'admin_content']);
   }
 
   void setRouteFromNavigation(String? route) {
@@ -120,8 +114,7 @@ class AdminShellStateController extends GetxController {
 
     currentRoute.value = normalized;
     _pushRecentRoute(normalized);
-
-    update(['admin_sidebar', 'admin_topbar']);
+    update(['admin_sidebar', 'admin_topbar', 'admin_content']);
   }
 
   Future<void> toggleSidebar() async {

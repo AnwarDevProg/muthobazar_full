@@ -37,3 +37,10 @@ git add .
 git commit -m "customer app ok, admin ongoing+ side bar has issue"
 git branch -M main
 git push -u origin main
+
+
+
+or use
+
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned; .\git_push.ps1 "customer app ok, admin ongoing, sidebar has issue"
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force; .\git_push.ps1 "customer app ok, admin ongoing, sidebar has issue"
