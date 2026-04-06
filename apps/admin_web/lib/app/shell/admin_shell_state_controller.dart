@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:admin_web/app/routes/admin_web_routes.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,6 +22,9 @@ class AdminShellStateController extends GetxController {
   final RxBool isCommandPaletteOpen = false.obs;
   final RxList<String> recentRoutes = <String>[].obs;
 
+  final TrackingScrollController sidebarScrollController =
+  TrackingScrollController();
+
   static const int _maxRecentRoutes = 8;
   static const String _expandedGroupsKey =
       'admin_web_shell_expanded_group_titles';
@@ -37,7 +41,11 @@ class AdminShellStateController extends GetxController {
     unawaited(_restoreSidebarState());
   }
 
-
+  @override
+  void onClose() {
+    sidebarScrollController.dispose();
+    super.onClose();
+  }
 
   void _initializeGroups() {
     expandedGroupTitles.clear();
@@ -49,6 +57,7 @@ class AdminShellStateController extends GetxController {
     }
 
     expandedGroupTitles.refresh();
+    update(['admin_sidebar']);
   }
 
   Future<void> _restoreSidebarState() async {
@@ -61,21 +70,20 @@ class AdminShellStateController extends GetxController {
     final List<String> savedExpanded =
         _prefs?.getStringList(_expandedGroupsKey) ?? const <String>[];
 
-    if (savedExpanded.isNotEmpty) {
-      expandedGroupTitles.clear();
+    expandedGroupTitles.clear();
 
-      for (final title in savedExpanded) {
-        expandedGroupTitles.add(title);
-      }
-
-      for (final group in AdminSidebarConfig.groups) {
-        if (group.alwaysVisible) {
-          expandedGroupTitles.add(group.title);
-        }
-      }
-
-      expandedGroupTitles.refresh();
+    for (final title in savedExpanded) {
+      expandedGroupTitles.add(title);
     }
+
+    for (final group in AdminSidebarConfig.groups) {
+      if (group.alwaysVisible) {
+        expandedGroupTitles.add(group.title);
+      }
+    }
+
+    expandedGroupTitles.refresh();
+    update(['admin_sidebar']);
   }
 
   Future<void> _persistSidebarState() async {
@@ -92,13 +100,15 @@ class AdminShellStateController extends GetxController {
     final String normalized = route.trim();
     if (normalized.isEmpty) return;
 
+    currentRoute.value = normalized;
+    _pushRecentRoute(normalized);
+
+    update(['admin_sidebar', 'admin_topbar']);
+
     if (Get.currentRoute == normalized) {
-      setRouteFromNavigation(normalized);
       return;
     }
 
-    currentRoute.value = normalized;
-    _pushRecentRoute(normalized);
     Get.offNamed(normalized);
   }
 
@@ -110,10 +120,13 @@ class AdminShellStateController extends GetxController {
 
     currentRoute.value = normalized;
     _pushRecentRoute(normalized);
+
+    update(['admin_sidebar', 'admin_topbar']);
   }
 
   Future<void> toggleSidebar() async {
     isSidebarCollapsed.value = !isSidebarCollapsed.value;
+    update(['admin_sidebar']);
     await _persistSidebarState();
   }
 
@@ -133,6 +146,7 @@ class AdminShellStateController extends GetxController {
     }
 
     expandedGroupTitles.refresh();
+    update(['admin_sidebar']);
     await _persistSidebarState();
   }
 

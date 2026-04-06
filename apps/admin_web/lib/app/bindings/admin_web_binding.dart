@@ -7,24 +7,26 @@ import 'package:get/get.dart';
 class AdminWebBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put<AdminWebSessionService>(
+    Get.put(
       AdminWebSessionService(),
       permanent: true,
     );
 
-    Get.lazyPut<AdminWebBootstrapService>(
+    Get.lazyPut(
           () => AdminWebBootstrapService(),
       fenix: true,
     );
 
-    Get.lazyPut<AdminPermissionGateService>(
+    Get.lazyPut(
           () => AdminPermissionGateService(),
       fenix: true,
     );
 
-    Get.lazyPut<AdminShellStateController>(
-          () => AdminShellStateController(),
-      fenix: true,
-    );
+    if (!Get.isRegistered<AdminShellStateController>()) {
+      Get.put(
+        AdminShellStateController(),
+        permanent: true,
+      );
+    }
   }
 }
