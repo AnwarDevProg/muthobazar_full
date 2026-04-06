@@ -1,7 +1,6 @@
 import 'package:admin_web/app/routes/admin_web_routes.dart';
 import 'package:admin_web/app/services/admin_web_session_service.dart';
 import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -110,36 +109,38 @@ class _AdminSidebar extends GetView<AdminShellStateController> {
 
     return Obx(() {
       final bool collapsed = controller.isSidebarCollapsed.value;
-      final double width = collapsed ? 96 : 292;
       final permission = accessController.permission.value;
-
       final visibleGroups = AdminSidebarConfig.visibleGroups(permission);
 
       return AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        width: width,
-        margin: const EdgeInsets.all(MBSpacing.lg),
+        width: collapsed ? 92 : 300,
+        margin: const EdgeInsets.fromLTRB(
+          MBSpacing.lg,
+          MBSpacing.lg,
+          0,
+          MBSpacing.lg,
+        ),
+        padding: const EdgeInsets.all(MBSpacing.md),
         decoration: BoxDecoration(
           gradient: MBGradients.primaryGradient,
           borderRadius: BorderRadius.circular(MBRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: MBColors.primaryOrange.withValues(alpha: 0.18),
-              blurRadius: 30,
-              offset: const Offset(0, 16),
+              color: MBColors.primaryOrange.withValues(alpha: 0.22),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(MBSpacing.lg),
-              child: _SidebarBrand(collapsed: collapsed),
-            ),
+            _SidebarBrandHeader(collapsed: collapsed),
+            MBSpacing.h(MBSpacing.lg),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: MBSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: visibleGroups.map((group) {
@@ -169,10 +170,8 @@ class _AdminSidebar extends GetView<AdminShellStateController> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(MBSpacing.md),
-              child: _SidebarBottomBar(collapsed: collapsed),
-            ),
+            MBSpacing.h(MBSpacing.md),
+            _SidebarBottomBar(collapsed: collapsed),
           ],
         ),
       );
@@ -180,8 +179,8 @@ class _AdminSidebar extends GetView<AdminShellStateController> {
   }
 }
 
-class _SidebarBrand extends StatelessWidget {
-  const _SidebarBrand({
+class _SidebarBrandHeader extends StatelessWidget {
+  const _SidebarBrandHeader({
     required this.collapsed,
   });
 
@@ -190,10 +189,11 @@ class _SidebarBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(MBSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(MBRadius.lg),
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.14),
         ),
@@ -203,22 +203,24 @@ class _SidebarBrand extends StatelessWidget {
         child: Icon(
           Icons.shopping_bag_outlined,
           color: Colors.white,
-          size: 28,
+          size: 26,
         ),
       )
           : Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(MBRadius.lg),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.shopping_bag_outlined,
-              color: Colors.white,
-              size: 26,
+            child: const Center(
+              child: Icon(
+                Icons.shopping_bag_outlined,
+                color: Colors.white,
+                size: 26,
+              ),
             ),
           ),
           MBSpacing.w(MBSpacing.md),
@@ -265,12 +267,13 @@ class _SidebarGroupCard extends GetView<AdminShellStateController> {
 
   @override
   Widget build(BuildContext context) {
-
+    return Obx(() {
       final bool active = controller.isGroupActive(title);
       final bool expanded = controller.isGroupExpanded(title);
 
       if (collapsed) {
         final firstIcon = items.first;
+
         return Tooltip(
           message: title,
           child: InkWell(
@@ -381,7 +384,7 @@ class _SidebarGroupCard extends GetView<AdminShellStateController> {
           ],
         ),
       );
-
+    });
   }
 }
 
@@ -397,7 +400,7 @@ class _SidebarItem extends GetView<AdminShellStateController> {
 
   @override
   Widget build(BuildContext context) {
-
+    return Obx(() {
       final bool isActive = controller.isActive(item.route);
       final icon = IconData(
         item.iconCodePoint,
@@ -461,7 +464,7 @@ class _SidebarItem extends GetView<AdminShellStateController> {
           ),
         ),
       );
-
+    });
   }
 }
 
@@ -526,8 +529,6 @@ class _AdminTopBar extends GetView<AdminShellStateController> {
 
   @override
   Widget build(BuildContext context) {
-    final AdminProfileController profileController =
-    Get.find<AdminProfileController>();
     final AdminWebSessionService sessionService =
     Get.find<AdminWebSessionService>();
 
@@ -556,7 +557,6 @@ class _AdminTopBar extends GetView<AdminShellStateController> {
           Expanded(
             child: Obx(() {
               final breadcrumbs = controller.breadcrumbs;
-
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,18 +622,21 @@ class _AdminTopBar extends GetView<AdminShellStateController> {
                   children: [
                     const Icon(
                       Icons.search_rounded,
+                      color: MBColors.textSecondary,
                       size: 20,
-                      color: MBColors.textMuted,
                     ),
                     MBSpacing.w(MBSpacing.sm),
                     Expanded(
                       child: Text(
-                        'Search modules, pages, routes...',
-                        style: MBTextStyles.body.copyWith(
-                          color: MBColors.textMuted,
+                        'Search pages, commands, routes...',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MBTextStyles.bodyMedium.copyWith(
+                          color: MBColors.textSecondary,
                         ),
                       ),
                     ),
+                    MBSpacing.w(MBSpacing.sm),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: MBSpacing.sm,
@@ -641,16 +644,16 @@ class _AdminTopBar extends GetView<AdminShellStateController> {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(MBRadius.pill),
+                        borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color: MBColors.border.withValues(alpha: 0.9),
                         ),
                       ),
                       child: Text(
-                        'Ctrl K',
+                        'Ctrl + K',
                         style: MBTextStyles.caption.copyWith(
                           color: MBColors.textSecondary,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -659,160 +662,31 @@ class _AdminTopBar extends GetView<AdminShellStateController> {
               ),
             ),
           ),
-          MBSpacing.w(MBSpacing.lg),
-          Obx(() {
-            final bool loading = profileController.isLoading.value;
-            final String name = profileController.displayNameForShell;
-            final String role = profileController.displayRoleForShell;
-            final String email = profileController.displayEmailForShell;
-            final String initials = profileController.initials;
-            final String picture = profileController.profilePicture;
-
-            return Container(
+          MBSpacing.w(MBSpacing.md),
+          InkWell(
+            borderRadius: BorderRadius.circular(MBRadius.pill),
+            onTap: () async {
+              await sessionService.signOut();
+              Get.offAllNamed(AdminWebRoutes.login);
+            },
+            child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: MBSpacing.md,
                 vertical: MBSpacing.sm,
               ),
               decoration: BoxDecoration(
-                color: MBColors.background,
+                gradient: MBGradients.primaryGradient,
                 borderRadius: BorderRadius.circular(MBRadius.pill),
-                border: Border.all(
-                  color: MBColors.border.withValues(alpha: 0.9),
+              ),
+              child: Text(
+                'Logout',
+                style: MBTextStyles.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 19,
-                    backgroundColor:
-                    MBColors.primaryOrange.withValues(alpha: 0.10),
-                    backgroundImage:
-                    picture.isNotEmpty ? NetworkImage(picture) : null,
-                    child: picture.isEmpty
-                        ? Text(
-                      initials,
-                      style: MBTextStyles.caption.copyWith(
-                        color: MBColors.primaryOrange,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    )
-                        : null,
-                  ),
-                  MBSpacing.w(MBSpacing.sm),
-                  SizedBox(
-                    width: 180,
-                    child: loading
-                        ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          height: 12,
-                          width: 90,
-                          decoration: BoxDecoration(
-                            color: MBColors.border,
-                            borderRadius:
-                            BorderRadius.circular(MBRadius.pill),
-                          ),
-                        ),
-                        MBSpacing.h(MBSpacing.xxs),
-                        Container(
-                          height: 10,
-                          width: 70,
-                          decoration: BoxDecoration(
-                            color: MBColors.border,
-                            borderRadius:
-                            BorderRadius.circular(MBRadius.pill),
-                          ),
-                        ),
-                      ],
-                    )
-                        : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: MBTextStyles.bodyMedium.copyWith(
-                            color: MBColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          role,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: MBTextStyles.caption.copyWith(
-                            color: MBColors.textSecondary,
-                          ),
-                        ),
-                        if (email != 'No email')
-                          Text(
-                            email,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textMuted,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  MBSpacing.w(MBSpacing.md),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(MBRadius.pill),
-                    onTap: () => Get.toNamed(AdminWebRoutes.profile),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: MBSpacing.md,
-                        vertical: MBSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(MBRadius.pill),
-                        border: Border.all(
-                          color: MBColors.primaryOrange.withValues(alpha: 0.24),
-                        ),
-                      ),
-                      child: Text(
-                        'Profile',
-                        style: MBTextStyles.bodyMedium.copyWith(
-                          color: MBColors.primaryOrange,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  MBSpacing.w(MBSpacing.sm),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(MBRadius.pill),
-                    onTap: () async {
-                      await sessionService.signOut();
-                      Get.offAllNamed(AdminWebRoutes.login);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: MBSpacing.md,
-                        vertical: MBSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: MBGradients.primaryGradient,
-                        borderRadius: BorderRadius.circular(MBRadius.pill),
-                      ),
-                      child: Text(
-                        'Logout',
-                        style: MBTextStyles.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
@@ -863,6 +737,7 @@ class _CommandPaletteOverlayState extends State<_CommandPaletteOverlay> {
       final bool isSearching = controller.commandQuery.value.trim().isNotEmpty;
       final results = controller.commandPaletteItems;
       final recents = controller.recentCommandPaletteItems;
+      final items = isSearching ? results : recents;
 
       return Positioned.fill(
         child: Material(
@@ -898,120 +773,53 @@ class _CommandPaletteOverlayState extends State<_CommandPaletteOverlay> {
                         decoration: BoxDecoration(
                           border: Border(
                             bottom: BorderSide(
-                              color: MBColors.border.withValues(alpha: 0.9),
+                              color: MBColors.border.withValues(alpha: 0.8),
                             ),
                           ),
                         ),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: MBColors.primaryOrange
-                                        .withValues(alpha: 0.10),
-                                    borderRadius:
-                                    BorderRadius.circular(MBRadius.md),
-                                  ),
-                                  child: const Icon(
-                                    Icons.search_rounded,
-                                    color: MBColors.primaryOrange,
-                                  ),
-                                ),
-                                MBSpacing.w(MBSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Command Palette',
-                                        style: MBTextStyles.bodyMedium.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: MBColors.textPrimary,
-                                        ),
-                                      ),
-                                      MBSpacing.h(MBSpacing.xxxs),
-                                      Text(
-                                        'Search modules, pages, and routes instantly.',
-                                        style: MBTextStyles.caption.copyWith(
-                                          color: MBColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: MBSpacing.sm,
-                                    vertical: MBSpacing.xxs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: MBColors.background,
-                                    borderRadius:
-                                    BorderRadius.circular(MBRadius.pill),
-                                    border: Border.all(
-                                      color: MBColors.border
-                                          .withValues(alpha: 0.9),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Esc',
-                                    style: MBTextStyles.caption.copyWith(
-                                      color: MBColors.textSecondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            const Icon(
+                              Icons.search_rounded,
+                              color: MBColors.textSecondary,
                             ),
-                            MBSpacing.h(MBSpacing.md),
-                            TextField(
-                              controller: _searchController,
-                              focusNode: _searchFocusNode,
-                              autofocus: true,
-                              onChanged: controller.updateCommandQuery,
-                              decoration: InputDecoration(
-                                hintText: 'Search pages, modules, routes...',
-                                prefixIcon: const Icon(Icons.search_rounded),
-                                suffixIcon:
-                                controller.commandQuery.value.trim().isEmpty
-                                    ? null
-                                    : IconButton(
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    controller.updateCommandQuery('');
-                                    _searchFocusNode.requestFocus();
-                                  },
-                                  icon:
-                                  const Icon(Icons.close_rounded),
+                            MBSpacing.w(MBSpacing.md),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                onChanged: controller.updateCommandQuery,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                  hintText: 'Search command or page...',
                                 ),
-                                filled: true,
-                                fillColor: MBColors.background,
-                                border: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(MBRadius.lg),
-                                  borderSide: BorderSide(
-                                    color:
-                                    MBColors.border.withValues(alpha: 0.8),
-                                  ),
+                                style: MBTextStyles.bodyMedium.copyWith(
+                                  color: MBColors.textPrimary,
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(MBRadius.lg),
-                                  borderSide: BorderSide(
-                                    color:
-                                    MBColors.border.withValues(alpha: 0.8),
-                                  ),
+                              ),
+                            ),
+                            MBSpacing.w(MBSpacing.sm),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(999),
+                              onTap: () {
+                                _searchController.clear();
+                                controller.closeCommandPalette();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: MBSpacing.sm,
+                                  vertical: MBSpacing.xxs,
                                 ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                  BorderRadius.circular(MBRadius.lg),
-                                  borderSide: const BorderSide(
-                                    color: MBColors.primaryOrange,
-                                    width: 1.4,
+                                decoration: BoxDecoration(
+                                  color: MBColors.background,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'ESC',
+                                  style: MBTextStyles.caption.copyWith(
+                                    color: MBColors.textSecondary,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -1020,20 +828,104 @@ class _CommandPaletteOverlayState extends State<_CommandPaletteOverlay> {
                         ),
                       ),
                       Expanded(
-                        child: isSearching
-                            ? _SearchResultsSection(
-                          results: results,
-                          onItemTap: (route) {
-                            _searchController.clear();
-                            controller.openRouteFromCommand(route);
-                          },
+                        child: items.isEmpty
+                            ? Center(
+                          child: Text(
+                            isSearching
+                                ? 'No matching command found'
+                                : 'No recent pages yet',
+                            style: MBTextStyles.bodyMedium.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
                         )
-                            : _RecentAndBrowseSection(
-                          recents: recents,
-                          browseItems: results,
-                          onItemTap: (route) {
-                            _searchController.clear();
-                            controller.openRouteFromCommand(route);
+                            : ListView.separated(
+                          padding: const EdgeInsets.all(MBSpacing.md),
+                          itemCount: items.length,
+                          separatorBuilder: (_, __) =>
+                              MBSpacing.h(MBSpacing.sm),
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                _searchController.clear();
+                                controller.openRouteFromCommand(item.route);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(MBSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: MBColors.background,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: MBColors.border.withValues(
+                                      alpha: 0.85,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        gradient:
+                                        MBGradients.primaryGradient,
+                                        borderRadius:
+                                        BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.arrow_outward_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    MBSpacing.w(MBSpacing.md),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.title,
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow.ellipsis,
+                                            style: MBTextStyles.bodyMedium
+                                                .copyWith(
+                                              color: MBColors.textPrimary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          MBSpacing.h(MBSpacing.xxxs),
+                                          Text(
+                                            item.description,
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow.ellipsis,
+                                            style: MBTextStyles.caption
+                                                .copyWith(
+                                              color:
+                                              MBColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    MBSpacing.w(MBSpacing.md),
+                                    Text(
+                                      item.route,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: MBTextStyles.caption.copyWith(
+                                        color: MBColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -1046,228 +938,5 @@ class _CommandPaletteOverlayState extends State<_CommandPaletteOverlay> {
         ),
       );
     });
-  }
-}
-
-class _SearchResultsSection extends StatelessWidget {
-  const _SearchResultsSection({
-    required this.results,
-    required this.onItemTap,
-  });
-
-  final List<AdminRouteMeta> results;
-  final ValueChanged<String> onItemTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (results.isEmpty) {
-      return Center(
-        child: Text(
-          'No matching pages found.',
-          style: MBTextStyles.body.copyWith(
-            color: MBColors.textSecondary,
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(MBSpacing.md),
-      itemCount: results.length,
-      separatorBuilder: (_, __) => Divider(
-        height: 1,
-        color: MBColors.border.withValues(alpha: 0.8),
-      ),
-      itemBuilder: (context, index) {
-        final item = results[index];
-        return _CommandPaletteItemTile(
-          item: item,
-          onTap: () => onItemTap(item.route),
-        );
-      },
-    );
-  }
-}
-
-class _RecentAndBrowseSection extends StatelessWidget {
-  const _RecentAndBrowseSection({
-    required this.recents,
-    required this.browseItems,
-    required this.onItemTap,
-  });
-
-  final List<AdminRouteMeta> recents;
-  final List<AdminRouteMeta> browseItems;
-  final ValueChanged<String> onItemTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(MBSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (recents.isNotEmpty) ...[
-            _PaletteSectionTitle(
-              title: 'Recent',
-              subtitle: 'Recently visited pages',
-            ),
-            MBSpacing.h(MBSpacing.sm),
-            ...recents.map(
-                  (item) => Padding(
-                padding: const EdgeInsets.only(bottom: MBSpacing.sm),
-                child: _CommandPaletteItemTile(
-                  item: item,
-                  compact: true,
-                  onTap: () => onItemTap(item.route),
-                ),
-              ),
-            ),
-            MBSpacing.h(MBSpacing.lg),
-          ],
-          _PaletteSectionTitle(
-            title: 'Browse All',
-            subtitle: 'Available admin pages',
-          ),
-          MBSpacing.h(MBSpacing.sm),
-          ...browseItems.take(16).map(
-                (item) => Padding(
-              padding: const EdgeInsets.only(bottom: MBSpacing.sm),
-              child: _CommandPaletteItemTile(
-                item: item,
-                compact: true,
-                onTap: () => onItemTap(item.route),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaletteSectionTitle extends StatelessWidget {
-  const _PaletteSectionTitle({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: MBTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: MBColors.textPrimary,
-                ),
-              ),
-              MBSpacing.h(MBSpacing.xxxs),
-              Text(
-                subtitle,
-                style: MBTextStyles.caption.copyWith(
-                  color: MBColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CommandPaletteItemTile extends StatelessWidget {
-  const _CommandPaletteItemTile({
-    required this.item,
-    required this.onTap,
-    this.compact = false,
-  });
-
-  final AdminRouteMeta item;
-  final VoidCallback onTap;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(MBRadius.lg),
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(compact ? MBSpacing.md : MBSpacing.lg),
-        decoration: BoxDecoration(
-          color: MBColors.card,
-          borderRadius: BorderRadius.circular(MBRadius.lg),
-          border: Border.all(
-            color: MBColors.border.withValues(alpha: 0.8),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: MBColors.primaryOrange.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-              ),
-              child: Icon(
-                item.icon,
-                color: MBColors.primaryOrange,
-                size: 20,
-              ),
-            ),
-            MBSpacing.w(MBSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    style: MBTextStyles.bodyMedium.copyWith(
-                      color: MBColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  MBSpacing.h(MBSpacing.xxxs),
-                  Text(
-                    item.breadcrumbs.join(' / '),
-                    style: MBTextStyles.caption.copyWith(
-                      color: MBColors.textSecondary,
-                    ),
-                  ),
-                  if (item.description.trim().isNotEmpty) ...[
-                    MBSpacing.h(MBSpacing.xxxs),
-                    Text(
-                      item.description,
-                      maxLines: compact ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: MBTextStyles.caption.copyWith(
-                        color: MBColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            MBSpacing.w(MBSpacing.md),
-            Text(
-              item.route,
-              style: MBTextStyles.caption.copyWith(
-                color: MBColors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -37,6 +37,8 @@ class AdminShellStateController extends GetxController {
     unawaited(_restoreSidebarState());
   }
 
+
+
   void _initializeGroups() {
     expandedGroupTitles.clear();
 
