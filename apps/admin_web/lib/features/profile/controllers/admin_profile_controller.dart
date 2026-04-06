@@ -1,9 +1,9 @@
 import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 import 'package:shared_ui/shared_ui.dart';
-
 
 class AdminProfileController extends GetxController {
   AdminProfileController({
@@ -22,18 +22,95 @@ class AdminProfileController extends GetxController {
 
   String get currentUid => currentUser.value?.id.trim() ?? '';
 
-  String get fullName => currentUser.value?.fullName.trim().isNotEmpty == true
-      ? currentUser.value!.fullName
-      : 'Admin User';
+  String get fullName {
+    final user = currentUser.value;
+    if (user == null) return 'Admin User';
+
+    final full = user.fullName.trim();
+    if (full.isNotEmpty) return full;
+
+    final first = user.firstName.trim();
+    final last = user.lastName.trim();
+    final combined = '$first $last'.trim();
+
+    return combined.isNotEmpty ? combined : 'Admin User';
+  }
 
   String get email => currentUser.value?.email.trim() ?? '';
 
   String get profilePicture => currentUser.value?.profilePicture.trim() ?? '';
 
-  String get role => currentUser.value?.role.trim() ?? 'admin';
+  String get role => currentUser.value?.role.trim().isNotEmpty == true
+      ? currentUser.value!.role.trim()
+      : 'admin';
 
-  bool get hasProfilePicture =>
-      currentUser.value?.profilePicture.trim().isNotEmpty == true;
+  String get prettyRole {
+    final raw = role.trim().toLowerCase();
+
+    switch (raw) {
+      case 'super_admin':
+        return 'Super Admin';
+      case 'admin':
+        return 'Admin';
+      case 'staff':
+        return 'Staff';
+      case 'customer':
+        return 'Customer';
+      default:
+        return raw.isEmpty
+            ? 'Admin'
+            : raw
+            .split('_')
+            .map(
+              (e) => e.isEmpty
+              ? e
+              : '${e[0].toUpperCase()}${e.substring(1)}',
+        )
+            .join(' ');
+    }
+  }
+
+  String get displayNameForShell => fullName;
+
+  String get displayEmailForShell {
+    final value = email.trim();
+    return value.isEmpty ? 'No email' : value;
+  }
+
+  String get displayRoleForShell => prettyRole;
+
+  String get initials {
+    final user = currentUser.value;
+    if (user == null) return 'A';
+
+    final direct = user.initials.trim();
+    if (direct.isNotEmpty) return direct;
+
+    final name = fullName.trim();
+    if (name.isEmpty || name == 'Admin User') return 'A';
+
+    final parts = name
+        .split(' ')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parts.isEmpty) return 'A';
+    if (parts.length == 1) {
+      final word = parts.first;
+      return word.length >= 2
+          ? word.substring(0, 2).toUpperCase()
+          : word.toUpperCase();
+    }
+
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
+  bool get hasProfilePicture => profilePicture.isNotEmpty;
+
+  bool get hasEmail => email.trim().isNotEmpty;
+
+  bool get isReadyForShell => !isLoading.value;
 
   @override
   void onInit() {
@@ -55,11 +132,7 @@ class AdminProfileController extends GetxController {
 
     _profileSubscription = _repository.watchUserById(uid).listen(
           (user) {
-        if (user == null) {
-          currentUser.value = null;
-        } else {
-          currentUser.value = UserModel.normalized(user);
-        }
+        _setCurrentUser(user);
         isLoading.value = false;
       },
       onError: (_) {
@@ -72,6 +145,15 @@ class AdminProfileController extends GetxController {
     );
   }
 
+  void _setCurrentUser(UserModel? user) {
+    if (user == null) {
+      currentUser.value = null;
+      return;
+    }
+
+    currentUser.value = UserModel.normalized(user);
+  }
+
   Future<void> refreshProfile() async {
     final String uid = _repository.currentUid.trim();
     if (uid.isEmpty) return;
@@ -79,7 +161,7 @@ class AdminProfileController extends GetxController {
     try {
       isRefreshing.value = true;
       final user = await _repository.fetchUserById(uid);
-      currentUser.value = user == null ? null : UserModel.normalized(user);
+      _setCurrentUser(user);
     } catch (_) {
       MBNotification.error(
         title: 'Error',

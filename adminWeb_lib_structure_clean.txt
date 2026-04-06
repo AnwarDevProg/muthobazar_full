@@ -4,6 +4,7 @@ C.
 +---app
 |   +---bindings
 |   |   +---admin_access_binding.dart
+|   |   +---admin_activity_logs_binding.dart
 |   |   +---admin_user_binding.dart
 |   |   +---admin_web_binding.dart
 |   |   +---audit_logs_binding.dart
@@ -25,6 +26,7 @@ C.
 |   |   +---orders_binding.dart
 |   |   +---packing_binding.dart
 |   |   +---picking_binding.dart
+|   |   +---placeholder_feature_binding.dart
 |   |   +---products_binding.dart
 |   |   +---profile_binding.dart
 |   |   +---purchase_receiving_binding.dart
@@ -57,6 +59,7 @@ C.
 |   +---shell
 |   |   +---admin_shell_state_controller.dart
 |   |   +---admin_sidebar.dart
+|   |   +---admin_sidebar_config.dart
 |   |   +---admin_topbar.dart
 |   |   \---admin_web_shell.dart
 |   +---startup
@@ -78,8 +81,10 @@ C.
 |   +---audit_logs
 |   |   +---controllers
 |   |   |   \---admin_activity_log_controller.dart
-|   |   \---pages
-|   |       \---admin_activity_logs_page.dart
+|   |   +---pages
+|   |   |   \---admin_activity_logs_page.dart
+|   |   \---widgets
+|   |       \---activity_log_details_dialog.dart
 |   +---auth
 |   |   +---controllers
 |   |   |   \---admin_auth_controller.dart
@@ -187,5 +192,7 @@ C.
 |   \---zones
 +---l10n
 |   \---app_en.arb
++---Activity log process. md
 +---firebase_options.dart
-\---main.dart
++---main.dart
+\---run web server.md
