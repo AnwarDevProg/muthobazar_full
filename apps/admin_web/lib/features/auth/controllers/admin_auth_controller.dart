@@ -328,19 +328,21 @@ class AdminAuthController extends BasePhoneAuthController {
         );
 
         final session = Get.find<AdminWebSessionService>();
-        final access = Get.find<AdminAccessController>();
-        final profile = Get.find<AdminProfileController>();
 
         await AdminActivityLogger.log(
-          actorUid: session.currentUid,
-          actorName: profile.fullName,
-          actorPhone: profile.currentUser.value?.phoneNumber ?? '',
-          actorRole: access.permission.value?.role ?? 'admin',
+          actorUid: user.uid,
+          actorName: (user.displayName ?? fullName).trim().isEmpty
+              ? 'Admin User'
+              : (user.displayName ?? fullName).trim(),
+          actorPhone: (user.phoneNumber ?? '').trim().isEmpty
+              ? rawPhone
+              : (user.phoneNumber ?? '').trim(),
+          actorRole: 'admin',
           action: 'auth.login',
           module: 'auth',
           targetType: 'admin',
-          targetId: session.currentUid,
-          targetTitle: profile.fullName,
+          targetId: user.uid,
+          targetTitle: (user.displayName ?? fullName).trim(),
           metadata: {
             'loginMethod': 'phone_otp',
           },
