@@ -9,6 +9,14 @@ class AdminActivityLogger {
   );
 
   static Future<void> log({
+    // Legacy call-site compatibility.
+    // These are intentionally ignored now because actor identity
+    // is resolved on the server side from request.auth.uid.
+    String? actorUid,
+    String? actorName,
+    String? actorPhone,
+    String? actorRole,
+
     required String action,
     required String module,
     required String targetType,
@@ -16,6 +24,8 @@ class AdminActivityLogger {
     required String targetTitle,
     String status = 'success',
     String? reason,
+    Map<String, dynamic>? beforeData,
+    Map<String, dynamic>? afterData,
     Map<String, dynamic>? metadata,
   }) async {
     try {
@@ -27,6 +37,8 @@ class AdminActivityLogger {
         'targetTitle': targetTitle.trim(),
         'status': status.trim(),
         'reason': reason?.trim(),
+        'beforeData': beforeData,
+        'afterData': afterData,
         'metadata': metadata,
       });
     } on FirebaseFunctionsException catch (e, s) {

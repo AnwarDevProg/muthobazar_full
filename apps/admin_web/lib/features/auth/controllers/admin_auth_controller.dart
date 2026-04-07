@@ -128,7 +128,6 @@ class AdminAuthController extends BasePhoneAuthController {
         return;
       }
 
-      // HARD GATE: login page can ONLY proceed for admin_login
       if (!requireFullName && result.authMode != 'admin_login') {
         setLoading(false);
         finishOtpRequest();
@@ -143,7 +142,6 @@ class AdminAuthController extends BasePhoneAuthController {
         return;
       }
 
-      // HARD GATE: register page can ONLY proceed for admin_register or bootstrap
       if (requireFullName &&
           result.authMode != 'admin_register' &&
           result.authMode != 'super_admin_bootstrap') {
@@ -164,8 +162,7 @@ class AdminAuthController extends BasePhoneAuthController {
       _lastAuthMode = result.authMode;
       _lastShowSuperAdminCreation = result.showSuperAdminCreation;
 
-      final String firebasePhone =
-      _repository.formatPhoneForFirebase(rawPhone);
+      final String firebasePhone = _repository.formatPhoneForFirebase(rawPhone);
 
       await _repository.sendOtpWeb(
         firebasePhoneNumber: firebasePhone,
@@ -298,7 +295,6 @@ class AdminAuthController extends BasePhoneAuthController {
       notifyListeners();
 
       if (!isRegistrationFlow) {
-        // LOGIN MUST NEVER ENTER BOOTSTRAP OR REGISTER MODE
         if (result.authMode != 'admin_login') {
           await _safeSignOut();
           onError(
@@ -326,8 +322,6 @@ class AdminAuthController extends BasePhoneAuthController {
           title: 'Login successful',
           message: 'Welcome to MuthoBazar Admin.',
         );
-
-        final session = Get.find<AdminWebSessionService>();
 
         try {
           await AdminActivityLogger.log(
@@ -357,7 +351,6 @@ class AdminAuthController extends BasePhoneAuthController {
         return;
       }
 
-      // REGISTRATION FLOW ONLY
       final bool bootstrapMode =
           result.authMode == 'super_admin_bootstrap' ||
               _lastAuthMode == 'super_admin_bootstrap' ||
@@ -396,22 +389,60 @@ class AdminAuthController extends BasePhoneAuthController {
       Get.offAllNamed(AdminWebRoutes.login);
     } on FirebaseAuthException catch (e) {
       otpErrorText = _repository.mapFirebaseAuthException(e);
+      generalErrorText = null;
 
-      if (e.code == 'code-invalid' ||
-          e.code == 'invalid-verification-code') {
+      if (_isInvalidOtpFirebaseAuthCode(e.code)) {
         await recordOtpFailure();
       }
 
       onError('Verification Failed', otpErrorText!);
+    } on FirebaseException catch (e) {
+      otpErrorText = null;
+      generalErrorText = _mapVerifyOtpPostAuthError(e);
+      onError('Verification Failed', generalErrorText!);
     } catch (e) {
-      otpErrorText = 'Invalid OTP. Please try again.';
-      await recordOtpFailure();
-      onError('Verification Failed', e.toString());
+      otpErrorText = null;
+      generalErrorText = _mapVerifyOtpPostAuthError(e);
+      onError('Verification Failed', generalErrorText!);
     } finally {
       setVerifyOtpInProgress(false);
       setLoading(false);
       notifyListeners();
     }
+  }
+
+  bool _isInvalidOtpFirebaseAuthCode(String code) {
+    return code == 'code-invalid' ||
+        code == 'invalid-verification-code' ||
+        code == 'session-expired';
+  }
+
+  String _mapVerifyOtpPostAuthError(Object error) {
+    if (error is FirebaseException) {
+      if (error.code == 'permission-denied') {
+        return 'Admin access verification failed due to Firestore permissions. Check deployed rules and admin documents.';
+      }
+
+      final message = (error.message ?? '').trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+
+      return 'Firebase error: ${error.code}';
+    }
+
+    final message = error.toString().trim();
+
+    if (message.contains('cloud_firestore/permission-denied') ||
+        message.contains('permission-denied')) {
+      return 'Admin access verification failed due to Firestore permissions. Check deployed rules and admin documents.';
+    }
+
+    if (message.isEmpty) {
+      return 'Verification failed. Please try again.';
+    }
+
+    return message;
   }
 
   Future<void> _createAdminUserRecord({
@@ -430,7 +461,6 @@ class AdminAuthController extends BasePhoneAuthController {
 
     final DocumentReference<Map<String, dynamic>> userRef =
     _repository.firestore.collection('users').doc(uid);
-
     final DocumentReference<Map<String, dynamic>> phoneRef =
     _repository.firestore.collection('phone_index').doc(normalizedPhone);
 
@@ -447,7 +477,7 @@ class AdminAuthController extends BasePhoneAuthController {
         'Gender': '',
         'IsGuest': false,
         'Role': 'admin',
-        'Addresses': <dynamic>[],
+        'Addresses': [],
         'AccountStatus': 'active',
         'DOB': '',
         'DefaultAddressId': '',
