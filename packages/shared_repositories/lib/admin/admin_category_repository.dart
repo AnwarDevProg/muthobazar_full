@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:shared_models/catalog/mb_category.dart';
 
@@ -9,16 +8,18 @@ class AdminCategoryRepository {
   static final AdminCategoryRepository instance = AdminCategoryRepository._();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'asia-south1',
+  );
 
   CollectionReference<Map<String, dynamic>> get categoriesCollection =>
       _firestore.collection('categories');
 
-  MBCategory _parseCategoryDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  MBCategory _parseCategoryDoc(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc,
+      ) {
     final data = doc.data();
-
-    final map = <String, dynamic>{
+    final map = {
       ...data,
       'id': (data['id'] ?? doc.id).toString(),
     };
@@ -41,8 +42,7 @@ class AdminCategoryRepository {
   }
 
   String _normalizeParentId(String? parentId) {
-    final value = parentId?.trim() ?? '';
-    return value;
+    return parentId?.trim() ?? '';
   }
 
   String _groupIdFromParentId(String? parentId) {
@@ -50,9 +50,40 @@ class AdminCategoryRepository {
     return normalizedParentId.isEmpty ? 'root' : normalizedParentId;
   }
 
+  Map<String, dynamic> _categoryPayload(MBCategory category) {
+    return {
+      'nameEn': category.nameEn.trim(),
+      'nameBn': category.nameBn.trim(),
+      'descriptionEn': category.descriptionEn.trim(),
+      'descriptionBn': category.descriptionBn.trim(),
+      'imageUrl': category.imageUrl.trim(),
+      'iconUrl': category.iconUrl.trim(),
+      'imagePath': category.imagePath.trim(),
+      'thumbPath': category.thumbPath.trim(),
+      'slug': category.slug.trim(),
+      'parentId': _normalizeParentId(category.parentId).isEmpty
+          ? null
+          : _normalizeParentId(category.parentId),
+      'isFeatured': category.isFeatured,
+      'showOnHome': category.showOnHome,
+      'isActive': category.isActive,
+      'sortOrder': category.sortOrder,
+    };
+  }
+
+  HttpsCallable _callable(String name) => _functions.httpsCallable(name);
+
+  String _extractFunctionMessage(
+      FirebaseFunctionsException e,
+      String fallback,
+      ) {
+    final message = (e.message ?? '').trim();
+    return message.isEmpty ? fallback : message;
+  }
+
   Stream<List<MBCategory>> watchCategories() {
     return categoriesCollection.snapshots().map((snapshot) {
-      final List<MBCategory> items = <MBCategory>[];
+      final List<MBCategory> items = [];
 
       for (final doc in snapshot.docs) {
         items.add(_parseCategoryDoc(doc));
@@ -61,7 +92,6 @@ class AdminCategoryRepository {
       items.sort((a, b) {
         final String aGroup = _groupIdFromParentId(a.parentId);
         final String bGroup = _groupIdFromParentId(b.parentId);
-
         final int byGroup = aGroup.compareTo(bGroup);
         if (byGroup != 0) return byGroup;
 
@@ -93,10 +123,10 @@ class AdminCategoryRepository {
       );
 
       if (snapshot.docs.isEmpty) {
-        return <MBCategory>[];
+        return [];
       }
 
-      final List<MBCategory> items = <MBCategory>[];
+      final List<MBCategory> items = [];
 
       for (final doc in snapshot.docs) {
         items.add(_parseCategoryDoc(doc));
@@ -105,7 +135,6 @@ class AdminCategoryRepository {
       items.sort((a, b) {
         final String aGroup = _groupIdFromParentId(a.parentId);
         final String bGroup = _groupIdFromParentId(b.parentId);
-
         final int byGroup = aGroup.compareTo(bGroup);
         if (byGroup != 0) return byGroup;
 
@@ -183,7 +212,6 @@ class AdminCategoryRepository {
 
         final data = doc.data();
         final docSortOrder = _parseInt(data['sortOrder']);
-
         if (docSortOrder == sortOrder) {
           return true;
         }
@@ -197,45 +225,30 @@ class AdminCategoryRepository {
     }
   }
 
-  Future<void> createCategory(MBCategory category) async {
+  Future<String> createCategory(MBCategory category) async {
     try {
-      final doc = category.id.trim().isEmpty
-          ? categoriesCollection.doc()
-          : categoriesCollection.doc(category.id.trim());
+      final callable = _callable('createCategory');
 
-      final now = DateTime.now();
-      final groupId = _groupIdFromParentId(category.parentId);
-
-      final payload = category.copyWith(
-        id: doc.id,
-        createdAt: category.createdAt ?? now,
-        updatedAt: now,
-      );
-
-      final bool sortExists = await sortExistsInSiblingGroup(
-        sortOrder: payload.sortOrder,
-        parentId: payload.parentId,
-      );
-
-      if (sortExists) {
-        throw Exception(
-          'Sort number already exists in this group. Please use another.',
-        );
-      }
-
-      final map = <String, dynamic>{
-        ...payload.toMap(),
-        'groupId': groupId,
-        'parentId': _normalizeParentId(payload.parentId).isEmpty
-            ? ''
-            : _normalizeParentId(payload.parentId),
-      };
-
-      await doc.set(map).timeout(
-        const Duration(seconds: 15),
+      final result = await callable.call<Map<String, dynamic>>({
+        'category': _categoryPayload(category),
+      }).timeout(
+        const Duration(seconds: 20),
         onTimeout: () {
           throw Exception('Timed out while creating category.');
         },
+      );
+
+      final data = Map<String, dynamic>.from(result.data ?? const {});
+      final categoryId = (data['categoryId'] ?? '').toString().trim();
+
+      if (categoryId.isEmpty) {
+        throw Exception('Category was created but no categoryId was returned.');
+      }
+
+      return categoryId;
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(
+        _extractFunctionMessage(e, 'Cloud Function error while creating category.'),
       );
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
@@ -251,62 +264,21 @@ class AdminCategoryRepository {
     }
 
     try {
-      final docRef = categoriesCollection.doc(categoryId);
+      final callable = _callable('updateCategory');
 
-      final existingDoc = await docRef.get().timeout(
-        const Duration(seconds: 15),
+      await callable.call<Map<String, dynamic>>({
+        'categoryId': categoryId,
+        'category': _categoryPayload(category),
+      }).timeout(
+        const Duration(seconds: 20),
         onTimeout: () {
-          throw Exception('Timed out while loading category before update.');
+          throw Exception('Timed out while updating category.');
         },
       );
-
-      final existingData = existingDoc.data() ?? <String, dynamic>{};
-
-      final oldImagePath = (existingData['imagePath'] ?? '').toString();
-      final oldThumbPath = (existingData['thumbPath'] ?? '').toString();
-
-      final newImagePath = category.imagePath;
-      final newThumbPath = category.thumbPath;
-
-      final bool sortExists = await sortExistsInSiblingGroup(
-        sortOrder: category.sortOrder,
-        parentId: category.parentId,
-        excludeCategoryId: categoryId,
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(
+        _extractFunctionMessage(e, 'Cloud Function error while updating category.'),
       );
-
-      if (sortExists) {
-        throw Exception(
-          'Sort number already exists in this group. Please use another.',
-        );
-      }
-
-      final now = DateTime.now();
-      final groupId = _groupIdFromParentId(category.parentId);
-
-      final map = <String, dynamic>{
-        ...category.copyWith(updatedAt: now).toMap(),
-        'groupId': groupId,
-        'parentId': _normalizeParentId(category.parentId).isEmpty
-            ? ''
-            : _normalizeParentId(category.parentId),
-      };
-
-      await docRef.set(
-        map,
-        SetOptions(merge: true),
-      );
-
-      if (oldImagePath.isNotEmpty && oldImagePath != newImagePath) {
-        try {
-          await _storage.ref(oldImagePath).delete();
-        } catch (_) {}
-      }
-
-      if (oldThumbPath.isNotEmpty && oldThumbPath != newThumbPath) {
-        try {
-          await _storage.ref(oldThumbPath).delete();
-        } catch (_) {}
-      }
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
     } catch (e) {
@@ -321,9 +293,9 @@ class AdminCategoryRepository {
     if (orderedCategoryIds.isEmpty) return;
 
     try {
-      final callable = _functions.httpsCallable('reorderCategoryGroup');
+      final callable = _callable('reorderCategoryGroup');
 
-      await callable.call({
+      await callable.call<Map<String, dynamic>>({
         'groupId': _groupIdFromParentId(parentId),
         'orderedCategoryIds': orderedCategoryIds,
       }).timeout(
@@ -334,7 +306,7 @@ class AdminCategoryRepository {
       );
     } on FirebaseFunctionsException catch (e) {
       throw Exception(
-        e.message ?? 'Cloud Function error while reordering categories.',
+        _extractFunctionMessage(e, 'Cloud Function error while reordering categories.'),
       );
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
@@ -347,9 +319,9 @@ class AdminCategoryRepository {
     required String? parentId,
   }) async {
     try {
-      final callable = _functions.httpsCallable('fixCategoryGroupSort');
+      final callable = _callable('fixCategoryGroupSort');
 
-      await callable.call({
+      await callable.call<Map<String, dynamic>>({
         'groupId': _groupIdFromParentId(parentId),
       }).timeout(
         const Duration(seconds: 20),
@@ -359,7 +331,7 @@ class AdminCategoryRepository {
       );
     } on FirebaseFunctionsException catch (e) {
       throw Exception(
-        e.message ?? 'Cloud Function error while fixing category sorting.',
+        _extractFunctionMessage(e, 'Cloud Function error while fixing category sorting.'),
       );
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
@@ -386,9 +358,8 @@ class AdminCategoryRepository {
         return 'Category not found.';
       }
 
-      final data = doc.data() ?? <String, dynamic>{};
+      final data = doc.data() ?? {};
       final int productsCount = _parseInt(data['productsCount']);
-
       if (productsCount > 0) {
         return 'This category cannot be deleted because it contains $productsCount product(s).';
       }
@@ -416,50 +387,30 @@ class AdminCategoryRepository {
     }
   }
 
-  Future<void> deleteCategory(String categoryId) async {
+  Future<void> deleteCategory(
+      String categoryId, {
+        String? reason,
+      }) async {
     final id = categoryId.trim();
     if (id.isEmpty) {
       throw Exception('Category id is required for delete.');
     }
 
     try {
-      final String? blockReason = await getDeleteBlockReason(id);
-      if (blockReason != null) {
-        throw Exception(blockReason);
-      }
+      final callable = _callable('deleteCategory');
 
-      final docRef = categoriesCollection.doc(id);
-      final doc = await docRef.get().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while loading category before delete.');
-        },
-      );
-
-      if (!doc.exists) return;
-
-      final data = doc.data() ?? <String, dynamic>{};
-
-      final String imagePath = (data['imagePath'] ?? '').toString().trim();
-      final String thumbPath = (data['thumbPath'] ?? '').toString().trim();
-
-      if (imagePath.isNotEmpty) {
-        try {
-          await _storage.ref(imagePath).delete();
-        } catch (_) {}
-      }
-
-      if (thumbPath.isNotEmpty && thumbPath != imagePath) {
-        try {
-          await _storage.ref(thumbPath).delete();
-        } catch (_) {}
-      }
-
-      await docRef.delete().timeout(
-        const Duration(seconds: 15),
+      await callable.call<Map<String, dynamic>>({
+        'categoryId': id,
+        'reason': reason?.trim(),
+      }).timeout(
+        const Duration(seconds: 20),
         onTimeout: () {
           throw Exception('Timed out while deleting category.');
         },
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(
+        _extractFunctionMessage(e, 'Cloud Function error while deleting category.'),
       );
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
@@ -471,6 +422,7 @@ class AdminCategoryRepository {
   Future<void> setCategoryActiveState({
     required String categoryId,
     required bool isActive,
+    String? reason,
   }) async {
     final id = categoryId.trim();
     if (id.isEmpty) {
@@ -478,17 +430,21 @@ class AdminCategoryRepository {
     }
 
     try {
-      await categoriesCollection.doc(id).set(
-        {
-          'isActive': isActive,
-          'updatedAt': Timestamp.now(),
-        },
-        SetOptions(merge: true),
-      ).timeout(
-        const Duration(seconds: 15),
+      final callable = _callable('setCategoryActiveState');
+
+      await callable.call<Map<String, dynamic>>({
+        'categoryId': id,
+        'isActive': isActive,
+        'reason': reason?.trim(),
+      }).timeout(
+        const Duration(seconds: 20),
         onTimeout: () {
           throw Exception('Timed out while updating category status.');
         },
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw Exception(
+        _extractFunctionMessage(e, 'Cloud Function error while updating category status.'),
       );
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));

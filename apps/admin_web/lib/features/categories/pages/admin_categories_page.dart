@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:admin_web/app/shell/admin_web_shell.dart';
+import 'package:admin_web/features/categories/controllers/admin_category_controller.dart';
 import 'package:admin_web/features/categories/widgets/admin_category_form_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -15,10 +17,13 @@ class AdminCategoriesPage extends StatefulWidget {
 }
 
 class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
+  late final AdminCategoryController _controller;
+
   List<MBCategory> _categories = <MBCategory>[];
   bool _isLoading = true;
   bool _isDeleting = false;
   bool _isReordering = false;
+  bool _isToggling = false;
   String _error = '';
 
   StreamSubscription<List<MBCategory>>? _categoriesSubscription;
@@ -26,6 +31,9 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
   @override
   void initState() {
     super.initState();
+    _controller = Get.isRegistered<AdminCategoryController>()
+        ? Get.find<AdminCategoryController>()
+        : Get.put(AdminCategoryController());
     _listenCategories();
   }
 
@@ -43,26 +51,23 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       _error = '';
     });
 
-    _categoriesSubscription =
-        AdminCategoryRepository.instance.watchCategories().listen(
-              (items) {
-            if (!mounted) return;
-
-            setState(() {
-              _categories = items;
-              _isLoading = false;
-              _error = '';
-            });
-          },
-          onError: (error) {
-            if (!mounted) return;
-
-            setState(() {
-              _error = error.toString();
-              _isLoading = false;
-            });
-          },
-        );
+    _categoriesSubscription = AdminCategoryRepository.instance.watchCategories().listen(
+          (items) {
+        if (!mounted) return;
+        setState(() {
+          _categories = items;
+          _isLoading = false;
+          _error = '';
+        });
+      },
+      onError: (error) {
+        if (!mounted) return;
+        setState(() {
+          _error = error.toString();
+          _isLoading = false;
+        });
+      },
+    );
   }
 
   Future<void> _reloadCategories() async {
@@ -94,7 +99,6 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
     try {
       final String? blockReason =
       await AdminCategoryRepository.instance.getDeleteBlockReason(category.id);
-
       if (!mounted) return;
 
       if (blockReason != null) {
@@ -145,8 +149,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
         _error = '';
       });
 
-      await AdminCategoryRepository.instance.deleteCategory(category.id);
-
+      await _controller.deleteCategory(category: category);
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,12 +161,9 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       );
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
         _error = e.toString();
-        _isDeleting = false;
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Delete failed: $e'),
@@ -171,7 +171,6 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       );
     } finally {
       if (!mounted) return;
-
       setState(() {
         _isDeleting = false;
       });
@@ -180,18 +179,27 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
 
   Future<void> _toggleActive(MBCategory category) async {
     try {
-      await AdminCategoryRepository.instance.setCategoryActiveState(
-        categoryId: category.id,
-        isActive: !category.isActive,
-      );
+      setState(() {
+        _isToggling = true;
+        _error = '';
+      });
+
+      await _controller.toggleActive(category: category);
     } catch (e) {
       if (!mounted) return;
-
+      setState(() {
+        _error = e.toString();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Status update failed: $e'),
         ),
       );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isToggling = false;
+      });
     }
   }
 
@@ -256,7 +264,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
     final moved = currentGroup.removeAt(oldIndex);
     currentGroup.insert(targetIndex, moved);
 
-    final updatedGroup = <MBCategory>[
+    final updatedGroup = [
       for (int i = 0; i < currentGroup.length; i++)
         currentGroup[i].copyWith(sortOrder: i),
     ];
@@ -278,31 +286,34 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
     });
 
     try {
-      await AdminCategoryRepository.instance.reorderCategoryGroup(
+      await _controller.reorderGroup(
         parentId: parentId,
         orderedCategoryIds: updatedGroup.map((e) => e.id).toList(),
       );
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
         _error = e.toString();
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Reorder failed: $e'),
         ),
       );
-
       _listenCategories();
     } finally {
       if (!mounted) return;
-
       setState(() {
         _isReordering = false;
       });
     }
+  }
+
+  String _busyLabel() {
+    if (_isDeleting) return 'Deleting...';
+    if (_isReordering) return 'Reordering...';
+    if (_isToggling) return 'Updating status...';
+    return 'Working...';
   }
 
   @override
@@ -343,15 +354,17 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed:
-                    _isLoading || _isDeleting || _isReordering ? null : _openCreateDialog,
+                    onPressed: _isLoading || _isDeleting || _isReordering || _isToggling
+                        ? null
+                        : _openCreateDialog,
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Add Category'),
                   ),
                   MBSpacing.w(MBSpacing.md),
                   OutlinedButton.icon(
-                    onPressed:
-                    _isLoading || _isDeleting || _isReordering ? null : _reloadCategories,
+                    onPressed: _isLoading || _isDeleting || _isReordering || _isToggling
+                        ? null
+                        : _reloadCategories,
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Reload'),
                   ),
@@ -408,6 +421,8 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       );
     }
 
+    final bool isBusy = _isDeleting || _isReordering || _isToggling;
+
     return _buildShellCard(
       child: Stack(
         children: [
@@ -424,7 +439,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
               _buildRootReorderList(rootCategories),
             ],
           ),
-          if (_isDeleting || _isReordering)
+          if (isBusy)
             Positioned.fill(
               child: Container(
                 color: Colors.white.withValues(alpha: 0.55),
@@ -435,7 +450,7 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                       const CircularProgressIndicator(),
                       MBSpacing.h(MBSpacing.sm),
                       Text(
-                        _isDeleting ? 'Deleting...' : 'Reordering...',
+                        _busyLabel(),
                         style: MBTextStyles.body.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -532,7 +547,6 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
             },
             itemBuilder: (context, index) {
               final item = children[index];
-
               return Container(
                 key: ValueKey('child_${parent.id}_${item.id}'),
                 margin: const EdgeInsets.only(bottom: MBSpacing.sm),
@@ -664,21 +678,17 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                     spacing: MBSpacing.sm,
                     runSpacing: MBSpacing.sm,
                     children: [
-                      if (isChild) _InfoChip(label: 'Child category'),
+                      if (isChild) const _InfoChip(label: 'Child category'),
                       _InfoChip(label: 'Slug: ${item.slug}'),
                       _InfoChip(label: 'Sort: ${item.sortOrder}'),
-                      _InfoChip(
-                        label: item.isActive ? 'Active' : 'Inactive',
-                      ),
+                      _InfoChip(label: item.isActive ? 'Active' : 'Inactive'),
                       _InfoChip(
                         label: item.isFeatured ? 'Featured' : 'Not featured',
                       ),
                       _InfoChip(
                         label: item.showOnHome ? 'Home visible' : 'Home hidden',
                       ),
-                      _InfoChip(
-                        label: 'Products: ${item.productsCount}',
-                      ),
+                      _InfoChip(label: 'Products: ${item.productsCount}'),
                     ],
                   ),
                 ],

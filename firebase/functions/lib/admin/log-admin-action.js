@@ -34,14 +34,21 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logAdminAction = void 0;
-const admin = __importStar(require("firebase-admin"));
-const functions = __importStar(require("firebase-functions"));
+const https_1 = require("firebase-functions/v2/https");
+const logger = __importStar(require("firebase-functions/logger"));
+const audit_log_core_1 = require("./audit-log-core");
+const SERVER_ONLY_AUDIT_MODULES = new Set([
+    "categories",
+    "brands",
+    "banners",
+    "products",
+]);
 function asTrimmedString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 function asNullableString(value) {
-    const result = typeof value === "string" ? value.trim() : "";
-    return result.length === 0 ? null : result;
+    const normalized = asTrimmedString(value);
+    return normalized.length === 0 ? null : normalized;
 }
 function asPlainObject(value) {
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -51,7 +58,7 @@ function asPlainObject(value) {
 }
 function requireNonEmpty(value, fieldName) {
     if (value.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", `${fieldName} is required.`);
+        throw new https_1.HttpsError("invalid-argument", `${fieldName} is required.`);
     }
 }
 function normalizeStatus(value) {
@@ -62,97 +69,46 @@ function normalizeStatus(value) {
     if (normalized === "success" || normalized === "failed") {
         return normalized;
     }
-    throw new functions.https.HttpsError("invalid-argument", "status must be either success or failed.");
+    throw new https_1.HttpsError("invalid-argument", "status must be either success or failed.");
 }
-function sanitizePhone(value) {
-    return value.replace(/\s+/g, " ").trim();
-}
-exports.logAdminAction = functions.https.onCall(async (data, context) => {
+exports.logAdminAction = (0, https_1.onCall)(async (request) => {
     try {
-        if (!context.auth) {
-            throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
-        }
-        const authUid = context.auth.uid;
-        const db = admin.firestore();
-        const actorUid = asTrimmedString(data.actorUid);
-        const actorName = asTrimmedString(data.actorName);
-        const actorPhone = sanitizePhone(asTrimmedString(data.actorPhone));
-        const actorRoleFromClient = asTrimmedString(data.actorRole).toLowerCase();
+        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid);
+        const data = request.data ?? {};
         const action = asTrimmedString(data.action);
-        const module = asTrimmedString(data.module);
+        const module = asTrimmedString(data.module).toLowerCase();
         const targetType = asTrimmedString(data.targetType);
         const targetId = asTrimmedString(data.targetId);
         const targetTitle = asTrimmedString(data.targetTitle);
-        const status = normalizeStatus(data.status);
-        const reason = asNullableString(data.reason);
-        const beforeData = asPlainObject(data.beforeData);
-        const afterData = asPlainObject(data.afterData);
-        const metadata = asPlainObject(data.metadata);
-        requireNonEmpty(actorUid, "actorUid");
-        requireNonEmpty(actorName, "actorName");
         requireNonEmpty(action, "action");
         requireNonEmpty(module, "module");
         requireNonEmpty(targetType, "targetType");
         requireNonEmpty(targetId, "targetId");
         requireNonEmpty(targetTitle, "targetTitle");
-        if (actorUid !== authUid) {
-            throw new functions.https.HttpsError("permission-denied", "actorUid must match the authenticated user.");
+        if (SERVER_ONLY_AUDIT_MODULES.has(module)) {
+            throw new https_1.HttpsError("failed-precondition", "This module must be audited by its own server-side action.");
         }
-        const permissionSnap = await db
-            .collection("admin_permissions")
-            .doc(authUid)
-            .get();
-        if (!permissionSnap.exists) {
-            throw new functions.https.HttpsError("permission-denied", "Admin permission record was not found.");
-        }
-        const permissionData = permissionSnap.data() ?? {};
-        const roleFromDb = asTrimmedString(permissionData.role).toLowerCase();
-        const canAccessAdminPanel = permissionData.canAccessAdminPanel === true;
-        const isAllowedAdmin = canAccessAdminPanel ||
-            roleFromDb === "admin" ||
-            roleFromDb === "super_admin";
-        if (!isAllowedAdmin) {
-            throw new functions.https.HttpsError("permission-denied", "User is not allowed to write admin activity logs.");
-        }
-        const actorRole = actorRoleFromClient.length > 0 ? actorRoleFromClient : roleFromDb;
-        requireNonEmpty(actorRole, "actorRole");
-        const logRef = db.collection("admin_activity_logs").doc();
-        await logRef.set({
-            id: logRef.id,
-            actorUid,
-            actorName,
-            actorPhone,
-            actorRole,
+        const id = await (0, audit_log_core_1.writeAdminAuditLog)(actor, {
             action,
             module,
             targetType,
             targetId,
             targetTitle,
-            status,
-            reason,
-            beforeData,
-            afterData,
-            metadata,
-            authUid,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: normalizeStatus(data.status),
+            reason: asNullableString(data.reason),
+            metadata: asPlainObject(data.metadata),
+            eventSource: "manual_endpoint",
         });
         return {
             success: true,
-            id: logRef.id,
+            id,
         };
     }
     catch (error) {
-        if (error instanceof functions.https.HttpsError) {
+        if (error instanceof https_1.HttpsError) {
             throw error;
         }
-        functions.logger.error("logAdminAction failed", error);
-        throw new functions.https.HttpsError("internal", "Failed to write admin activity log.");
+        logger.error("logAdminAction failed", error);
+        throw new https_1.HttpsError("internal", "Failed to write admin activity log.");
     }
 });
-// Deploy commands
-// Run from repo root:
-// cd firebase/functions
-// npm run build
-// firebase deploy --only functions:logAdminAction
-// Optional logs check:
-// firebase functions:log --only logAdminAction

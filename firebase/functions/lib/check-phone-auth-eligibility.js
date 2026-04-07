@@ -57,7 +57,6 @@ function emptyResponse(app, intent, normalizedPhone = "") {
     };
 }
 exports.checkPhoneAuthEligibility = (0, https_1.onCall)({
-    region: "asia-south1",
     cors: true,
 }, async (request) => {
     const data = request.data;

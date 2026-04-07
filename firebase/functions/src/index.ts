@@ -15,6 +15,10 @@ export {
   onProductDeletedUpdateCategoryCount,
 } from "./category-product-count";
 
+export { createCategory } from "./categories/create-category";
+export { updateCategory } from "./categories/update-category";
+export { deleteCategory } from "./categories/delete-category";
+export { setCategoryActiveState } from "./categories/set-category-active-state";
 export { reorderCategoryGroup } from "./categories/reorder-categories";
 export { fixCategoryGroupSort } from "./categories/fix-category-group-sort";
 

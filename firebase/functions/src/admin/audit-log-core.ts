@@ -29,13 +29,15 @@ export type AdminAuditActor = {
   role: AdminActorRole;
 };
 
+export type AdminAuditStatus = "success" | "failed";
+
 export type AdminAuditInput = {
   action: string;
   module: string;
   targetType: string;
   targetId: string;
   targetTitle: string;
-  status?: "success" | "failed";
+  status?: AdminAuditStatus;
   reason?: string | null;
   beforeData?: PlainObject | null;
   afterData?: PlainObject | null;
@@ -61,7 +63,10 @@ function asPlainObject(value: unknown): PlainObject | null {
 
 function requireNonEmpty(value: string, fieldName: string): void {
   if (value.length === 0) {
-    throw new HttpsError("invalid-argument", `${fieldName} is required.`);
+    throw new HttpsError(
+      "invalid-argument",
+      `${fieldName} is required.`,
+    );
   }
 }
 
@@ -70,21 +75,21 @@ function resolveActorName(
   adminData: PlainObject | null,
   uid: string,
 ): string {
-  const adminName =
+  const adminSideName =
     asTrimmedString(adminData?.name) ||
     asTrimmedString(adminData?.fullName) ||
     asTrimmedString(adminData?.displayName);
 
-  if (adminName.length > 0) {
-    return adminName;
+  if (adminSideName.length > 0) {
+    return adminSideName;
   }
 
   const firstName = asTrimmedString(userData?.FirstName);
   const lastName = asTrimmedString(userData?.LastName);
-  const combined = `${firstName} ${lastName}`.trim();
+  const fullName = `${firstName} ${lastName}`.trim();
 
-  if (combined.length > 0) {
-    return combined;
+  if (fullName.length > 0) {
+    return fullName;
   }
 
   return uid;
@@ -144,7 +149,10 @@ export async function getAuthorizedAdminActor(
   const uid = asTrimmedString(authUid);
 
   if (uid.length === 0) {
-    throw new HttpsError("unauthenticated", "Authentication is required.");
+    throw new HttpsError(
+      "unauthenticated",
+      "Authentication is required.",
+    );
   }
 
   const permissionRef = db.collection("admin_permissions").doc(uid);
@@ -232,6 +240,10 @@ export async function writeAdminAuditLog(
   input: AdminAuditInput,
 ): Promise<string> {
   const logRef = newAdminAuditLogRef();
-  await logRef.set(buildAdminAuditLogDoc(logRef.id, actor, input));
+
+  await logRef.set(
+    buildAdminAuditLogDoc(logRef.id, actor, input),
+  );
+
   return logRef.id;
 }

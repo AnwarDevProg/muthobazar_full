@@ -1,11 +1,11 @@
-import 'dart:typed_data';
-import 'dart:ui';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_core/media/mb_image_pipeline_service.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'package:shared_ui/shared_ui.dart';
+
+import '../controllers/admin_category_controller.dart';
 
 enum _CategoryImageResizeOption {
   small,
@@ -76,6 +76,7 @@ class AdminCategoryFormDialog extends StatefulWidget {
 
 class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  late final AdminCategoryController _controller;
 
   late final TextEditingController _nameEnController;
   late final TextEditingController _nameBnController;
@@ -118,55 +119,42 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     return _generatedId;
   }
 
-  bool get _isNewImageSelected => _originalPickedImage != null;
+  List<MBCategory> get _availableParentCategories {
+    final currentId = widget.category?.id.trim() ?? '';
+    final items = widget.categories.where((item) {
+      if (currentId.isEmpty) return true;
+      return item.id.trim() != currentId;
+    }).toList();
+
+    items.sort((a, b) {
+      final byName = a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
+      if (byName != 0) return byName;
+      return a.id.compareTo(b.id);
+    });
+
+    return items;
+  }
+
+  bool get _hasSelectedOriginalImage => _originalPickedImage != null;
 
   bool get _hasPreparedImage => _preparedImage != null;
 
-  bool get _hasExistingImage {
-    return !_removeExistingImage && _currentPreviewUrl.isNotEmpty;
-  }
-
   bool get _mustRequirePreparedImageForSubmit {
-    if (!isEdit) return true;
-    if (_removeExistingImage) return true;
-    if (_isNewImageSelected) return true;
-    return false;
-  }
-
-  bool get _isImageRequirementSatisfied {
-    if (_mustRequirePreparedImageForSubmit) {
-      return _isNewImageSelected && _hasPreparedImage;
+    if (_hasPreparedImage) return false;
+    if (_hasSelectedOriginalImage) return true;
+    if (isEdit) {
+      return _removeExistingImage;
     }
-    return _hasExistingImage;
-  }
-
-  bool get _canResize {
-    return _originalPickedImage != null &&
-        !_isPickingImage &&
-        !_isResizingImage &&
-        !_isSaving;
-  }
-
-  bool get _canSubmit {
-    return !_isSaving &&
-        !_isPickingImage &&
-        !_isResizingImage &&
-        _isImageRequirementSatisfied;
-  }
-
-  bool get _isDialogBlocked {
-    return _isSaving || _isPickingImage || _isResizingImage;
-  }
-
-  String _normalizeParentId(String? parentId) {
-    return parentId?.trim() ?? '';
+    return true;
   }
 
   @override
   void initState() {
     super.initState();
-
-    _generatedId = 'cat_${DateTime.now().microsecondsSinceEpoch}';
+    _controller = Get.isRegistered<AdminCategoryController>()
+        ? Get.find<AdminCategoryController>()
+        : Get.put(AdminCategoryController());
+    _generatedId = FirebaseFirestore.instance.collection('categories').doc().id;
 
     final category = widget.category;
 
@@ -176,344 +164,37 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         TextEditingController(text: category?.descriptionEn ?? '');
     _descriptionBnController =
         TextEditingController(text: category?.descriptionBn ?? '');
-    _iconUrlController = TextEditingController(
-      text: category?.iconUrl ?? '',
-    );
+    _iconUrlController = TextEditingController(text: category?.iconUrl ?? '');
     _slugController = TextEditingController(text: category?.slug ?? '');
     _sortOrderController =
-        TextEditingController(text: '${category?.sortOrder ?? 0}');
-    _productsCountController =
-        TextEditingController(text: '${category?.productsCount ?? 0}');
+        TextEditingController(text: (category?.sortOrder ?? 0).toString());
+    _productsCountController = TextEditingController(
+      text: (category?.productsCount ?? 0).toString(),
+    );
 
     _isFeatured = category?.isFeatured ?? false;
     _showOnHome = category?.showOnHome ?? false;
     _isActive = category?.isActive ?? true;
-    _selectedParentId = category?.parentId;
 
-    _nameEnController.addListener(_handleNameChanged);
+    final parentId = category?.parentId?.trim() ?? '';
+    _selectedParentId = parentId.isEmpty ? null : parentId;
 
-    if (!isEdit && _slugController.text.trim().isEmpty) {
-      _slugController.text = _generateSlug(_nameEnController.text);
-    }
+    _nameEnController.addListener(_handleNameOrSlugChanged);
+    _slugController.addListener(_handleSlugChanged);
+    _sortOrderController.addListener(_handleSortChanged);
 
-    if (!isEdit) {
-      _applySuggestedSortOrder(forceReplace: true);
-    } else {
-      _updateSortSuggestionLabel();
-    }
-  }
-
-  void _handleNameChanged() {
-    if (!mounted) return;
-
-    if (!isEdit) {
-      final nextSlug = _generateSlug(_nameEnController.text);
-      if (_slugController.text != nextSlug) {
-        _slugController.text = nextSlug;
-      }
-    }
-
-    if (_slugErrorText != null) {
-      setState(() {
-        _slugErrorText = null;
-      });
-    } else {
-      setState(() {});
-    }
-  }
-
-  String _generateSlug(String input) {
-    return input
-        .toLowerCase()
-        .trim()
-        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
-        .replaceAll(RegExp(r'[\s_-]+'), '-')
-        .replaceAll(RegExp(r'-+'), '-')
-        .replaceAll(RegExp(r'^-|-$'), '');
-  }
-
-  Set<String> _collectDescendantIds(String rootId) {
-    final Map<String, List<String>> parentToChildren = <String, List<String>>{};
-
-    for (final category in widget.categories) {
-      final parentId = category.parentId?.trim();
-      if (parentId == null || parentId.isEmpty) continue;
-
-      parentToChildren.putIfAbsent(parentId, () => <String>[]).add(category.id);
-    }
-
-    final Set<String> descendants = <String>{};
-    final List<String> stack = <String>[rootId];
-
-    while (stack.isNotEmpty) {
-      final current = stack.removeLast();
-      final children = parentToChildren[current] ?? <String>[];
-
-      for (final childId in children) {
-        if (descendants.add(childId)) {
-          stack.add(childId);
-        }
-      }
-    }
-
-    return descendants;
-  }
-
-  List<MBCategory> get _parentOptions {
-    final String? currentId = widget.category?.id;
-    final Set<String> blockedIds = <String>{};
-
-    if (currentId != null && currentId.trim().isNotEmpty) {
-      blockedIds.add(currentId);
-      blockedIds.addAll(_collectDescendantIds(currentId));
-    }
-
-    final items = widget.categories
-        .where((cat) => !blockedIds.contains(cat.id))
-        .toList()
-      ..sort((a, b) {
-        final bySort = a.sortOrder.compareTo(b.sortOrder);
-        if (bySort != 0) return bySort;
-        return a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
-      });
-
-    return items;
-  }
-
-  List<MBCategory> _categoriesInCurrentGroup() {
-    final normalizedParentId = _normalizeParentId(_selectedParentId);
-    final editingId = widget.category?.id.trim() ?? '';
-
-    final items = widget.categories.where((item) {
-      if (editingId.isNotEmpty && item.id == editingId) {
-        return false;
-      }
-
-      return _normalizeParentId(item.parentId) == normalizedParentId;
-    }).toList()
-      ..sort((a, b) {
-        final int bySort = a.sortOrder.compareTo(b.sortOrder);
-        if (bySort != 0) return bySort;
-        return a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
-      });
-
-    return items;
-  }
-
-  int _suggestSortOrder() {
-    final items = _categoriesInCurrentGroup();
-    final used = items.map((e) => e.sortOrder).toSet();
-
-    for (int i = 0; i < used.length + 1; i++) {
-      if (!used.contains(i)) {
-        return i;
-      }
-    }
-
-    return used.length;
-  }
-
-  bool _isSortDuplicate(int value) {
-    final editingId = widget.category?.id.trim() ?? '';
-    final normalizedParentId = _normalizeParentId(_selectedParentId);
-
-    return widget.categories.any((item) {
-      if (editingId.isNotEmpty && item.id == editingId) {
-        return false;
-      }
-
-      return _normalizeParentId(item.parentId) == normalizedParentId &&
-          item.sortOrder == value;
-    });
-  }
-
-  void _updateSortSuggestionLabel() {
-    final suggested = _suggestSortOrder();
-
-    setState(() {
-      _sortSuggestionText =
-      'Suggested sort number for this group: $suggested';
-    });
-  }
-
-  void _applySuggestedSortOrder({
-    required bool forceReplace,
-  }) {
-    final suggested = _suggestSortOrder();
-
-    if (forceReplace || _sortOrderController.text.trim().isEmpty) {
-      _sortOrderController.text = suggested.toString();
-    }
-
-    _sortSuggestionText =
-    'Suggested sort number for this group: $suggested';
-  }
-
-  Uint8List? get _originalPreviewBytes {
-    return _originalPickedImage?.originalBytes;
-  }
-
-  Uint8List? get _resizedPreviewBytes {
-    return _preparedImage?.previewBytes;
-  }
-
-  String get _currentPreviewUrl {
-    if (_removeExistingImage) {
-      return '';
-    }
-
-    final String imageUrl = widget.category?.imageUrl.trim() ?? '';
-    final String iconUrl = widget.category?.iconUrl.trim() ?? '';
-
-    if (imageUrl.isNotEmpty) return imageUrl;
-    if (iconUrl.isNotEmpty) return iconUrl;
-
-    return '';
-  }
-
-  Future<void> _pickOriginalImage() async {
-    if (_isPickingImage || _isSaving || _isResizingImage) return;
-
-    setState(() {
-      _isPickingImage = true;
-      _submitError = null;
-    });
-
-    try {
-      final original = await MBImagePipelineService.instance.pickOriginalImage();
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
-      if (original == null) {
-        setState(() {
-          _isPickingImage = false;
-        });
-        return;
-      }
-
-      setState(() {
-        _originalPickedImage = original;
-        _preparedImage = null;
-        _selectedResizeOption = _CategoryImageResizeOption.recommended;
-        _removeExistingImage = false;
-        _isPickingImage = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isPickingImage = false;
-        _submitError = 'Image selection failed: $e';
-      });
-    }
-  }
-
-  Future<void> _resizeSelectedImage() async {
-    if (_originalPickedImage == null || _isResizingImage || _isSaving) return;
-
-    setState(() {
-      _isResizingImage = true;
-      _submitError = null;
+      _updateSortSuggestion();
+      _validateSlug();
     });
-
-    try {
-      final prepared =
-      await MBImagePipelineService.instance.prepareImageSetFromOriginal(
-        original: _originalPickedImage!,
-        fullMaxWidth: _selectedResizeOption.size,
-        fullMaxHeight: _selectedResizeOption.size,
-        fullJpegQuality: 88,
-        thumbSize: _selectedResizeOption.thumbSize,
-        thumbJpegQuality: 82,
-        requestSquareCrop: true,
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _preparedImage = prepared;
-        _isResizingImage = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isResizingImage = false;
-        _submitError = 'Image resize failed: $e';
-      });
-    }
-  }
-
-  void _removePreparedOrExistingImage() {
-    setState(() {
-      _preparedImage = null;
-      _originalPickedImage = null;
-
-      if (_currentPreviewUrl.isNotEmpty) {
-        _removeExistingImage = true;
-      }
-    });
-  }
-
-  Future<bool> _isSlugAvailable({
-    required String slug,
-    String? excludeCategoryId,
-  }) async {
-    if (slug.trim().isEmpty) return false;
-
-    final exists = await AdminCategoryRepository.instance.slugExists(
-      slug: slug.trim(),
-      excludeCategoryId: excludeCategoryId,
-    );
-
-    return !exists;
-  }
-
-  String _formatBytesFromLength(int? length) {
-    if (length == null || length <= 0) return 'N/A';
-
-    if (length < 1024) return '$length B';
-
-    final double kb = length / 1024;
-    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
-
-    final double mb = kb / 1024;
-    return '${mb.toStringAsFixed(2)} MB';
-  }
-
-  Widget _buildInfoRow({
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: MBSpacing.xs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 96,
-            child: Text(
-              label,
-              style: MBTextStyles.body.copyWith(
-                fontWeight: FontWeight.w600,
-                color: MBColors.textSecondary,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: MBTextStyles.body,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   void dispose() {
-    _nameEnController.removeListener(_handleNameChanged);
+    _nameEnController.removeListener(_handleNameOrSlugChanged);
+    _slugController.removeListener(_handleSlugChanged);
+    _sortOrderController.removeListener(_handleSortChanged);
 
     _nameEnController.dispose();
     _nameBnController.dispose();
@@ -526,965 +207,319 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final bool hasSelectedParent = _selectedParentId != null &&
-        _parentOptions.any((cat) => cat.id == _selectedParentId);
-
-    final String? dropdownInitialValue =
-    hasSelectedParent ? _selectedParentId : null;
-
-    return Dialog(
-      insetPadding: const EdgeInsets.all(32),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 1100,
-          maxHeight: 900,
-        ),
-        child: Stack(
-          children: [
-            AbsorbPointer(
-              absorbing: _isDialogBlocked,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(MBSpacing.xl),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            isEdit ? 'Edit Category' : 'Create Category',
-                            style: MBTextStyles.sectionTitle.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _isDialogBlocked
-                              ? null
-                              : () => Navigator.of(context).pop(false),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(MBSpacing.xl),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: MBTextField(
-                                              controller: _nameEnController,
-                                              labelText: 'Name (English)',
-                                              validator: (value) {
-                                                if ((value ?? '').trim().isEmpty) {
-                                                  return 'Enter English name';
-                                                }
-                                                return null;
-                                              },
-                                            ),
-                                          ),
-                                          MBSpacing.w(MBSpacing.md),
-                                          Expanded(
-                                            child: MBTextField(
-                                              controller: _nameBnController,
-                                              labelText: 'Name (Bangla)',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      MBSpacing.h(MBSpacing.md),
-                                      Row(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: MBTextField(
-                                              controller:
-                                              _descriptionEnController,
-                                              labelText: 'Description (English)',
-                                              maxLines: 3,
-                                            ),
-                                          ),
-                                          MBSpacing.w(MBSpacing.md),
-                                          Expanded(
-                                            child: MBTextField(
-                                              controller:
-                                              _descriptionBnController,
-                                              labelText: 'Description (Bangla)',
-                                              maxLines: 3,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      MBSpacing.h(MBSpacing.md),
-                                      Row(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: MBTextField(
-                                              controller: _slugController,
-                                              labelText: 'Slug',
-                                              enabled: false,
-                                            ),
-                                          ),
-                                          MBSpacing.w(MBSpacing.md),
-                                          Expanded(
-                                            child:
-                                            DropdownButtonFormField<String>(
-                                              initialValue: dropdownInitialValue,
-                                              decoration: const InputDecoration(
-                                                labelText: 'Parent Category',
-                                                border: OutlineInputBorder(),
-                                              ),
-                                              items: [
-                                                const DropdownMenuItem<String>(
-                                                  value: null,
-                                                  child: Text('None'),
-                                                ),
-                                                ..._parentOptions.map(
-                                                      (cat) =>
-                                                      DropdownMenuItem<String>(
-                                                        value: cat.id,
-                                                        child: Text(
-                                                          cat.nameEn.trim().isEmpty
-                                                              ? 'Unnamed Category'
-                                                              : cat.nameEn,
-                                                        ),
-                                                      ),
-                                                ),
-                                              ],
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _selectedParentId = value;
-                                                  _applySuggestedSortOrder(
-                                                    forceReplace: !isEdit,
-                                                  );
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (_slugErrorText != null) ...[
-                                        MBSpacing.h(MBSpacing.sm),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                _slugErrorText!,
-                                                style:
-                                                MBTextStyles.body.copyWith(
-                                                  color: MBColors.error,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                      MBSpacing.h(MBSpacing.md),
-                                      Row(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                              children: [
-                                                MBTextField(
-                                                  controller:
-                                                  _sortOrderController,
-                                                  labelText: 'Sort Order',
-                                                  keyboardType:
-                                                  TextInputType.number,
-                                                  validator: (value) {
-                                                    final sortValue =
-                                                        int.tryParse(
-                                                          (value ?? '').trim(),
-                                                        ) ??
-                                                            -1;
-
-                                                    if (sortValue < 0) {
-                                                      return 'Enter valid sort number';
-                                                    }
-
-                                                    if (_isSortDuplicate(sortValue)) {
-                                                      return 'Sort number already exists in this group';
-                                                    }
-
-                                                    return null;
-                                                  },
-                                                ),
-                                                MBSpacing.h(MBSpacing.xs),
-                                                Text(
-                                                  _sortSuggestionText ??
-                                                      'Suggested sort number will appear here.',
-                                                  style: MBTextStyles.bodySmall.copyWith(
-                                                    color: MBColors.textSecondary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          MBSpacing.w(MBSpacing.md),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                              children: [
-                                                MBTextField(
-                                                  controller:
-                                                  _productsCountController,
-                                                  labelText: 'Products Count',
-                                                  keyboardType:
-                                                  TextInputType.number,
-                                                  enabled: false,
-                                                ),
-                                                MBSpacing.h(MBSpacing.xs),
-                                                Text(
-                                                  'This value is auto-calculated from product creation/update.',
-                                                  style:
-                                                  MBTextStyles.bodySmall.copyWith(
-                                                    color:
-                                                    MBColors.textSecondary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      MBSpacing.h(MBSpacing.md),
-                                      MBTextField(
-                                        controller: _iconUrlController,
-                                        labelText:
-                                        'Icon URL override (optional, leave blank to use uploaded thumb)',
-                                      ),
-                                      MBSpacing.h(MBSpacing.md),
-                                      MBCard(
-                                        padding:
-                                        const EdgeInsets.all(MBSpacing.md),
-                                        child: Column(
-                                          children: [
-                                            SwitchListTile(
-                                              title: const Text('Featured'),
-                                              value: _isFeatured,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _isFeatured = value;
-                                                });
-                                              },
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            SwitchListTile(
-                                              title: const Text('Show On Home'),
-                                              value: _showOnHome,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _showOnHome = value;
-                                                });
-                                              },
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            SwitchListTile(
-                                              title: const Text('Active'),
-                                              value: _isActive,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _isActive = value;
-                                                });
-                                              },
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            SwitchListTile(
-                                              title: const Text(
-                                                'Use uploaded thumb as icon',
-                                              ),
-                                              value: _useUploadedThumbAsIcon,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _useUploadedThumbAsIcon =
-                                                      value;
-                                                });
-                                              },
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                MBSpacing.w(MBSpacing.lg),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildImagePanel(),
-                                ),
-                              ],
-                            ),
-                            if (_submitError != null) ...[
-                              MBSpacing.h(MBSpacing.md),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(MBSpacing.md),
-                                decoration: BoxDecoration(
-                                  color: MBColors.error.withValues(alpha: 0.08),
-                                  borderRadius:
-                                  BorderRadius.circular(MBRadius.lg),
-                                  border: Border.all(
-                                    color:
-                                    MBColors.error.withValues(alpha: 0.20),
-                                  ),
-                                ),
-                                child: Text(
-                                  _submitError!,
-                                  style: MBTextStyles.body.copyWith(
-                                    color: MBColors.error,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.all(MBSpacing.xl),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: MBSecondaryButton(
-                            text: 'Cancel',
-                            isLoading: _isSaving,
-                            onPressed: _isDialogBlocked
-                                ? null
-                                : () => Navigator.of(context).pop(false),
-                          ),
-                        ),
-                        MBSpacing.w(MBSpacing.md),
-                        Expanded(
-                          child: MBPrimaryButton(
-                            text: isEdit ? 'Update Category' : 'Create Category',
-                            isLoading: _isSaving,
-                            onPressed:
-                            _isDialogBlocked || !_canSubmit ? null : _submit,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (_isDialogBlocked) _buildGlobalOverlay(),
-          ],
-        ),
-      ),
-    );
+  void _handleNameOrSlugChanged() {
+    if (!mounted) return;
+    setState(() {
+      _submitError = null;
+      _slugErrorText = null;
+    });
   }
 
-  Widget _buildGlobalOverlay() {
-    String message = 'Processing...';
+  void _handleSlugChanged() {
+    if (!mounted) return;
+    setState(() {
+      _submitError = null;
+      _slugErrorText = null;
+    });
+  }
 
-    if (_isPickingImage) {
-      message = 'Picking image...';
-    } else if (_isResizingImage) {
-      message = 'Resizing image...';
-    } else if (_isSaving) {
-      message = 'Saving category...';
+  void _handleSortChanged() {
+    if (!mounted) return;
+    setState(() {
+      _submitError = null;
+      _updateSortSuggestion();
+    });
+  }
+
+  String _normalizeSlug(String value) {
+    return value
+        .toLowerCase()
+        .trim()
+        .replaceAll('&', ' and ')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '')
+        .replaceAll(RegExp(r'-{2,}'), '-');
+  }
+
+  String _groupIdFromParentId(String? parentId) {
+    final value = (parentId ?? '').trim();
+    return value.isEmpty ? 'root' : value;
+  }
+
+  int _safeParseSort(String value) {
+    return int.tryParse(value.trim()) ?? 0;
+  }
+
+  bool _isSortDuplicate(int sortOrder) {
+    final currentId = widget.category?.id.trim() ?? '';
+    final groupId = _groupIdFromParentId(_selectedParentId);
+
+    for (final category in widget.categories) {
+      final sameGroup = _groupIdFromParentId(category.parentId) == groupId;
+      if (!sameGroup) continue;
+      if (currentId.isNotEmpty && category.id.trim() == currentId) continue;
+      if (category.sortOrder == sortOrder) return true;
     }
 
-    return Positioned.fill(
-      child: AbsorbPointer(
-        absorbing: true,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(MBRadius.lg),
-          child: Stack(
-            children: [
-              BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 6,
-                  sigmaY: 6,
-                ),
-                child: Container(
-                  color: Colors.white.withValues(alpha: 0.18),
-                ),
-              ),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(MBSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(MBRadius.lg),
-                    border: Border.all(
-                      color: MBColors.border.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: CircularProgressIndicator(),
-                      ),
-                      MBSpacing.h(MBSpacing.md),
-                      Text(
-                        message,
-                        style: MBTextStyles.bodyLarge.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      MBSpacing.h(MBSpacing.xs),
-                      Text(
-                        'Please wait...',
-                        style: MBTextStyles.body.copyWith(
-                          color: MBColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return false;
   }
 
-  Widget _buildImagePanel() {
-    final bool hasSelectedImage =
-        _originalPickedImage != null || _currentPreviewUrl.isNotEmpty;
-
-    return MBCard(
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Category Image',
-            style: MBTextStyles.sectionTitle.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          MBSpacing.h(MBSpacing.sm),
-          Text(
-            'Select original image, review the original preview, choose one category preset, click Resize Preview, then save.',
-            style: MBTextStyles.body.copyWith(
-              color: MBColors.textSecondary,
-            ),
-          ),
-          MBSpacing.h(MBSpacing.md),
-          _buildImageActionBar(hasSelectedImage),
-          MBSpacing.h(MBSpacing.md),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: MBColors.background,
-              borderRadius: BorderRadius.circular(MBRadius.lg),
-              border: Border.all(
-                color: MBColors.border.withValues(alpha: 0.90),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(MBSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bool useColumn = constraints.maxWidth < 520;
-
-                      if (useColumn) {
-                        return Column(
-                          children: [
-                            _buildOriginalPreviewCard(),
-                            MBSpacing.h(MBSpacing.md),
-                            _buildResizedPreviewCard(),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildOriginalPreviewCard()),
-                          MBSpacing.w(MBSpacing.md),
-                          Expanded(child: _buildResizedPreviewCard()),
-                        ],
-                      );
-                    },
-                  ),
-                  MBSpacing.h(MBSpacing.md),
-                  _buildResizeControls(),
-                  if (_originalPickedImage != null && _preparedImage == null) ...[
-                    MBSpacing.h(MBSpacing.sm),
-                    Text(
-                      'Resize is required before ${isEdit ? 'updating' : 'creating'} this category.',
-                      style: MBTextStyles.body.copyWith(
-                        color: MBColors.warning,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  if (_removeExistingImage &&
-                      _originalPickedImage == null &&
-                      _preparedImage == null) ...[
-                    MBSpacing.h(MBSpacing.sm),
-                    Text(
-                      'Existing image has been removed. Please select and resize a new image before saving.',
-                      style: MBTextStyles.body.copyWith(
-                        color: MBColors.warning,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _updateSortSuggestion() {
+    final sortValue = _safeParseSort(_sortOrderController.text);
+    if (_isSortDuplicate(sortValue)) {
+      _sortSuggestionText =
+      'Sort number already exists in this group. Please use another.';
+    } else {
+      _sortSuggestionText = null;
+    }
   }
 
-  Widget _buildImageActionBar(bool hasSelectedImage) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.sm),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
-      child: Wrap(
-        spacing: MBSpacing.sm,
-        runSpacing: MBSpacing.sm,
-        alignment: WrapAlignment.start,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          FilledButton.icon(
-            onPressed: _isDialogBlocked ? null : _pickOriginalImage,
-            icon: const Icon(Icons.upload_rounded),
-            label: Text(
-              hasSelectedImage ? 'Change Image' : 'Select Image',
-            ),
-          ),
-          OutlinedButton.icon(
-            onPressed: _isDialogBlocked || !hasSelectedImage
-                ? null
-                : _removePreparedOrExistingImage,
-            icon: const Icon(Icons.delete_outline_rounded),
-            label: const Text('Remove'),
-          ),
-          if (_originalPickedImage != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: MBSpacing.sm,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: MBColors.primaryOrange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-                border: Border.all(
-                  color: MBColors.primaryOrange.withValues(alpha: 0.18),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.image_outlined,
-                    size: 18,
-                    color: MBColors.primaryOrange,
-                  ),
-                  MBSpacing.w(MBSpacing.xs),
-                  Text(
-                    'New image selected',
-                    style: MBTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: MBColors.primaryOrange,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (_currentPreviewUrl.isNotEmpty && !_removeExistingImage)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: MBSpacing.sm,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(MBRadius.md),
-                border: Border.all(
-                  color: MBColors.border.withValues(alpha: 0.85),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    size: 18,
-                    color: MBColors.textSecondary,
-                  ),
-                  MBSpacing.w(MBSpacing.xs),
-                  Text(
-                    'Using saved image',
-                    style: MBTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: MBColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Future<void> _validateSlug() async {
+    final slug = _normalizeSlug(_slugController.text);
+    if (slug.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _slugErrorText = 'Slug is required.';
+      });
+      return;
+    }
 
-  Widget _buildOriginalPreviewCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(MBSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Original Preview',
-              style: MBTextStyles.bodyLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.sm),
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: MBColors.primaryOrange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _buildOriginalPreview(),
-            ),
-            MBSpacing.h(MBSpacing.md),
-            _buildOriginalInfoSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResizedPreviewCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(MBSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Resized Preview',
-              style: MBTextStyles.bodyLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.sm),
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: MBColors.primaryOrange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(MBRadius.md),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _buildResizedPreview(),
-            ),
-            MBSpacing.h(MBSpacing.md),
-            _buildPreparedInfoSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOriginalPreview() {
-    if (_originalPreviewBytes != null) {
-      return Image.memory(
-        _originalPreviewBytes!,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.contain,
+    try {
+      final exists = await AdminCategoryRepository.instance.slugExists(
+        slug: slug,
+        excludeCategoryId: widget.category?.id,
       );
-    }
 
-    if (_currentPreviewUrl.isNotEmpty) {
-      return Image.network(
-        _currentPreviewUrl,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: Text(
-              'No image found, please select an image.',
-              textAlign: TextAlign.center,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
-              ),
-            ),
-          );
-        },
-      );
+      if (!mounted) return;
+      setState(() {
+        _slugErrorText =
+        exists ? 'This slug is already used by another category.' : null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _slugErrorText = e.toString();
+      });
     }
-
-    return Center(
-      child: Text(
-        isEdit
-            ? 'No image found, please select an image.'
-            : 'Please select an image.',
-        textAlign: TextAlign.center,
-        style: MBTextStyles.body.copyWith(
-          color: MBColors.textSecondary,
-        ),
-      ),
-    );
   }
 
-  Widget _buildResizedPreview() {
-    if (_resizedPreviewBytes != null) {
-      return Image.memory(
-        _resizedPreviewBytes!,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.contain,
-      );
-    }
+  Future<void> _pickOriginalImage() async {
+    if (_isSaving || _isPickingImage || _isResizingImage) return;
 
-    return Center(
-      child: Text(
-        'Resized preview will appear here after clicking Resize Preview.',
-        textAlign: TextAlign.center,
-        style: MBTextStyles.body.copyWith(
-          color: MBColors.textSecondary,
-        ),
-      ),
-    );
-  }
+    setState(() {
+      _submitError = null;
+      _isPickingImage = true;
+    });
 
-  Widget _buildOriginalInfoSection() {
-    if (_originalPickedImage == null) {
-      if (_currentPreviewUrl.isNotEmpty && !_removeExistingImage) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(MBSpacing.md),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(MBRadius.md),
-            border: Border.all(
-              color: MBColors.border.withValues(alpha: 0.85),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Current image information',
-                style: MBTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              MBSpacing.h(MBSpacing.xs),
-              _buildInfoRow(label: 'Status', value: 'Using existing image'),
-              _buildInfoRow(label: 'Source', value: 'Saved category image'),
-            ],
-          ),
-        );
+    try {
+      final picked = await _controller.pickOriginalImage();
+      if (!mounted) return;
+      if (picked == null) {
+        setState(() {
+          _isPickingImage = false;
+        });
+        return;
       }
 
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(MBSpacing.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.md),
-          border: Border.all(
-            color: MBColors.border.withValues(alpha: 0.85),
-          ),
-        ),
-        child: Text(
-          'Original image information will appear here after selecting an image.',
-          style: MBTextStyles.body.copyWith(
-            color: MBColors.textSecondary,
-          ),
-        ),
-      );
+      setState(() {
+        _originalPickedImage = picked;
+        _preparedImage = null;
+        _removeExistingImage = false;
+        _isPickingImage = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitError = e.toString();
+        _isPickingImage = false;
+      });
     }
-
-    final original = _originalPickedImage!;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Original image information',
-            style: MBTextStyles.bodyLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          MBSpacing.h(MBSpacing.xs),
-          _buildInfoRow(label: 'Name', value: original.originalFileName),
-          _buildInfoRow(
-            label: 'Size',
-            value: '${original.width} × ${original.height}',
-          ),
-          _buildInfoRow(
-            label: 'File',
-            value: _formatBytesFromLength(original.originalByteLength),
-          ),
-        ],
-      ),
-    );
   }
 
-  Widget _buildResizeControls() {
+  Future<void> _prepareSelectedImage() async {
+    final original = _originalPickedImage;
+    if (original == null || _isSaving || _isResizingImage) return;
+
+    setState(() {
+      _submitError = null;
+      _isResizingImage = true;
+    });
+
+    try {
+      final prepared = await _controller.resizeSelectedImage(
+        original: original,
+        fullMaxWidth: _selectedResizeOption.size,
+        fullMaxHeight: _selectedResizeOption.size,
+        fullJpegQuality: 90,
+        thumbSize: _selectedResizeOption.thumbSize,
+        thumbJpegQuality: 85,
+        requestSquareCrop: true,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _preparedImage = prepared;
+        _isResizingImage = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitError = e.toString();
+        _isResizingImage = false;
+      });
+    }
+  }
+
+  Widget _buildExistingImagePreview() {
+    final imageUrl = widget.category?.imageUrl.trim() ?? '';
+    final iconUrl = widget.category?.iconUrl.trim() ?? '';
+    final displayUrl = imageUrl.isNotEmpty ? imageUrl : iconUrl;
+
+    if (displayUrl.isEmpty || _removeExistingImage) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.md),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Resize options',
-            style: MBTextStyles.bodyLarge.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          const Text(
+            'Current image',
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
-          MBSpacing.h(MBSpacing.sm),
-          Text(
-            'Category images are square only. Recommended size is 512 × 512.',
-            style: MBTextStyles.body.copyWith(
-              color: MBColors.textSecondary,
-            ),
-          ),
-          MBSpacing.h(MBSpacing.md),
-          SegmentedButton<_CategoryImageResizeOption>(
-            segments: _CategoryImageResizeOption.values
-                .map(
-                  (option) => ButtonSegment<_CategoryImageResizeOption>(
-                value: option,
-                label: Text(option.label),
-                tooltip: option.note,
-              ),
-            )
-                .toList(),
-            selected: <_CategoryImageResizeOption>{_selectedResizeOption},
-            onSelectionChanged:
-            _originalPickedImage == null || _isDialogBlocked
-                ? null
-                : (selectedValues) {
-              if (selectedValues.isEmpty) return;
-
-              setState(() {
-                _selectedResizeOption = selectedValues.first;
-                _preparedImage = null;
-              });
-            },
-            multiSelectionEnabled: false,
-            emptySelectionAllowed: false,
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(
-                  horizontal: MBSpacing.sm,
-                  vertical: MBSpacing.sm,
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.network(
+                displayUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.black12,
+                  alignment: Alignment.center,
+                  child: const Text('Image preview unavailable'),
                 ),
               ),
             ),
           ),
-          MBSpacing.h(MBSpacing.sm),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(MBSpacing.sm),
-            decoration: BoxDecoration(
-              color: MBColors.primaryOrange.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(MBRadius.md),
-              border: Border.all(
-                color: MBColors.primaryOrange.withValues(alpha: 0.16),
+          const SizedBox(height: 12),
+          SelectableText('Image URL: $imageUrl'),
+          const SizedBox(height: 6),
+          SelectableText('Icon URL: $iconUrl'),
+          const SizedBox(height: 6),
+          SelectableText('Image path: ${widget.category?.imagePath ?? ''}'),
+          const SizedBox(height: 6),
+          SelectableText('Thumb path: ${widget.category?.thumbPath ?? ''}'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Checkbox(
+                value: _removeExistingImage,
+                onChanged: _isSaving
+                    ? null
+                    : (value) {
+                  setState(() {
+                    _removeExistingImage = value ?? false;
+                    if (_removeExistingImage) {
+                      _preparedImage = null;
+                      _originalPickedImage = null;
+                    }
+                  });
+                },
               ),
-            ),
-            child: Text(
-              _selectedResizeOption.note,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
+              const Expanded(
+                child: Text('Remove current image and upload a new one'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOriginalImageCard() {
+    final original = _originalPickedImage;
+    if (original == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Selected original image',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.memory(
+                original.originalBytes,
+                fit: BoxFit.cover,
               ),
             ),
           ),
-          MBSpacing.h(MBSpacing.md),
-          SizedBox(
-            width: double.infinity,
+          const SizedBox(height: 12),
+          Text('Name: ${original.originalFileName}'),
+          const SizedBox(height: 6),
+          Text('Source size: ${original.width} × ${original.height}'),
+          const SizedBox(height: 6),
+          Text('Bytes: ${original.originalByteLength}'),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: _CategoryImageResizeOption.values.map((option) {
+              return ChoiceChip(
+                label: Text(option.label),
+                selected: _selectedResizeOption == option,
+                onSelected: _isSaving || _isResizingImage
+                    ? null
+                    : (_) {
+                  setState(() {
+                    _selectedResizeOption = option;
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _selectedResizeOption.note,
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
             child: FilledButton.icon(
-              onPressed: _canResize && !_isDialogBlocked
-                  ? _resizeSelectedImage
-                  : null,
-              icon: const Icon(Icons.tune_rounded),
-              label: const Text('Resize Preview'),
+              onPressed: _isSaving || _isResizingImage
+                  ? null
+                  : _prepareSelectedImage,
+              icon: _isResizingImage
+                  ? const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.aspect_ratio_rounded),
+              label: Text(_isResizingImage ? 'Resizing...' : 'Resize image'),
             ),
           ),
         ],
@@ -1492,109 +527,134 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     );
   }
 
-  Widget _buildPreparedInfoSection() {
-    if (_preparedImage == null) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(MBSpacing.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.md),
-          border: Border.all(
-            color: MBColors.border.withValues(alpha: 0.85),
-          ),
-        ),
-        child: Text(
-          'Resized image information will appear here after clicking Resize Preview.',
-          style: MBTextStyles.body.copyWith(
-            color: MBColors.textSecondary,
-          ),
-        ),
-      );
-    }
-
-    final prepared = _preparedImage!;
+  Widget _buildPreparedImageCard() {
+    final prepared = _preparedImage;
+    if (prepared == null) return const SizedBox.shrink();
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.md),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.md),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Resized image information',
-            style: MBTextStyles.bodyLarge.copyWith(
-              fontWeight: FontWeight.w700,
+          const Text(
+            'Prepared image',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.memory(
+                prepared.previewBytes,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-          MBSpacing.h(MBSpacing.xs),
-          _buildInfoRow(label: 'Preset', value: _selectedResizeOption.label),
-          _buildInfoRow(
-            label: 'Full',
-            value: '${prepared.fullWidth} × ${prepared.fullHeight}',
+          const SizedBox(height: 12),
+          Text(
+            'Full: ${prepared.fullWidth} × ${prepared.fullHeight} • ${prepared.fullByteLength} bytes',
           ),
-          _buildInfoRow(
-            label: 'Thumb',
-            value: '${prepared.thumbWidth} × ${prepared.thumbHeight}',
+          const SizedBox(height: 6),
+          Text(
+            'Thumb: ${prepared.thumbWidth} × ${prepared.thumbHeight} • ${prepared.thumbByteLength} bytes',
           ),
-          _buildInfoRow(label: 'File', value: prepared.originalFileName),
-          _buildInfoRow(
-            label: 'Full file',
-            value: _formatBytesFromLength(prepared.fullByteLength),
-          ),
-          _buildInfoRow(
-            label: 'Thumb file',
-            value: _formatBytesFromLength(prepared.thumbByteLength),
-          ),
-          _buildInfoRow(
-            label: 'Crop',
-            value:
-            prepared.requestSquareCrop ? 'Square crop applied' : 'No crop',
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Checkbox(
+                value: _useUploadedThumbAsIcon,
+                onChanged: _isSaving
+                    ? null
+                    : (value) {
+                  setState(() {
+                    _useUploadedThumbAsIcon = value ?? true;
+                  });
+                },
+              ),
+              const Expanded(
+                child: Text('Use uploaded thumb URL as icon URL'),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildParentSelector() {
+    final items = _availableParentCategories;
+
+    return DropdownButtonFormField<String?>(
+      initialValue: _selectedParentId,
+      decoration: const InputDecoration(
+        labelText: 'Parent category',
+        border: OutlineInputBorder(),
+      ),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('No parent (root)'),
+        ),
+        ...items.map((item) => DropdownMenuItem<String?>(
+          value: item.id,
+          child: Text(item.nameEn),
+        )),
+      ],
+      onChanged: _isSaving
+          ? null
+          : (value) {
+        setState(() {
+          _selectedParentId = value;
+          _updateSortSuggestion();
+        });
+      },
     );
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
     if (_isSaving) return;
 
+    final currentState = _formKey.currentState;
+    if (currentState == null || !currentState.validate()) {
+      return;
+    }
+
     setState(() {
-      _slugErrorText = null;
       _submitError = null;
       _isSaving = true;
     });
 
     try {
-      final String slug = _slugController.text.trim();
-      final int sortValue =
-          int.tryParse(_sortOrderController.text.trim()) ?? -1;
-
-      if (sortValue < 0) {
+      final slug = _normalizeSlug(_slugController.text.trim());
+      if (slug.isEmpty) {
         setState(() {
-          _submitError = 'Enter valid sort number.';
+          _slugErrorText = 'Slug is required.';
+          _submitError = 'Please enter a valid slug.';
           _isSaving = false;
         });
         return;
       }
 
-      final bool slugAvailable = await _isSlugAvailable(
-        slug: slug,
-        excludeCategoryId: widget.category?.id,
-      );
-
-      if (!slugAvailable) {
+      await _validateSlug();
+      if (!mounted) return;
+      if (_slugErrorText != null && _slugErrorText!.trim().isNotEmpty) {
         setState(() {
-          _slugErrorText =
-          'This slug already exists. Change the English name to generate another slug.';
+          _submitError = _slugErrorText;
+          _isSaving = false;
+        });
+        return;
+      }
+
+      final sortValue = _safeParseSort(_sortOrderController.text);
+      if (sortValue < 0) {
+        setState(() {
+          _submitError = 'Sort number must be 0 or greater.';
           _isSaving = false;
         });
         return;
@@ -1641,10 +701,10 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         finalThumbPath = '';
       }
 
-      final MBPreparedImageSet? preparedForUpload = _preparedImage;
+      final preparedForUpload = _preparedImage;
 
       if (preparedForUpload != null) {
-        final MBUploadedImageSet uploaded =
+        final uploaded =
         await MBImagePipelineService.instance.uploadPreparedImageSet(
           prepared: preparedForUpload,
           storageFolder: 'category_images',
@@ -1679,10 +739,10 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         return;
       }
 
-      final DateTime now = DateTime.now();
-      final MBCategory? existing = widget.category;
+      final now = DateTime.now();
+      final existing = widget.category;
 
-      final MBCategory category = MBCategory(
+      final category = MBCategory(
         id: existing?.id ?? _draftEntityId,
         nameEn: _nameEnController.text.trim(),
         nameBn: _nameBnController.text.trim(),
@@ -1698,17 +758,16 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         showOnHome: _showOnHome,
         isActive: _isActive,
         sortOrder: sortValue,
-        productsCount:
-        int.tryParse(_productsCountController.text.trim()) ?? 0,
+        productsCount: int.tryParse(_productsCountController.text.trim()) ?? 0,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
       );
 
-      if (existing == null) {
-        await AdminCategoryRepository.instance.createCategory(category);
-      } else {
-        await AdminCategoryRepository.instance.updateCategory(category);
-      }
+      _controller.clearOperationError();
+      await _controller.saveCategory(
+        category: category,
+        isEdit: existing != null,
+      );
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -1720,5 +779,298 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
         _isSaving = false;
       });
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960, maxHeight: 900),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isEdit ? 'Edit category' : 'Create category',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: [
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _nameEnController,
+                              decoration: const InputDecoration(
+                                labelText: 'Name (English)',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if ((value ?? '').trim().isEmpty) {
+                                  return 'English name is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _nameBnController,
+                              decoration: const InputDecoration(
+                                labelText: 'Name (Bangla)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _slugController,
+                              decoration: InputDecoration(
+                                labelText: 'Slug',
+                                border: const OutlineInputBorder(),
+                                errorText: _slugErrorText,
+                              ),
+                              validator: (value) {
+                                if (_normalizeSlug(value ?? '').isEmpty) {
+                                  return 'Slug is required.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _sortOrderController,
+                              decoration: InputDecoration(
+                                labelText: 'Sort order',
+                                border: const OutlineInputBorder(),
+                                helperText: _sortSuggestionText,
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                final parsed = int.tryParse((value ?? '').trim());
+                                if (parsed == null) {
+                                  return 'Enter a valid integer.';
+                                }
+                                if (parsed < 0) {
+                                  return 'Sort order must be 0 or greater.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 420, child: _buildParentSelector()),
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _iconUrlController,
+                              decoration: const InputDecoration(
+                                labelText: 'Custom icon URL (optional)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 420,
+                            child: TextFormField(
+                              controller: _productsCountController,
+                              decoration: const InputDecoration(
+                                labelText: 'Products count',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                              readOnly: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionEnController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (English)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionBnController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (Bangla)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 24,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('Featured'),
+                            selected: _isFeatured,
+                            onSelected: _isSaving
+                                ? null
+                                : (value) {
+                              setState(() {
+                                _isFeatured = value;
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: const Text('Show on home'),
+                            selected: _showOnHome,
+                            onSelected: _isSaving
+                                ? null
+                                : (value) {
+                              setState(() {
+                                _showOnHome = value;
+                              });
+                            },
+                          ),
+                          FilterChip(
+                            label: const Text('Active'),
+                            selected: _isActive,
+                            onSelected: _isSaving
+                                ? null
+                                : (value) {
+                              setState(() {
+                                _isActive = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: [
+                          _buildExistingImagePreview(),
+                          _buildOriginalImageCard(),
+                          _buildPreparedImageCard(),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          FilledButton.icon(
+                            onPressed: _isSaving || _isPickingImage
+                                ? null
+                                : _pickOriginalImage,
+                            icon: _isPickingImage
+                                ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                                : const Icon(Icons.image_outlined),
+                            label: Text(
+                              _isPickingImage ? 'Selecting...' : 'Select image',
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_submitError != null && _submitError!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.24),
+                            ),
+                          ),
+                          child: Text(
+                            _submitError!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(
+                    onPressed: _isSaving ? null : _submit,
+                    child: _isSaving
+                        ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : Text(isEdit ? 'Update category' : 'Create category'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
