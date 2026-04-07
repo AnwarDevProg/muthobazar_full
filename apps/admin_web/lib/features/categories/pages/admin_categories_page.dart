@@ -51,23 +51,24 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
       _error = '';
     });
 
-    _categoriesSubscription = AdminCategoryRepository.instance.watchCategories().listen(
-          (items) {
-        if (!mounted) return;
-        setState(() {
-          _categories = items;
-          _isLoading = false;
-          _error = '';
-        });
-      },
-      onError: (error) {
-        if (!mounted) return;
-        setState(() {
-          _error = error.toString();
-          _isLoading = false;
-        });
-      },
-    );
+    _categoriesSubscription =
+        AdminCategoryRepository.instance.watchCategories().listen(
+              (items) {
+            if (!mounted) return;
+            setState(() {
+              _categories = items;
+              _isLoading = false;
+              _error = '';
+            });
+          },
+          onError: (error) {
+            if (!mounted) return;
+            setState(() {
+              _error = error.toString();
+              _isLoading = false;
+            });
+          },
+        );
   }
 
   Future<void> _reloadCategories() async {
@@ -75,17 +76,21 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
   }
 
   Future<void> _openCreateDialog() async {
-    await showDialog<bool>(
+    final bool? changed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AdminCategoryFormDialog(
         categories: _categories,
       ),
     );
+
+    if (changed == true && mounted) {
+      await _reloadCategories();
+    }
   }
 
   Future<void> _openEditDialog(MBCategory category) async {
-    await showDialog<bool>(
+    final bool? changed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AdminCategoryFormDialog(
@@ -93,12 +98,18 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
         categories: _categories,
       ),
     );
+
+    if (changed == true && mounted) {
+      await _reloadCategories();
+    }
   }
 
   Future<void> _deleteCategory(MBCategory category) async {
     try {
       final String? blockReason =
-      await AdminCategoryRepository.instance.getDeleteBlockReason(category.id);
+      await AdminCategoryRepository.instance.getDeleteBlockReason(
+        category.id,
+      );
       if (!mounted) return;
 
       if (blockReason != null) {
@@ -354,7 +365,8 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: _isLoading || _isDeleting || _isReordering || _isToggling
+                    onPressed:
+                    _isLoading || _isDeleting || _isReordering || _isToggling
                         ? null
                         : _openCreateDialog,
                     icon: const Icon(Icons.add_rounded),
@@ -362,7 +374,8 @@ class _AdminCategoriesPageState extends State<AdminCategoriesPage> {
                   ),
                   MBSpacing.w(MBSpacing.md),
                   OutlinedButton.icon(
-                    onPressed: _isLoading || _isDeleting || _isReordering || _isToggling
+                    onPressed:
+                    _isLoading || _isDeleting || _isReordering || _isToggling
                         ? null
                         : _reloadCategories,
                     icon: const Icon(Icons.refresh_rounded),

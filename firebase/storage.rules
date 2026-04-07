@@ -1,6 +1,58 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminPermissionDoc() {
+      return /databases/(default)/documents/admin_permissions/$(request.auth.uid);
+    }
+
+    function hasAdminPermissionDoc() {
+      return signedIn() && firestore.exists(adminPermissionDoc());
+    }
+
+    function adminPermission() {
+      return firestore.get(adminPermissionDoc()).data;
+    }
+
+    function canManageCategories() {
+      return hasAdminPermissionDoc()
+        && adminPermission().canManageCategories == true;
+    }
+
+    match /profile_pictures/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /product_images/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /category_images/{categoryId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn() && canManageCategories();
+    }
+
+    match /banner_images/{bannerId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /brand_images/{brandId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /profile_images/{profileId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

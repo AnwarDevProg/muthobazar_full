@@ -15,6 +15,8 @@ class AdminCategoryRepository {
   CollectionReference<Map<String, dynamic>> get categoriesCollection =>
       _firestore.collection('categories');
 
+  HttpsCallable _callable(String name) => _functions.httpsCallable(name);
+
   MBCategory _parseCategoryDoc(
       QueryDocumentSnapshot<Map<String, dynamic>> doc,
       ) {
@@ -35,6 +37,14 @@ class AdminCategoryRepository {
     }
   }
 
+  String _extractFunctionMessage(
+      FirebaseFunctionsException e,
+      String fallback,
+      ) {
+    final message = (e.message ?? '').trim();
+    return message.isEmpty ? fallback : message;
+  }
+
   int _parseInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
@@ -42,7 +52,7 @@ class AdminCategoryRepository {
   }
 
   String _normalizeParentId(String? parentId) {
-    return parentId?.trim() ?? '';
+    return (parentId ?? '').trim();
   }
 
   String _groupIdFromParentId(String? parentId) {
@@ -50,7 +60,13 @@ class AdminCategoryRepository {
     return normalizedParentId.isEmpty ? 'root' : normalizedParentId;
   }
 
+  String _normalizeSlug(String value) {
+    return value.trim().toLowerCase();
+  }
+
   Map<String, dynamic> _categoryPayload(MBCategory category) {
+    final normalizedParentId = _normalizeParentId(category.parentId);
+
     return {
       'nameEn': category.nameEn.trim(),
       'nameBn': category.nameBn.trim(),
@@ -60,10 +76,8 @@ class AdminCategoryRepository {
       'iconUrl': category.iconUrl.trim(),
       'imagePath': category.imagePath.trim(),
       'thumbPath': category.thumbPath.trim(),
-      'slug': category.slug.trim(),
-      'parentId': _normalizeParentId(category.parentId).isEmpty
-          ? null
-          : _normalizeParentId(category.parentId),
+      'slug': _normalizeSlug(category.slug),
+      'parentId': normalizedParentId.isEmpty ? null : normalizedParentId,
       'isFeatured': category.isFeatured,
       'showOnHome': category.showOnHome,
       'isActive': category.isActive,
@@ -71,14 +85,19 @@ class AdminCategoryRepository {
     };
   }
 
-  HttpsCallable _callable(String name) => _functions.httpsCallable(name);
+  List<MBCategory> _sortCategories(List<MBCategory> items) {
+    items.sort((a, b) {
+      final String aGroup = _groupIdFromParentId(a.parentId);
+      final String bGroup = _groupIdFromParentId(b.parentId);
+      final int byGroup = aGroup.compareTo(bGroup);
+      if (byGroup != 0) return byGroup;
 
-  String _extractFunctionMessage(
-      FirebaseFunctionsException e,
-      String fallback,
-      ) {
-    final message = (e.message ?? '').trim();
-    return message.isEmpty ? fallback : message;
+      final int bySort = a.sortOrder.compareTo(b.sortOrder);
+      if (bySort != 0) return bySort;
+
+      return a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
+    });
+    return items;
   }
 
   Stream<List<MBCategory>> watchCategories() {
@@ -89,19 +108,7 @@ class AdminCategoryRepository {
         items.add(_parseCategoryDoc(doc));
       }
 
-      items.sort((a, b) {
-        final String aGroup = _groupIdFromParentId(a.parentId);
-        final String bGroup = _groupIdFromParentId(b.parentId);
-        final int byGroup = aGroup.compareTo(bGroup);
-        if (byGroup != 0) return byGroup;
-
-        final int bySort = a.sortOrder.compareTo(b.sortOrder);
-        if (bySort != 0) return bySort;
-
-        return a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
-      });
-
-      return items;
+      return _sortCategories(items);
     }).handleError((error) {
       if (error is FirebaseException) {
         throw Exception(_readableFirebaseError(error));
@@ -127,20 +134,47 @@ class AdminCategoryRepository {
       }
 
       final List<MBCategory> items = [];
-
       for (final doc in snapshot.docs) {
         items.add(_parseCategoryDoc(doc));
       }
 
-      items.sort((a, b) {
-        final String aGroup = _groupIdFromParentId(a.parentId);
-        final String bGroup = _groupIdFromParentId(b.parentId);
-        final int byGroup = aGroup.compareTo(bGroup);
-        if (byGroup != 0) return byGroup;
+      return _sortCategories(items);
+    } on FirebaseException catch (e) {
+      throw Exception(_readableFirebaseError(e));
+    } catch (e) {
+      rethrow;
+    }
+  }
 
+  Future<List<MBCategory>> fetchSiblingGroupCategories({
+    String? parentId,
+    String? excludeCategoryId,
+  }) async {
+    try {
+      final groupId = _groupIdFromParentId(parentId);
+      final excludedId = excludeCategoryId?.trim() ?? '';
+
+      final snapshot = await categoriesCollection
+          .where('groupId', isEqualTo: groupId)
+          .get()
+          .timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Timed out while loading sibling categories.');
+        },
+      );
+
+      final List<MBCategory> items = [];
+      for (final doc in snapshot.docs) {
+        if (excludedId.isNotEmpty && doc.id == excludedId) {
+          continue;
+        }
+        items.add(_parseCategoryDoc(doc));
+      }
+
+      items.sort((a, b) {
         final int bySort = a.sortOrder.compareTo(b.sortOrder);
         if (bySort != 0) return bySort;
-
         return a.nameEn.toLowerCase().compareTo(b.nameEn.toLowerCase());
       });
 
@@ -152,12 +186,39 @@ class AdminCategoryRepository {
     }
   }
 
+  Future<int> suggestSortOrder({
+    String? parentId,
+    String? excludeCategoryId,
+  }) async {
+    final siblings = await fetchSiblingGroupCategories(
+      parentId: parentId,
+      excludeCategoryId: excludeCategoryId,
+    );
+
+    final used = siblings
+        .map((item) => item.sortOrder)
+        .where((value) => value >= 0)
+        .toSet()
+        .toList()
+      ..sort();
+
+    int expected = 0;
+    for (final value in used) {
+      if (value != expected) {
+        return expected;
+      }
+      expected += 1;
+    }
+
+    return expected;
+  }
+
   Future<bool> slugExists({
     required String slug,
     String? excludeCategoryId,
   }) async {
     try {
-      final normalizedSlug = slug.trim();
+      final normalizedSlug = _normalizeSlug(slug);
       if (normalizedSlug.isEmpty) return false;
 
       final query = await categoriesCollection
@@ -191,33 +252,12 @@ class AdminCategoryRepository {
     String? excludeCategoryId,
   }) async {
     try {
-      final groupId = _groupIdFromParentId(parentId);
-
-      final snapshot = await categoriesCollection
-          .where('groupId', isEqualTo: groupId)
-          .get()
-          .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while checking sort uniqueness.');
-        },
+      final siblings = await fetchSiblingGroupCategories(
+        parentId: parentId,
+        excludeCategoryId: excludeCategoryId,
       );
 
-      final excludedId = excludeCategoryId?.trim() ?? '';
-
-      for (final doc in snapshot.docs) {
-        if (excludedId.isNotEmpty && doc.id == excludedId) {
-          continue;
-        }
-
-        final data = doc.data();
-        final docSortOrder = _parseInt(data['sortOrder']);
-        if (docSortOrder == sortOrder) {
-          return true;
-        }
-      }
-
-      return false;
+      return siblings.any((item) => item.sortOrder == sortOrder);
     } on FirebaseException catch (e) {
       throw Exception(_readableFirebaseError(e));
     } catch (e) {

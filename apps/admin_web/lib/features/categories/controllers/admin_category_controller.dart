@@ -6,17 +6,17 @@ import 'package:shared_repositories/shared_repositories.dart';
 class AdminCategoryController extends GetxController {
   final AdminCategoryRepository _repo = AdminCategoryRepository.instance;
 
+  final RxBool isSaving = false.obs;
   final RxBool isDeleting = false.obs;
   final RxBool isReordering = false.obs;
-  final RxBool isSaving = false.obs;
   final RxBool isPickingImage = false.obs;
   final RxBool isResizingImage = false.obs;
   final RxnString operationError = RxnString();
 
   bool get isAnyBusy =>
-      isDeleting.value ||
+      isSaving.value ||
+          isDeleting.value ||
           isReordering.value ||
-          isSaving.value ||
           isPickingImage.value ||
           isResizingImage.value;
 
@@ -24,18 +24,23 @@ class AdminCategoryController extends GetxController {
     operationError.value = null;
   }
 
+  void _setOperationError(Object error) {
+    operationError.value = error.toString();
+  }
+
   Future<MBOriginalPickedImage?> pickOriginalImage() async {
-    if (isPickingImage.value || isSaving.value || isResizingImage.value) {
+    if (isSaving.value || isDeleting.value || isPickingImage.value) {
       return null;
     }
 
     isPickingImage.value = true;
-    operationError.value = null;
+    clearOperationError();
 
     try {
-      return await MBImagePipelineService.instance.pickOriginalImage();
+      final result = await MBImagePipelineService.instance.pickOriginalImage();
+      return result;
     } catch (e) {
-      operationError.value = 'Image selection failed: $e';
+      _setOperationError(e);
       rethrow;
     } finally {
       isPickingImage.value = false;
@@ -51,15 +56,15 @@ class AdminCategoryController extends GetxController {
     required int thumbJpegQuality,
     bool requestSquareCrop = true,
   }) async {
-    if (isResizingImage.value || isSaving.value) {
-      throw Exception('Another operation is already running.');
+    if (isSaving.value || isDeleting.value || isResizingImage.value) {
+      throw Exception('Another category operation is already running.');
     }
 
     isResizingImage.value = true;
-    operationError.value = null;
+    clearOperationError();
 
     try {
-      return await MBImagePipelineService.instance.prepareImageSetFromOriginal(
+      final result = await MBImagePipelineService.instance.prepareImageSetFromOriginal(
         original: original,
         fullMaxWidth: fullMaxWidth,
         fullMaxHeight: fullMaxHeight,
@@ -68,8 +73,9 @@ class AdminCategoryController extends GetxController {
         thumbJpegQuality: thumbJpegQuality,
         requestSquareCrop: requestSquareCrop,
       );
+      return result;
     } catch (e) {
-      operationError.value = 'Image resize failed: $e';
+      _setOperationError(e);
       rethrow;
     } finally {
       isResizingImage.value = false;
@@ -83,7 +89,7 @@ class AdminCategoryController extends GetxController {
     if (isSaving.value) return;
 
     isSaving.value = true;
-    operationError.value = null;
+    clearOperationError();
 
     try {
       if (isEdit) {
@@ -92,7 +98,7 @@ class AdminCategoryController extends GetxController {
         await _repo.createCategory(category);
       }
     } catch (e) {
-      operationError.value = e.toString();
+      _setOperationError(e);
       rethrow;
     } finally {
       isSaving.value = false;
@@ -106,7 +112,7 @@ class AdminCategoryController extends GetxController {
     if (isDeleting.value) return;
 
     isDeleting.value = true;
-    operationError.value = null;
+    clearOperationError();
 
     try {
       await _repo.deleteCategory(
@@ -114,7 +120,7 @@ class AdminCategoryController extends GetxController {
         reason: reason,
       );
     } catch (e) {
-      operationError.value = e.toString();
+      _setOperationError(e);
       rethrow;
     } finally {
       isDeleting.value = false;
@@ -125,18 +131,16 @@ class AdminCategoryController extends GetxController {
     required MBCategory category,
     String? reason,
   }) async {
-    operationError.value = null;
-
-    final bool nextIsActive = !category.isActive;
+    clearOperationError();
 
     try {
       await _repo.setCategoryActiveState(
         categoryId: category.id,
-        isActive: nextIsActive,
+        isActive: !category.isActive,
         reason: reason,
       );
     } catch (e) {
-      operationError.value = e.toString();
+      _setOperationError(e);
       rethrow;
     }
   }
@@ -148,7 +152,7 @@ class AdminCategoryController extends GetxController {
     if (isReordering.value) return;
 
     isReordering.value = true;
-    operationError.value = null;
+    clearOperationError();
 
     try {
       await _repo.reorderCategoryGroup(
@@ -156,7 +160,27 @@ class AdminCategoryController extends GetxController {
         orderedCategoryIds: orderedCategoryIds,
       );
     } catch (e) {
-      operationError.value = e.toString();
+      _setOperationError(e);
+      rethrow;
+    } finally {
+      isReordering.value = false;
+    }
+  }
+
+  Future<void> fixGroupSort({
+    required String? parentId,
+  }) async {
+    if (isReordering.value) return;
+
+    isReordering.value = true;
+    clearOperationError();
+
+    try {
+      await _repo.fixCategoryGroupSort(
+        parentId: parentId,
+      );
+    } catch (e) {
+      _setOperationError(e);
       rethrow;
     } finally {
       isReordering.value = false;
