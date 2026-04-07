@@ -1,5 +1,11 @@
 import * as admin from "firebase-admin";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
+
+import {
+  buildAdminAuditLogDoc,
+  getAuthorizedAdminActor,
+  newAdminAuditLogRef,
+} from "../admin/audit-log-core";
 
 const db = admin.firestore();
 
@@ -8,47 +14,58 @@ function normalizeGroupId(input: unknown): string {
   return value.length === 0 ? "root" : value;
 }
 
-export const reorderCategoryGroup = onCall(async (request) => {
-  const data = request.data ?? {};
-
-  const groupIdRaw = data.groupId;
-  const orderedCategoryIdsRaw = data.orderedCategoryIds;
-
-  const groupId = normalizeGroupId(groupIdRaw);
-
-  if (!Array.isArray(orderedCategoryIdsRaw) || orderedCategoryIdsRaw.length === 0) {
+function normalizeOrderedIds(input: unknown): string[] {
+  if (!Array.isArray(input) || input.length === 0) {
     throw new HttpsError(
       "invalid-argument",
       "orderedCategoryIds must be a non-empty array.",
     );
   }
 
-  const orderedCategoryIds = orderedCategoryIdsRaw
+  const normalized = input
     .map((item) => String(item ?? "").trim())
     .filter((item) => item.length > 0);
 
-  if (orderedCategoryIds.length === 0) {
+  if (normalized.length === 0) {
     throw new HttpsError(
       "invalid-argument",
       "orderedCategoryIds must contain valid ids.",
     );
   }
 
-  const duplicateCheck = new Set<string>();
-  for (const id of orderedCategoryIds) {
-    if (duplicateCheck.has(id)) {
+  const seen = new Set<string>();
+  for (const id of normalized) {
+    if (seen.has(id)) {
       throw new HttpsError(
         "invalid-argument",
         "orderedCategoryIds contains duplicates.",
       );
     }
-    duplicateCheck.add(id);
+    seen.add(id);
   }
 
+  return normalized;
+}
+
+function getGroupTitle(groupId: string): string {
+  return groupId === "root" ? "Root Category Group" : `Category Group ${groupId}`;
+}
+
+export const reorderCategoryGroup = onCall(async (request) => {
+  const actor = await getAuthorizedAdminActor(
+    request.auth?.uid,
+    "canManageCategories",
+  );
+
+  const data = request.data ?? {};
+  const groupId = normalizeGroupId(data.groupId);
+  const orderedCategoryIds = normalizeOrderedIds(data.orderedCategoryIds);
+
+  let auditLogId = "";
+
   await db.runTransaction(async (tx) => {
-    const snapshot = await tx.get(
-      db.collection("categories").where("groupId", "==", groupId),
-    );
+    const query = db.collection("categories").where("groupId", "==", groupId);
+    const snapshot = await tx.get(query);
 
     const existingDocs = snapshot.docs;
     const existingIds = new Set(existingDocs.map((doc) => doc.id));
@@ -70,20 +87,57 @@ export const reorderCategoryGroup = onCall(async (request) => {
       }
     }
 
+    const beforeOrderedCategoryIds = existingDocs
+      .map((doc) => ({
+        id: doc.id,
+        sortOrder: Number(doc.data().sortOrder ?? 0),
+        nameEn: String(doc.data().nameEn ?? "").toLowerCase(),
+      }))
+      .sort((a, b) => {
+        const bySort = a.sortOrder - b.sortOrder;
+        if (bySort !== 0) return bySort;
+        return a.nameEn.localeCompare(b.nameEn);
+      })
+      .map((item) => item.id);
+
     for (let index = 0; index < orderedCategoryIds.length; index++) {
       const id = orderedCategoryIds[index];
-      const ref = db.collection("categories").doc(id);
-
-      tx.update(ref, {
+      tx.update(db.collection("categories").doc(id), {
         sortOrder: index,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
+
+    const logRef = newAdminAuditLogRef();
+    auditLogId = logRef.id;
+
+    tx.set(
+      logRef,
+      buildAdminAuditLogDoc(logRef.id, actor, {
+        action: "reorder_category_group",
+        module: "categories",
+        targetType: "category_group",
+        targetId: groupId,
+        targetTitle: getGroupTitle(groupId),
+        status: "success",
+        beforeData: {
+          orderedCategoryIds: beforeOrderedCategoryIds,
+        },
+        afterData: {
+          orderedCategoryIds,
+        },
+        metadata: {
+          count: orderedCategoryIds.length,
+        },
+        eventSource: "server_action",
+      }),
+    );
   });
 
   return {
     success: true,
     groupId,
     count: orderedCategoryIds.length,
+    auditLogId,
   };
 });
