@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fixCategoryGroupSort = exports.reorderCategoryGroup = exports.onProductDeletedUpdateCategoryCount = exports.onProductUpdatedUpdateCategoryCount = exports.onProductCreatedUpdateCategoryCount = exports.checkPhoneAuthEligibility = void 0;
+exports.logAdminAction = exports.fixCategoryGroupSort = exports.reorderCategoryGroup = exports.onProductDeletedUpdateCategoryCount = exports.onProductUpdatedUpdateCategoryCount = exports.onProductCreatedUpdateCategoryCount = exports.checkPhoneAuthEligibility = void 0;
 const app_1 = require("firebase-admin/app");
 (0, app_1.initializeApp)();
 var check_phone_auth_eligibility_1 = require("./check-phone-auth-eligibility");
@@ -13,3 +13,5 @@ var reorder_categories_1 = require("./categories/reorder-categories");
 Object.defineProperty(exports, "reorderCategoryGroup", { enumerable: true, get: function () { return reorder_categories_1.reorderCategoryGroup; } });
 var fix_category_group_sort_1 = require("./categories/fix-category-group-sort");
 Object.defineProperty(exports, "fixCategoryGroupSort", { enumerable: true, get: function () { return fix_category_group_sort_1.fixCategoryGroupSort; } });
+var log_admin_action_1 = require("./admin/log-admin-action");
+Object.defineProperty(exports, "logAdminAction", { enumerable: true, get: function () { return log_admin_action_1.logAdminAction; } });

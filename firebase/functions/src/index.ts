@@ -1,6 +1,11 @@
 import { initializeApp } from "firebase-admin/app";
+import { setGlobalOptions } from "firebase-functions/v2";
 
 initializeApp();
+
+setGlobalOptions({
+  region: "asia-south1",
+});
 
 export { checkPhoneAuthEligibility } from "./check-phone-auth-eligibility";
 export {

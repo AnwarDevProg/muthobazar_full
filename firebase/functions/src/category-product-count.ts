@@ -3,7 +3,7 @@ import {
   onDocumentDeleted,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
-import { logger } from "firebase-functions";
+import * as logger from "firebase-functions/logger";
 import { getFirestore } from "firebase-admin/firestore";
 
 const db = getFirestore();
@@ -30,7 +30,6 @@ async function recomputeCategoryProductsCount(
     for (const doc of productsSnap.docs) {
       const data = doc.data() ?? {};
 
-      // Optional future protection for soft delete
       if (data.isDeleted === true) {
         continue;
       }
@@ -61,7 +60,6 @@ async function recomputeCategoryProductsCount(
 export const onProductCreatedUpdateCategoryCount = onDocumentCreated(
   {
     document: "products/{productId}",
-    region: "asia-south1",
   },
   async (event) => {
     const data = event.data?.data() ?? {};
@@ -81,7 +79,6 @@ export const onProductCreatedUpdateCategoryCount = onDocumentCreated(
 export const onProductUpdatedUpdateCategoryCount = onDocumentUpdated(
   {
     document: "products/{productId}",
-    region: "asia-south1",
   },
   async (event) => {
     const beforeData = event.data?.before.data() ?? {};
@@ -115,7 +112,6 @@ export const onProductUpdatedUpdateCategoryCount = onDocumentUpdated(
 export const onProductDeletedUpdateCategoryCount = onDocumentDeleted(
   {
     document: "products/{productId}",
-    region: "asia-south1",
   },
   async (event) => {
     const data = event.data?.data() ?? {};

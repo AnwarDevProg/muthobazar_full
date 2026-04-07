@@ -119,7 +119,6 @@ export const checkPhoneAuthEligibility = onCall<
   Promise<CheckPhoneAuthEligibilityResponse>
 >(
   {
-    region: "asia-south1",
     cors: true,
   },
   async (request): Promise<CheckPhoneAuthEligibilityResponse> => {

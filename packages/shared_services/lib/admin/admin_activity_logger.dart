@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 class AdminActivityLogger {
   AdminActivityLogger._();
@@ -38,8 +39,16 @@ class AdminActivityLogger {
         'afterData': afterData,
         'metadata': metadata,
       });
-    } catch (_) {
-      // Never crash the main UI flow because audit logging failed.
+    } on FirebaseFunctionsException catch (e, s) {
+      debugPrint(
+        'logAdminAction FirebaseFunctionsException: ${e.code} ${e.message}',
+      );
+      debugPrintStack(stackTrace: s);
+      rethrow;
+    } catch (e, s) {
+      debugPrint('logAdminAction unknown error: $e');
+      debugPrintStack(stackTrace: s);
+      rethrow;
     }
   }
 }

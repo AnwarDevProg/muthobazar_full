@@ -329,25 +329,29 @@ class AdminAuthController extends BasePhoneAuthController {
 
         final session = Get.find<AdminWebSessionService>();
 
-        await AdminActivityLogger.log(
-          actorUid: user.uid,
-          actorName: (user.displayName ?? fullName).trim().isEmpty
-              ? 'Admin User'
-              : (user.displayName ?? fullName).trim(),
-          actorPhone: (user.phoneNumber ?? '').trim().isEmpty
-              ? rawPhone
-              : (user.phoneNumber ?? '').trim(),
-          actorRole: 'admin',
-          action: 'auth.login',
-          module: 'auth',
-          targetType: 'admin',
-          targetId: user.uid,
-          targetTitle: (user.displayName ?? fullName).trim(),
-          metadata: {
-            'loginMethod': 'phone_otp',
-          },
-          status: 'success',
-        );
+        try {
+          await AdminActivityLogger.log(
+            actorUid: user.uid,
+            actorName: (user.displayName ?? fullName).trim().isEmpty
+                ? 'Admin User'
+                : (user.displayName ?? fullName).trim(),
+            actorPhone: (user.phoneNumber ?? '').trim().isEmpty
+                ? rawPhone
+                : (user.phoneNumber ?? '').trim(),
+            actorRole: 'admin',
+            action: 'auth.login',
+            module: 'auth',
+            targetType: 'admin',
+            targetId: user.uid,
+            targetTitle: (user.displayName ?? fullName).trim(),
+            metadata: {
+              'loginMethod': 'phone_otp',
+            },
+            status: 'success',
+          );
+        } catch (e) {
+          debugPrint('Login activity log failed: $e');
+        }
 
         Get.offAllNamed(AdminWebRoutes.dashboard);
         return;
