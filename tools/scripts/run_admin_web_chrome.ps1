@@ -4,7 +4,7 @@ param(
     [int]$Port = 8080,
     [string]$ChromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe",
     [switch]$SkipClean,
-    [int]$OpenBrowserDelaySeconds = 8
+    [int]$WaitTimeoutSeconds = 180
 )
 
 function Write-Info($Message) {
@@ -21,6 +21,20 @@ function Write-Warn($Message) {
 
 function Write-Fail($Message) {
     Write-Host "[FAIL] $Message" -ForegroundColor Red
+}
+
+function Test-WebUrlReady {
+    param(
+        [string]$Url
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -Method Get -TimeoutSec 3
+        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+    }
+    catch {
+        return $false
+    }
 }
 
 try {
@@ -55,20 +69,72 @@ try {
     Write-Success "flutter pub get completed."
 
     $Url = "http://$HostName`:$Port"
-    Write-Info "App URL: $Url"
+    $LogFile = Join-Path $env:TEMP "flutter_admin_web_$Port.log"
 
-    $flutterCommand = "Set-Location '$ProjectPath'; flutter run -d web-server --web-hostname $HostName --web-port $Port"
+    if (Test-Path $LogFile) {
+        Remove-Item $LogFile -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-Info "App URL: $Url"
+    Write-Info "Log file: $LogFile"
+
+    $flutterCommand = @"
+Set-Location '$ProjectPath'
+flutter run -d web-server --web-hostname $HostName --web-port $Port 2>&1 | Tee-Object -FilePath '$LogFile'
+"@
 
     Write-Info "Starting Flutter web server in a new PowerShell window..."
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $flutterCommand
+    Start-Process powershell `
+        -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $flutterCommand `
+        -PassThru | Out-Null
 
-    Write-Info "Waiting $OpenBrowserDelaySeconds seconds before opening Chrome..."
-    Start-Sleep -Seconds $OpenBrowserDelaySeconds
+    Write-Info "Waiting until Flutter prints the localhost serve line..."
 
-    Write-Info "Opening Chrome..."
-    Start-Process -FilePath $ChromePath -ArgumentList $Url
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $browserOpened = $false
+    $servedPattern = [regex]::Escape("lib\main.dart is being served at $Url")
 
-    Write-Success "Chrome opened successfully. Exiting launcher script."
+    while ($stopwatch.Elapsed.TotalSeconds -lt $WaitTimeoutSeconds) {
+        Start-Sleep -Seconds 1
+
+        $servedLineFound = $false
+        if (Test-Path $LogFile) {
+            $servedLineFound = Select-String -Path $LogFile -Pattern $servedPattern -Quiet
+        }
+
+        if ($servedLineFound) {
+            Write-Success "Flutter reported that localhost is now being served."
+
+            $urlReady = $false
+            $urlStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+            while ($urlStopwatch.Elapsed.TotalSeconds -lt 30) {
+                if (Test-WebUrlReady -Url $Url) {
+                    $urlReady = $true
+                    break
+                }
+                Start-Sleep -Milliseconds 500
+            }
+
+            if (-not $urlReady) {
+                Write-Warn "Flutter printed the serve line, but the URL did not respond in time."
+                Write-Warn "You can still open this manually: $Url"
+                exit 1
+            }
+
+            Write-Info "Opening Chrome..."
+            Start-Process -FilePath $ChromePath -ArgumentList $Url
+            $browserOpened = $true
+            break
+        }
+    }
+
+    if (-not $browserOpened) {
+        Write-Warn "Timed out waiting for Flutter to print the localhost serve line."
+        Write-Warn "You can still open this manually: $Url"
+        exit 1
+    }
+
+    Write-Success "Chrome opened successfully after localhost was confirmed ready."
     exit 0
 }
 catch {
@@ -76,11 +142,8 @@ catch {
     exit 1
 }
 
-
-#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1"
-#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -SkipClean
-#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -Port 9090
-#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -ChromePath "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-
-
-
+# Usage:
+# powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1"
+# powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -SkipClean
+# powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -Port 9090
+# powershell -ExecutionPolicy Bypass -File ".\tools\scripts\run_admin_web_chrome.ps1" -ChromePath "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
