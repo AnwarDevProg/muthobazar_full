@@ -137,10 +137,11 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     return imageUrl.isNotEmpty ? imageUrl : iconUrl;
   }
 
-  bool get _hasExistingImage =>
-      !_removeExistingImage &&
-          ((widget.category?.imageUrl.trim().isNotEmpty ?? false) ||
-              (widget.category?.iconUrl.trim().isNotEmpty ?? false));
+  bool get _hasStoredImageAtOpen =>
+      (widget.category?.imageUrl.trim().isNotEmpty ?? false) ||
+          (widget.category?.iconUrl.trim().isNotEmpty ?? false);
+
+  bool get _hasExistingImage => !_removeExistingImage && _hasStoredImageAtOpen;
 
   bool get _hasPreparedImage => _preparedImage != null;
 
@@ -154,7 +155,13 @@ class _AdminCategoryFormDialogState extends State<AdminCategoryFormDialog> {
     if (!_isFormBasicsValid) return false;
 
     if (isEdit) {
-      return _hasPreparedImage || _hasExistingImage;
+      // Important fix:
+      // If the category already had a stored image, keep Update enabled even
+      // after selecting a new original image, unless the user explicitly chose
+      // to remove the old image. Resized image is only required when there is
+      // no valid stored image left.
+      if (_hasExistingImage) return true;
+      return _hasPreparedImage;
     }
 
     return _hasPreparedImage;
