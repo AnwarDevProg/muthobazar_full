@@ -32,34 +32,20 @@ class AdminWebShell extends StatelessWidget {
                 children: [
                   const _AdminSidebar(),
                   Expanded(
-                    child: Column(
-                      children: [
-                        const _AdminTopBar(),
-                        Expanded(
-                          child: Container(
-                            margin: const EdgeInsets.fromLTRB(
-                              MBSpacing.lg,
-                              0,
-                              MBSpacing.lg,
-                              MBSpacing.lg,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius:
-                              BorderRadius.circular(MBRadius.xl),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                  MBColors.shadow.withValues(alpha: 0.08),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: child,
+                    child: Container(
+                      margin: const EdgeInsets.all(MBSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(MBRadius.xl),
+                        boxShadow: [
+                          BoxShadow(
+                            color: MBColors.shadow.withValues(alpha: 0.08),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: child,
                     ),
                   ),
                 ],
@@ -92,10 +78,10 @@ class _AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AdminShellStateController controller =
-    Get.find<AdminShellStateController>();
     final AdminAccessController accessController =
     Get.find<AdminAccessController>();
+    final AdminWebSessionService sessionService =
+    Get.find<AdminWebSessionService>();
 
     return Obx(() {
       final permission = accessController.permission.value;
@@ -134,7 +120,18 @@ class _AdminSidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SidebarBrandHeader(collapsed: collapsed),
+                _SidebarBrandHeader(
+                  collapsed: collapsed,
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    controller.setRoute(AdminWebRoutes.dashboard);
+                  },
+                ),
+                MBSpacing.h(MBSpacing.md),
+                _SidebarSearchShortcut(
+                  collapsed: collapsed,
+                  onTap: controller.openCommandPalette,
+                ),
                 MBSpacing.h(MBSpacing.lg),
                 Expanded(
                   child: SingleChildScrollView(
@@ -191,6 +188,10 @@ class _AdminSidebar extends StatelessWidget {
                 _SidebarBottomBar(
                   collapsed: collapsed,
                   onToggleSidebar: controller.toggleSidebar,
+                  onLogout: () async {
+                    await sessionService.signOut();
+                    Get.offAllNamed(AdminWebRoutes.login);
+                  },
                 ),
               ],
             ),
@@ -204,13 +205,15 @@ class _AdminSidebar extends StatelessWidget {
 class _SidebarBrandHeader extends StatelessWidget {
   const _SidebarBrandHeader({
     required this.collapsed,
+    required this.onTap,
   });
 
   final bool collapsed;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final Widget content = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(MBSpacing.md),
       decoration: BoxDecoration(
@@ -272,6 +275,120 @@ class _SidebarBrandHeader extends StatelessWidget {
         ],
       ),
     );
+
+    final Widget tappable = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        canRequestFocus: false,
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: content,
+      ),
+    );
+
+    if (collapsed) {
+      return Tooltip(
+        message: 'Go to dashboard',
+        child: tappable,
+      );
+    }
+
+    return tappable;
+  }
+}
+
+class _SidebarSearchShortcut extends StatelessWidget {
+  const _SidebarSearchShortcut({
+    required this.collapsed,
+    required this.onTap,
+  });
+
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget child = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        canRequestFocus: false,
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+            horizontal: collapsed ? MBSpacing.sm : MBSpacing.md,
+            vertical: MBSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.14),
+            ),
+          ),
+          child: collapsed
+              ? const Center(
+            child: Icon(
+              Icons.search_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          )
+              : Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              MBSpacing.w(MBSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Search pages, commands...',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: MBTextStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              MBSpacing.w(MBSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: MBSpacing.sm,
+                  vertical: MBSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(MBRadius.pill),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Text(
+                  'Ctrl + K',
+                  style: MBTextStyles.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (collapsed) {
+      return Tooltip(
+        message: 'Search pages, commands, routes (Ctrl + K)',
+        child: child,
+      );
+    }
+
+    return child;
   }
 }
 
@@ -505,234 +622,109 @@ class _SidebarBottomBar extends StatelessWidget {
   const _SidebarBottomBar({
     required this.collapsed,
     required this.onToggleSidebar,
+    required this.onLogout,
   });
 
   final bool collapsed;
   final VoidCallback onToggleSidebar;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        InkWell(
-          canRequestFocus: false,
-          borderRadius: BorderRadius.circular(14),
+        _SidebarActionButton(
+          collapsed: collapsed,
+          icon: collapsed
+              ? Icons.keyboard_double_arrow_right_rounded
+              : Icons.keyboard_double_arrow_left_rounded,
+          label: 'Collapse Sidebar',
+          tooltip: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
           onTap: onToggleSidebar,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: MBSpacing.md,
-              vertical: MBSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: collapsed
-                ? const Icon(
-              Icons.keyboard_double_arrow_right_rounded,
-              color: Colors.white,
-              size: 20,
-            )
-                : Row(
-              children: [
-                const Icon(
-                  Icons.keyboard_double_arrow_left_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                MBSpacing.w(MBSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Collapse Sidebar',
-                    style: MBTextStyles.bodyMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        ),
+        MBSpacing.h(MBSpacing.sm),
+        _SidebarActionButton(
+          collapsed: collapsed,
+          icon: Icons.logout_rounded,
+          label: 'Logout',
+          tooltip: 'Logout',
+          onTap: onLogout,
         ),
       ],
     );
   }
 }
 
-class _AdminTopBar extends StatelessWidget {
-  const _AdminTopBar();
+class _SidebarActionButton extends StatelessWidget {
+  const _SidebarActionButton({
+    required this.collapsed,
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final bool collapsed;
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final AdminWebSessionService sessionService =
-    Get.find<AdminWebSessionService>();
-
-    return GetBuilder<AdminShellStateController>(
-      id: 'admin_topbar',
-      builder: (controller) {
-        final breadcrumbs = controller.breadcrumbs;
-
-        return Container(
-          height: 92,
-          margin: const EdgeInsets.fromLTRB(
-            MBSpacing.lg,
-            MBSpacing.lg,
-            MBSpacing.lg,
-            MBSpacing.lg,
+    final Widget child = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        canRequestFocus: false,
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: MBSpacing.md,
+            vertical: MBSpacing.md,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: MBSpacing.xl),
           decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: collapsed
+              ? Icon(
+            icon,
             color: Colors.white,
-            borderRadius: BorderRadius.circular(MBRadius.xl),
-            boxShadow: [
-              BoxShadow(
-                color: MBColors.shadow.withValues(alpha: 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
+            size: 20,
+          )
+              : Row(
             children: [
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 20,
+              ),
+              MBSpacing.w(MBSpacing.sm),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        for (int i = 0; i < breadcrumbs.length; i++) ...[
-                          Text(
-                            breadcrumbs[i],
-                            style: MBTextStyles.caption.copyWith(
-                              color: i == breadcrumbs.length - 1
-                                  ? MBColors.primaryOrange
-                                  : MBColors.textSecondary,
-                              fontWeight: i == breadcrumbs.length - 1
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                          if (i != breadcrumbs.length - 1)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: MBSpacing.xs,
-                              ),
-                              child: Text(
-                                '/',
-                                style: MBTextStyles.caption.copyWith(
-                                  color: MBColors.textMuted,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ],
-                    ),
-                    MBSpacing.h(MBSpacing.xxxs),
-                    Text(
-                      controller.pageTitle,
-                      style: MBTextStyles.pageTitle.copyWith(
-                        color: MBColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 320,
-                child: InkWell(
-                  canRequestFocus: false,
-                  borderRadius: BorderRadius.circular(MBRadius.pill),
-                  onTap: controller.openCommandPalette,
-                  child: Container(
-                    height: 48,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: MBSpacing.md),
-                    decoration: BoxDecoration(
-                      color: MBColors.background,
-                      borderRadius: BorderRadius.circular(MBRadius.pill),
-                      border: Border.all(
-                        color: MBColors.border.withValues(alpha: 0.9),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.search_rounded,
-                          color: MBColors.textSecondary,
-                          size: 20,
-                        ),
-                        MBSpacing.w(MBSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            'Search pages, commands, routes...',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: MBTextStyles.bodyMedium.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        MBSpacing.w(MBSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: MBSpacing.sm,
-                            vertical: MBSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: MBColors.border.withValues(alpha: 0.9),
-                            ),
-                          ),
-                          child: Text(
-                            'Ctrl + K',
-                            style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              InkWell(
-                canRequestFocus: false,
-                borderRadius: BorderRadius.circular(MBRadius.pill),
-                onTap: () async {
-                  await sessionService.signOut();
-                  Get.offAllNamed(AdminWebRoutes.login);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: MBSpacing.md,
-                    vertical: MBSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: MBGradients.primaryGradient,
-                    borderRadius: BorderRadius.circular(MBRadius.pill),
-                  ),
-                  child: Text(
-                    'Logout',
-                    style: MBTextStyles.bodyMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                child: Text(
+                  label,
+                  style: MBTextStyles.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
+
+    if (collapsed) {
+      return Tooltip(
+        message: tooltip,
+        child: child,
+      );
+    }
+
+    return child;
   }
 }
 
@@ -922,8 +914,8 @@ class _CommandPaletteOverlayState extends State<_CommandPaletteOverlay> {
                                         borderRadius:
                                         BorderRadius.circular(12),
                                       ),
-                                      child: const Icon(
-                                        Icons.arrow_outward_rounded,
+                                      child: Icon(
+                                        item.icon,
                                         color: Colors.white,
                                         size: 20,
                                       ),
