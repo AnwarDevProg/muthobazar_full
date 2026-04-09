@@ -2,33 +2,51 @@ import 'dart:convert';
 
 // MB Banner Model
 // ---------------
-// Unified production-ready home banner model for:
+// Unified production-ready banner model for:
 // - hero sliders
 // - campaign banners
 // - section promo banners
-
+//
+// Target types:
+// - none
+// - product
+// - category
+// - brand
+// - route
+// - external
+//
+// Position examples:
+// - home_hero
+// - home_secondary
+// - home_strip
+// - category_top
+// - brand_top
+// - generic
 class MBBanner {
   final String id;
 
   final String titleEn;
   final String titleBn;
-
   final String subtitleEn;
   final String subtitleBn;
-
   final String buttonTextEn;
   final String buttonTextBn;
 
+  // Wide/desktop image
   final String imageUrl;
+
+  // Mobile-specific image
   final String mobileImageUrl;
 
-  /// none | product | category | brand | offer | route | external
+  // none | product | category | brand | route | external
   final String targetType;
   final String? targetId;
   final String? targetRoute;
   final String? externalUrl;
 
   final bool isActive;
+  final bool showOnHome;
+  final String position;
   final int sortOrder;
 
   final DateTime? startAt;
@@ -51,6 +69,8 @@ class MBBanner {
     this.targetRoute,
     this.externalUrl,
     this.isActive = true,
+    this.showOnHome = true,
+    this.position = 'home_hero',
     this.sortOrder = 0,
     this.startAt,
     this.endAt,
@@ -68,6 +88,10 @@ class MBBanner {
   }
 
   bool get isAvailable => isActive && isWithinSchedule;
+
+  bool get hasAction {
+    return targetType != 'none';
+  }
 
   MBBanner copyWith({
     String? id,
@@ -87,6 +111,8 @@ class MBBanner {
     String? externalUrl,
     bool clearExternalUrl = false,
     bool? isActive,
+    bool? showOnHome,
+    String? position,
     int? sortOrder,
     DateTime? startAt,
     bool clearStartAt = false,
@@ -110,6 +136,8 @@ class MBBanner {
       targetRoute: clearTargetRoute ? null : (targetRoute ?? this.targetRoute),
       externalUrl: clearExternalUrl ? null : (externalUrl ?? this.externalUrl),
       isActive: isActive ?? this.isActive,
+      showOnHome: showOnHome ?? this.showOnHome,
+      position: position ?? this.position,
       sortOrder: sortOrder ?? this.sortOrder,
       startAt: clearStartAt ? null : (startAt ?? this.startAt),
       endAt: clearEndAt ? null : (endAt ?? this.endAt),
@@ -119,7 +147,7 @@ class MBBanner {
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
+    return {
       'id': id,
       'titleEn': titleEn,
       'titleBn': titleBn,
@@ -134,6 +162,8 @@ class MBBanner {
       'targetRoute': targetRoute,
       'externalUrl': externalUrl,
       'isActive': isActive,
+      'showOnHome': showOnHome,
+      'position': position,
       'sortOrder': sortOrder,
       'startAt': startAt?.toIso8601String(),
       'endAt': endAt?.toIso8601String(),
@@ -142,7 +172,7 @@ class MBBanner {
     };
   }
 
-  factory MBBanner.fromMap(Map<String, dynamic>? map) {
+  factory MBBanner.fromMap(Map<dynamic, dynamic>? map) {
     if (map == null) return empty;
 
     return MBBanner(
@@ -159,7 +189,9 @@ class MBBanner {
       targetId: map['targetId']?.toString(),
       targetRoute: map['targetRoute']?.toString(),
       externalUrl: map['externalUrl']?.toString(),
-      isActive: map['isActive'] ?? true,
+      isActive: map['isActive'] is bool ? map['isActive'] as bool : true,
+      showOnHome: map['showOnHome'] is bool ? map['showOnHome'] as bool : true,
+      position: (map['position'] ?? 'home_hero').toString(),
       sortOrder: (map['sortOrder'] ?? 0) is int
           ? map['sortOrder'] as int
           : int.tryParse((map['sortOrder'] ?? '0').toString()) ?? 0,
@@ -185,5 +217,5 @@ class MBBanner {
   String toJson() => json.encode(toMap());
 
   factory MBBanner.fromJson(String source) =>
-      MBBanner.fromMap(json.decode(source) as Map<String, dynamic>);
+      MBBanner.fromMap(json.decode(source) as Map<dynamic, dynamic>);
 }

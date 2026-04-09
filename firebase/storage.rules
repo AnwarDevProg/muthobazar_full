@@ -25,6 +25,10 @@ service firebase.storage {
       return hasAdminPermissionDoc() && adminPermission().canManageBrands == true;
     }
 
+    function canManageBanners() {
+      return hasAdminPermissionDoc() && adminPermission().canManageBanners == true;
+    }
+
     match /profile_pictures/{userId}/{fileName} {
       allow read: if true;
       allow write: if signedIn() && request.auth.uid == userId;
@@ -42,7 +46,7 @@ service firebase.storage {
 
     match /banner_images/{bannerId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn();
+      allow write: if signedIn() && canManageBanners();
     }
 
     match /brand_images/{brandId}/{fileName} {

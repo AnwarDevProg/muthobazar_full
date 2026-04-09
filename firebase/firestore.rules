@@ -465,7 +465,15 @@ service cloud.firestore {
 
     match /brands/{brandId} {
       allow read: if true;
-      // Brand writes are also server-only now, aligned with categories.
+      // Brand writes are server-only.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      // Banner writes are server-only.
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -474,11 +482,6 @@ service cloud.firestore {
     // =========================================================
     // Marketing
     // =========================================================
-    match /banners/{bannerId} {
-      allow read: if true;
-      allow create, update, delete: if canManageBanners() || isSuperAdmin();
-    }
-
     match /offers/{offerId} {
       allow read: if true;
       allow create, update, delete: if canManageOffers() || isSuperAdmin();

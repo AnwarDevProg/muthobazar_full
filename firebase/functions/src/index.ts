@@ -27,4 +27,9 @@ export { updateBrand } from "./brands/update-brand";
 export { deleteBrand } from "./brands/delete-brand";
 export { setBrandActiveState } from "./brands/set-brand-active-state";
 
+export { createBanner } from "./banners/create-banner";
+export { updateBanner } from "./banners/update-banner";
+export { deleteBanner } from "./banners/delete-banner";
+export { setBannerActiveState } from "./banners/set-banner-active-state";
+
 export { logAdminAction } from "./admin/log-admin-action";

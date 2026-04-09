@@ -1,156 +1,200 @@
-import 'package:admin_web/app/shell/admin_web_shell.dart';
-import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
-import 'package:admin_web/features/banners/controllers/admin_banner_controller.dart';
-import 'package:admin_web/features/banners/widgets/admin_banner_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-class AdminBannersPage extends StatelessWidget {
+import '../controllers/admin_banner_controller.dart';
+import '../widgets/admin_banner_form_dialog.dart';
+
+class AdminBannersPage extends GetView<AdminBannerController> {
   const AdminBannersPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final AdminAccessController accessController =
-    Get.find<AdminAccessController>();
-    final AdminBannerController bannerController =
-    Get.find<AdminBannerController>();
-
-    return AdminWebShell(
-      child: Obx(() {
-        if (!accessController.canManageBanners) {
-          return const _NoBannerPermissionState();
-        }
-
-        if (bannerController.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-
-        return Column(
-          children: [
-            const _BannersHeader(),
-            Expanded(
-              child: bannerController.filteredBanners.isEmpty
-                  ? const _EmptyBannersState()
-                  : RefreshIndicator(
-                onRefresh: bannerController.refreshBanners,
-                child: _BannersTable(
-                  banners: bannerController.filteredBanners,
-                ),
-              ),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-}
-
-class _BannersHeader extends StatelessWidget {
-  const _BannersHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final AdminBannerController controller = Get.find<AdminBannerController>();
-
-    return Container(
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.85),
-          ),
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
+    return Scaffold(
+      backgroundColor: MBColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(MBSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildHeader(context),
+              MBSpacing.h(MBSpacing.lg),
               Expanded(
-                child: Text(
-                  'Banner Management',
-                  style: MBTextStyles.sectionTitle.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Get.dialog(
-                    const AdminBannerFormDialog(),
-                    barrierDismissible: false,
+                child: Obx(() {
+                  final bool loading = controller.isLoading.value;
+                  final String? error = controller.operationError.value;
+                  final List<MBBanner> items = controller.filteredBanners;
+                  final List<MBBanner> allItems = controller.banners;
+
+                  if (loading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      _buildTopCard(context, allItems),
+                      if ((error ?? '').trim().isNotEmpty) ...[
+                        MBSpacing.h(MBSpacing.lg),
+                        MBAdminFormErrorBanner(message: error!),
+                      ],
+                      MBSpacing.h(MBSpacing.lg),
+                      Expanded(
+                        child: items.isEmpty
+                            ? _buildEmptyState()
+                            : _buildBannerGrid(items),
+                      ),
+                    ],
                   );
-                },
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Banner'),
+                }),
               ),
             ],
           ),
-          MBSpacing.h(MBSpacing.md),
-          Row(
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 3,
+              Text(
+                'Banner Management',
+                style: MBTextStyles.pageTitle.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              MBSpacing.h(MBSpacing.xs),
+              Text(
+                'Manage wide and mobile banners, target behavior, scheduling, order, and home placement.',
+                style: MBTextStyles.body.copyWith(
+                  color: MBColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: () => _openFormDialog(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Create Banner'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopCard(BuildContext context, List<MBBanner> items) {
+    final int total = items.length;
+    final int active = items.where((e) => e.isActive).length;
+    final int home = items.where((e) => e.showOnHome).length;
+    final int scheduled = items.where((e) => e.startAt != null || e.endAt != null).length;
+
+    return MBAdminFormSectionCard(
+      title: 'Search & filters',
+      subtitle: 'Filter by text, status, target type, and see quick banner stats.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double gap = MBSpacing.sm;
+              final double width = constraints.maxWidth;
+              final double itemWidth = width >= 1000
+                  ? (width - (gap * 3)) / 4
+                  : width >= 720
+                  ? (width - gap) / 2
+                  : width;
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  _summaryChipCard('Total', '$total', itemWidth),
+                  _summaryChipCard('Active', '$active', itemWidth),
+                  _summaryChipCard('Show on home', '$home', itemWidth),
+                  _summaryChipCard('Scheduled', '$scheduled', itemWidth),
+                ],
+              );
+            },
+          ),
+          MBSpacing.h(MBSpacing.lg),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: 260,
                 child: TextField(
                   onChanged: controller.setSearchQuery,
                   decoration: const InputDecoration(
-                    hintText: 'Search banners...',
+                    labelText: 'Search banners',
+                    hintText: 'title, subtitle, route, URL',
                     prefixIcon: Icon(Icons.search_rounded),
                     border: OutlineInputBorder(),
                   ),
                 ),
               ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: controller.statusFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                    DropdownMenuItem(
-                      value: 'scheduledOut',
-                      child: Text('Out of Schedule'),
+              SizedBox(
+                width: 150,
+                child: Obx(
+                      () => DropdownButtonFormField<String>(
+                    initialValue: controller.statusFilter.value,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
                     ),
-                  ],
-                  onChanged: (value) =>
-                      controller.setStatusFilter(value ?? 'all'),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: controller.targetTypeFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Target Type',
-                    border: OutlineInputBorder(),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                    ],
+                    onChanged: (value) {
+                      controller.setStatusFilter(value ?? 'all');
+                    },
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(value: 'none', child: Text('None')),
-                    DropdownMenuItem(value: 'product', child: Text('Product')),
-                    DropdownMenuItem(value: 'category', child: Text('Category')),
-                    DropdownMenuItem(value: 'brand', child: Text('Brand')),
-                    DropdownMenuItem(value: 'offer', child: Text('Offer')),
-                    DropdownMenuItem(value: 'route', child: Text('Route')),
-                    DropdownMenuItem(value: 'external', child: Text('External')),
-                  ],
-                  onChanged: (value) =>
-                      controller.setTargetTypeFilter(value ?? 'all'),
                 ),
               ),
-              MBSpacing.w(MBSpacing.md),
-              OutlinedButton(
+              SizedBox(
+                width: 180,
+                child: Obx(
+                      () => DropdownButtonFormField<String>(
+                    initialValue: controller.targetTypeFilter.value,
+                    decoration: const InputDecoration(
+                      labelText: 'Target Type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(value: 'none', child: Text('No action')),
+                      DropdownMenuItem(value: 'product', child: Text('Product')),
+                      DropdownMenuItem(value: 'category', child: Text('Category')),
+                      DropdownMenuItem(value: 'brand', child: Text('Brand')),
+                      DropdownMenuItem(value: 'route', child: Text('Route')),
+                      DropdownMenuItem(value: 'external', child: Text('Custom URL')),
+                    ],
+                    onChanged: (value) {
+                      controller.setTargetTypeFilter(value ?? 'all');
+                    },
+                  ),
+                ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: controller.refreshBanners,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
+              ),
+              OutlinedButton.icon(
                 onPressed: controller.resetFilters,
-                child: const Text('Reset'),
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: const Text('Reset'),
               ),
             ],
           ),
@@ -158,330 +202,357 @@ class _BannersHeader extends StatelessWidget {
       ),
     );
   }
-}
 
-class _BannersTable extends StatelessWidget {
-  const _BannersTable({
-    required this.banners,
-  });
-
-  final List<MBBanner> banners;
-
-  @override
-  Widget build(BuildContext context) {
-    final AdminBannerController controller = Get.find<AdminBannerController>();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(MBRadius.lg),
-          side: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.9),
-          ),
-        ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 24,
-            headingRowHeight: 56,
-            dataRowMinHeight: 84,
-            dataRowMaxHeight: 96,
-            columns: const [
-              DataColumn(label: Text('Banner')),
-              DataColumn(label: Text('Target')),
-              DataColumn(label: Text('Schedule')),
-              DataColumn(label: Text('Sort')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: banners.map((banner) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    SizedBox(
-                      width: 360,
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(MBRadius.md),
-                            child: banner.imageUrl.trim().isNotEmpty
-                                ? Image.network(
-                              banner.imageUrl,
-                              width: 120,
-                              height: 64,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 120,
-                                height: 64,
-                                color: MBColors.background,
-                                child: const Icon(
-                                  Icons.broken_image_outlined,
-                                ),
-                              ),
-                            )
-                                : Container(
-                              width: 120,
-                              height: 64,
-                              color: MBColors.background,
-                              child: const Icon(
-                                Icons.image_outlined,
-                              ),
-                            ),
-                          ),
-                          MBSpacing.w(MBSpacing.md),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  banner.titleEn.isEmpty
-                                      ? 'Untitled Banner'
-                                      : banner.titleEn,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: MBTextStyles.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (banner.titleBn.isNotEmpty) ...[
-                                  MBSpacing.h(MBSpacing.xxxs),
-                                  Text(
-                                    banner.titleBn,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: MBTextStyles.caption.copyWith(
-                                      color: MBColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                                if (banner.subtitleEn.isNotEmpty) ...[
-                                  MBSpacing.h(MBSpacing.xxxs),
-                                  Text(
-                                    banner.subtitleEn,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: MBTextStyles.caption.copyWith(
-                                      color: MBColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      '${banner.targetType}${banner.targetId != null ? ' • ${banner.targetId}' : ''}',
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      '${banner.startAt?.toString().split(".").first ?? "-"}\n${banner.endAt?.toString().split(".").first ?? "-"}',
-                    ),
-                  ),
-                  DataCell(Text('${banner.sortOrder}')),
-                  DataCell(
-                    _BannerStatusPill(
-                      label: banner.isAvailable ? 'Active' : 'Inactive',
-                      active: banner.isAvailable,
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      children: [
-                        Switch(
-                          value: banner.isActive,
-                          onChanged: (_) => controller.toggleBannerActive(banner),
-                        ),
-                        IconButton(
-                          tooltip: 'Edit banner',
-                          onPressed: () {
-                            Get.dialog(
-                              AdminBannerFormDialog(banner: banner),
-                              barrierDismissible: false,
-                            );
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete banner',
-                          onPressed: () async {
-                            final bool? confirmed = await Get.dialog<bool>(
-                              AlertDialog(
-                                title: const Text('Delete Banner'),
-                                content: Text(
-                                  'Are you sure you want to delete "${banner.titleEn.isEmpty ? 'this banner' : banner.titleEn}"?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(result: false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Get.back(result: true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirmed == true) {
-                              await controller.deleteBanner(banner.id);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: MBColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BannerStatusPill extends StatelessWidget {
-  const _BannerStatusPill({
-    required this.label,
-    required this.active,
-  });
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _summaryChipCard(String label, String value, double width) {
     return Container(
+      width: width,
       padding: const EdgeInsets.symmetric(
         horizontal: MBSpacing.md,
-        vertical: MBSpacing.xs,
+        vertical: MBSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: active
-            ? MBColors.success.withValues(alpha: 0.12)
-            : MBColors.textMuted.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(MBRadius.pill),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        border: Border.all(color: MBColors.border.withValues(alpha: 0.90)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: MBTextStyles.caption.copyWith(
+                color: MBColors.textSecondary,
+              ),
+            ),
+          ),
+          MBSpacing.w(MBSpacing.sm),
+          Text(
+            value,
+            style: MBTextStyles.body.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        border: Border.all(color: MBColors.border.withValues(alpha: 0.90)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(MBSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.photo_library_outlined,
+              size: 48,
+              color: MBColors.textMuted,
+            ),
+            MBSpacing.h(MBSpacing.md),
+            Text(
+              'No banners found',
+              style: MBTextStyles.sectionTitle.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            MBSpacing.h(MBSpacing.sm),
+            Text(
+              'Try changing your filters or create a new banner.',
+              style: MBTextStyles.body.copyWith(
+                color: MBColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerGrid(List<MBBanner> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = 1;
+        if (constraints.maxWidth >= 1024) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth >= 780) {
+          crossAxisCount = 3;
+        } else if (constraints.maxWidth >= 520) {
+          crossAxisCount = 2;
+        }
+
+        return GridView.builder(
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            mainAxisExtent: 408,
+          ),
+          itemBuilder: (context, index) {
+            final MBBanner banner = items[index];
+            return _buildBannerCard(context, banner);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBannerCard(BuildContext context, MBBanner banner) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        border: Border.all(color: MBColors.border.withValues(alpha: 0.90)),
+        boxShadow: [
+          BoxShadow(
+            color: MBColors.shadow.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(MBRadius.xl),
+            ),
+            child: AspectRatio(
+              aspectRatio: 16 / 7,
+              child: banner.imageUrl.trim().isEmpty
+                  ? Container(
+                color: MBColors.background,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.image_outlined,
+                  size: 36,
+                  color: MBColors.textMuted,
+                ),
+              )
+                  : Image.network(
+                banner.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: MBColors.background,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 36,
+                    color: MBColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(MBSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    banner.titleEn.trim().isEmpty ? 'Untitled Banner' : banner.titleEn,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: MBTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  MBSpacing.h(MBSpacing.xs),
+                  Text(
+                    banner.subtitleEn.trim().isEmpty
+                        ? 'No subtitle provided.'
+                        : banner.subtitleEn,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: MBTextStyles.caption.copyWith(
+                      color: MBColors.textSecondary,
+                    ),
+                  ),
+                  MBSpacing.h(MBSpacing.sm),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _tag(banner.isActive ? 'Active' : 'Inactive'),
+                      _tag(banner.showOnHome ? 'Home' : 'Hidden'),
+                      _tag('Sort: ${banner.sortOrder}'),
+                    ],
+                  ),
+                  MBSpacing.h(MBSpacing.sm),
+                  _infoLine('Target', _prettyTargetType(banner.targetType)),
+                  _infoLine('Position', banner.position),
+                  _infoLine('Schedule', _scheduleText(banner)),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 40,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _openFormDialog(context, banner: banner),
+                            icon: const Icon(Icons.edit_outlined, size: 16),
+                            label: const Text('Edit'),
+                          ),
+                        ),
+                      ),
+                      MBSpacing.w(MBSpacing.xs),
+                      Expanded(
+                        child: SizedBox(
+                          height: 40,
+                          child: FilledButton.tonalIcon(
+                            onPressed: () => _toggleActive(banner),
+                            icon: Icon(
+                              banner.isActive
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 16,
+                            ),
+                            label: Text(banner.isActive ? 'Disable' : 'Enable'),
+                          ),
+                        ),
+                      ),
+                      MBSpacing.w(MBSpacing.xs),
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: IconButton(
+                          tooltip: 'Delete',
+                          onPressed: () => _deleteBanner(context, banner),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: MBSpacing.sm,
+        vertical: 5,
+      ),
+      decoration: BoxDecoration(
+        color: MBColors.background,
+        borderRadius: BorderRadius.circular(MBRadius.lg),
+        border: Border.all(color: MBColors.border.withValues(alpha: 0.90)),
       ),
       child: Text(
-        label,
+        text,
         style: MBTextStyles.caption.copyWith(
-          color: active ? MBColors.success : MBColors.textSecondary,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
-}
 
-class _NoBannerPermissionState extends StatelessWidget {
-  const _NoBannerPermissionState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 480,
-        padding: const EdgeInsets.all(MBSpacing.xl),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: MBColors.shadow.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.lock_outline_rounded,
-              size: 44,
-              color: MBColors.error,
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              'Permission Required',
-              style: MBTextStyles.sectionTitle.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.xs),
-            Text(
-              'You do not have permission to manage banners.',
-              textAlign: TextAlign.center,
-              style: MBTextStyles.body.copyWith(
+  Widget _infoLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: MBSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Text(
+              label,
+              style: MBTextStyles.caption.copyWith(
                 color: MBColors.textSecondary,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: Text(
+              value.trim().isEmpty ? '—' : value.trim(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: MBTextStyles.caption,
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _EmptyBannersState extends StatelessWidget {
-  const _EmptyBannersState();
+  String _prettyTargetType(String value) {
+    switch (value.trim().toLowerCase()) {
+      case 'product':
+        return 'Product';
+      case 'category':
+        return 'Category';
+      case 'brand':
+        return 'Brand';
+      case 'route':
+        return 'Route';
+      case 'external':
+        return 'Custom URL';
+      default:
+        return 'No action';
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 460,
-        padding: const EdgeInsets.all(MBSpacing.xl),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: MBColors.shadow.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+  String _scheduleText(MBBanner banner) {
+    final String start = banner.startAt?.toIso8601String() ?? '—';
+    final String end = banner.endAt?.toIso8601String() ?? '—';
+    return '$start → $end';
+  }
+
+  Future<void> _openFormDialog(
+      BuildContext context, {
+        MBBanner? banner,
+      }) async {
+    await Get.dialog<bool>(
+      AdminBannerFormDialog(banner: banner),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<void> _toggleActive(MBBanner banner) async {
+    await controller.toggleBannerActive(banner);
+  }
+
+  Future<void> _deleteBanner(BuildContext context, MBBanner banner) async {
+    final bool? confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Delete Banner'),
+        content: Text(
+          'Are you sure you want to delete "${banner.titleEn.trim().isEmpty ? 'this banner' : banner.titleEn}"?',
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.image_outlined,
-              size: 44,
-              color: MBColors.primaryOrange,
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              'No Banners Found',
-              style: MBTextStyles.sectionTitle.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.xs),
-            Text(
-              'Create banners for homepage campaigns and promotions.',
-              textAlign: TextAlign.center,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed == true) {
+      await controller.deleteBanner(banner.id);
+    }
   }
 }
