@@ -188,7 +188,8 @@ class AdminBrandController extends GetxController {
       clearOperationError();
       return await _repository.slugExists(
         slug: normalizeSlug(slug),
-        excludeBrandId: excludeBrandId,
+        excludeId: excludeBrandId,
+        timeoutMessage: 'Timed out while checking brand slug uniqueness.',
       );
     } catch (error) {
       _setOperationError(error);

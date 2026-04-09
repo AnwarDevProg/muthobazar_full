@@ -83,7 +83,6 @@ class AdminBrandRepository extends MBAdminCallableRepositoryBase<MBBrand> {
     );
   }
 
-
   Future<bool> sortExists({
     required int sortOrder,
     String? excludeBrandId,
@@ -141,7 +140,7 @@ class AdminBrandRepository extends MBAdminCallableRepositoryBase<MBBrand> {
       );
 
       final Map<String, dynamic> data =
-      Map<String, dynamic>.from(result.data ?? const <String, dynamic>{});
+      Map<String, dynamic>.from(result.data);
       final String brandId = (data['brandId'] ?? '').toString().trim();
       if (brandId.isEmpty) {
         throw Exception('Brand was created but no brandId was returned.');
