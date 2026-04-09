@@ -7,13 +7,13 @@ setGlobalOptions({
   region: "asia-south1",
 });
 
-export { checkPhoneAuthEligibility } from "./check-phone-auth-eligibility";
+export { checkPhoneAuthEligibility } from "./auth/check-phone-auth-eligibility";
 
 export {
   onProductCreatedUpdateCategoryCount,
   onProductUpdatedUpdateCategoryCount,
   onProductDeletedUpdateCategoryCount,
-} from "./category-product-count";
+} from "./categories/category-product-count";
 
 export { createCategory } from "./categories/create-category";
 export { updateCategory } from "./categories/update-category";
@@ -23,3 +23,9 @@ export { reorderCategoryGroup } from "./categories/reorder-categories";
 export { fixCategoryGroupSort } from "./categories/fix-category-group-sort";
 
 export { logAdminAction } from "./admin/log-admin-action";
+
+
+export { createBrand } from "./brands/create-brand";
+export { updateBrand } from "./brands/update-brand";
+export { deleteBrand } from "./brands/delete-brand";
+export { setBrandActiveState } from "./brands/set-brand-active-state";

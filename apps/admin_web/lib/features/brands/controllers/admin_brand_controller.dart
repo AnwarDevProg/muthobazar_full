@@ -1,17 +1,13 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
+import 'package:shared_core/media/mb_image_pipeline_service.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'package:shared_services/shared_services.dart';
 import 'package:shared_ui/shared_ui.dart';
-
-import '../../admin_access/controllers/admin_access_controller.dart';
 
 class AdminBrandController extends GetxController {
   final AdminBrandRepository _repository = AdminBrandRepository.instance;
-  final AdminAccessController _accessController =
-  Get.find<AdminAccessController>();
 
   final RxList<MBBrand> brands = <MBBrand>[].obs;
   final RxList<MBBrand> filteredBrands = <MBBrand>[].obs;
@@ -19,13 +15,24 @@ class AdminBrandController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxBool isSaving = false.obs;
   final RxBool isDeleting = false.obs;
+  final RxBool isPickingImage = false.obs;
+  final RxBool isResizingImage = false.obs;
 
   final RxString searchQuery = ''.obs;
   final RxString statusFilter = 'all'.obs;
   final RxString featuredFilter = 'all'.obs;
   final RxString homeFilter = 'all'.obs;
 
+  final RxnString operationError = RxnString();
+
   StreamSubscription<List<MBBrand>>? _brandsSubscription;
+
+  bool get isAnyBusy =>
+      isLoading.value ||
+          isSaving.value ||
+          isDeleting.value ||
+          isPickingImage.value ||
+          isResizingImage.value;
 
   @override
   void onInit() {
@@ -33,9 +40,18 @@ class AdminBrandController extends GetxController {
     _listenBrands();
   }
 
+  void clearOperationError() {
+    operationError.value = null;
+  }
+
+  void _setOperationError(Object error) {
+    operationError.value = error.toString();
+  }
+
   void _listenBrands() {
     _brandsSubscription?.cancel();
     isLoading.value = true;
+    clearOperationError();
 
     _brandsSubscription = _repository.watchBrands().listen(
           (items) {
@@ -43,11 +59,13 @@ class AdminBrandController extends GetxController {
         applyFilters();
         isLoading.value = false;
       },
-      onError: (_) {
+      onError: (error) {
+        _setOperationError(error);
         isLoading.value = false;
+
         MBNotification.error(
           title: 'Error',
-          message: 'Failed to load brands.',
+          message: error.toString(),
         );
       },
     );
@@ -56,13 +74,17 @@ class AdminBrandController extends GetxController {
   Future<void> refreshBrands() async {
     try {
       isLoading.value = true;
+      clearOperationError();
+
       final items = await _repository.fetchBrandsOnce();
       brands.assignAll(items);
       applyFilters();
-    } catch (_) {
+    } catch (e) {
+      _setOperationError(e);
+
       MBNotification.error(
         title: 'Error',
-        message: 'Failed to refresh brands.',
+        message: e.toString(),
       );
     } finally {
       isLoading.value = false;
@@ -138,109 +160,261 @@ class AdminBrandController extends GetxController {
     filteredBrands.assignAll(result);
   }
 
-  Future<void> createBrand(MBBrand brand) async {
-    if (isSaving.value) return;
+  String normalizeSlug(String value) {
+    return value
+        .toLowerCase()
+        .trim()
+        .replaceAll('&', ' and ')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '')
+        .replaceAll(RegExp(r'-{2,}'), '-');
+  }
+
+  Future<int> suggestSortOrder({
+    String? excludeBrandId,
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.suggestSortOrder(
+        excludeBrandId: excludeBrandId,
+      );
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    }
+  }
+
+  Future<bool> slugExists({
+    required String slug,
+    String? excludeBrandId,
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.slugExists(
+        slug: normalizeSlug(slug),
+        excludeBrandId: excludeBrandId,
+      );
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    }
+  }
+
+  Future<bool> sortExists({
+    required int sortOrder,
+    String? excludeBrandId,
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.sortExists(
+        sortOrder: sortOrder,
+        excludeBrandId: excludeBrandId,
+      );
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    }
+  }
+
+  Future<String?> getDeleteBlockReason({
+    required String brandId,
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.getDeleteBlockReason(brandId);
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    }
+  }
+
+  Future<MBOriginalPickedImage?> pickOriginalImage() async {
+    if (isSaving.value || isDeleting.value || isPickingImage.value) {
+      return null;
+    }
+
+    isPickingImage.value = true;
+    clearOperationError();
 
     try {
-      isSaving.value = true;
-      await _repository.createBrand(brand);
-      /// Insert actual logger during development
-      /// await AdminActivityLogger.log(      );
+      final result = await MBImagePipelineService.instance.pickOriginalImage();
+      return result;
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    } finally {
+      isPickingImage.value = false;
+    }
+  }
 
-      MBNotification.success(
-        title: 'Success',
-        message: 'Brand created successfully.',
+  Future<MBPreparedImageSet> resizeSelectedImage({
+    required MBOriginalPickedImage original,
+    required int fullMaxWidth,
+    required int fullMaxHeight,
+    required int fullJpegQuality,
+    required int thumbSize,
+    required int thumbJpegQuality,
+    bool requestSquareCrop = true,
+  }) async {
+    if (isSaving.value || isDeleting.value || isResizingImage.value) {
+      throw Exception('Another brand operation is already running.');
+    }
+
+    isResizingImage.value = true;
+    clearOperationError();
+
+    try {
+      final result = await MBImagePipelineService.instance
+          .prepareImageSetFromOriginal(
+        original: original,
+        fullMaxWidth: fullMaxWidth,
+        fullMaxHeight: fullMaxHeight,
+        fullJpegQuality: fullJpegQuality,
+        thumbSize: thumbSize,
+        thumbJpegQuality: thumbJpegQuality,
+        requestSquareCrop: requestSquareCrop,
       );
-    } catch (_) {
+
+      return result;
+    } catch (e) {
+      _setOperationError(e);
+      rethrow;
+    } finally {
+      isResizingImage.value = false;
+    }
+  }
+
+  Future<void> saveBrand({
+    required MBBrand brand,
+    required bool isEdit,
+  }) async {
+    if (isSaving.value) return;
+
+    isSaving.value = true;
+    clearOperationError();
+
+    try {
+      if (isEdit) {
+        await _repository.updateBrand(brand);
+        MBNotification.success(
+          title: 'Success',
+          message: 'Brand updated successfully.',
+        );
+      } else {
+        await _repository.createBrand(brand);
+        MBNotification.success(
+          title: 'Success',
+          message: 'Brand created successfully.',
+        );
+      }
+    } catch (e) {
+      _setOperationError(e);
+
       MBNotification.error(
         title: 'Error',
-        message: 'Failed to create brand.',
+        message: e.toString(),
       );
+
+      rethrow;
     } finally {
       isSaving.value = false;
     }
+  }
+
+  Future<void> createBrand(MBBrand brand) async {
+    await saveBrand(
+      brand: brand,
+      isEdit: false,
+    );
   }
 
   Future<void> updateBrand(MBBrand brand) async {
-    if (isSaving.value) return;
-
-    try {
-      isSaving.value = true;
-
-      final before = brands.firstWhereOrNull((e) => e.id == brand.id);
-
-      await _repository.updateBrand(brand);
-
-      /// Insert actual logger during development
-      /// await AdminActivityLogger.log(      );
-
-      MBNotification.success(
-        title: 'Success',
-        message: 'Brand updated successfully.',
-      );
-    } catch (_) {
-      MBNotification.error(
-        title: 'Error',
-        message: 'Failed to update brand.',
-      );
-    } finally {
-      isSaving.value = false;
-    }
+    await saveBrand(
+      brand: brand,
+      isEdit: true,
+    );
   }
 
-  Future<void> deleteBrand(String brandId) async {
-    if (isDeleting.value) return;
+  Future<bool> deleteBrand(
+      String brandId, {
+        String? reason,
+      }) async {
+    if (isDeleting.value) return false;
+
+    isDeleting.value = true;
+    clearOperationError();
 
     try {
-      isDeleting.value = true;
+      final blockReason = await _repository.getDeleteBlockReason(brandId);
+      if (blockReason != null && blockReason.trim().isNotEmpty) {
+        throw Exception(blockReason);
+      }
 
-      final before = brands.firstWhereOrNull((e) => e.id == brandId);
-
-      await _repository.deleteBrand(brandId);
-
-      /// Insert actual logger during development
-      /// await AdminActivityLogger.log(      );
+      await _repository.deleteBrand(
+        brandId,
+        reason: reason,
+      );
 
       MBNotification.success(
         title: 'Success',
         message: 'Brand deleted successfully.',
       );
-    } catch (_) {
+
+      return true;
+    } catch (e) {
+      _setOperationError(e);
+
       MBNotification.error(
         title: 'Error',
-        message: 'Failed to delete brand.',
+        message: e.toString(),
       );
+
+      return false;
     } finally {
       isDeleting.value = false;
     }
   }
 
-  Future<void> toggleBrandActive(MBBrand brand) async {
+  Future<bool> deleteBrandModel({
+    required MBBrand brand,
+    String? reason,
+  }) async {
+    return deleteBrand(
+      brand.id,
+      reason: reason,
+    );
+  }
+
+  Future<bool> toggleBrandActive(
+      MBBrand brand, {
+        String? reason,
+      }) async {
+    clearOperationError();
+
     try {
-      final updated = brand.copyWith(
-        isActive: !brand.isActive,
-        updatedAt: DateTime.now(),
-      );
+      final bool newState = !brand.isActive;
 
       await _repository.setBrandActiveState(
         brandId: brand.id,
-        isActive: updated.isActive,
+        isActive: newState,
+        reason: reason,
       );
-
-      /// Insert actual logger during development
-      /// await AdminActivityLogger.log(      );
 
       MBNotification.success(
         title: 'Success',
-        message: updated.isActive
-            ? 'Brand activated.'
-            : 'Brand deactivated.',
+        message: newState ? 'Brand activated.' : 'Brand deactivated.',
       );
-    } catch (_) {
+
+      return true;
+    } catch (e) {
+      _setOperationError(e);
+
       MBNotification.error(
         title: 'Error',
-        message: 'Failed to update brand state.',
+        message: e.toString(),
       );
+
+      return false;
     }
   }
 
