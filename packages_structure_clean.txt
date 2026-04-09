@@ -106,6 +106,10 @@ C.
 +---shared_repositories
 |   +---lib
 |   |   +---admin
+|   |   |   +---core
+|   |   |   |   +---mb_admin_callable_repository_base.dart
+|   |   |   |   +---mb_admin_repository_errors.dart
+|   |   |   |   \---mb_admin_slug_utils.dart
 |   |   |   +---purchases
 |   |   |   |   \---mobile_admin_purchase_repository.dart
 |   |   |   +---admin_access_repository.dart
@@ -186,6 +190,11 @@ C.
 |   |   \---placeholders
 |   |       \---.gitkeep
 |   +---lib
+|   |   +---admin
+|   |   |   \---forms
+|   |   |       +---mb_admin_form_shell_widgets.dart
+|   |   |       +---mb_admin_image_form_panel.dart
+|   |   |       \---mb_admin_image_resize_presets.dart
 |   |   +---extensions
 |   |   +---layout
 |   |   |   +---mb_app_layout.dart

@@ -8,13 +8,37 @@ C.
 |   |   +---admin
 |   |   |   +---audit-log-core.js
 |   |   |   \---log-admin-action.js
+|   |   +---auth
+|   |   |   \---check-phone-auth-eligibility.js
+|   |   +---banners
+|   |   |   +---create_banner.js
+|   |   |   +---create_banner_shared_clean.js
+|   |   |   +---create-banner.js
+|   |   |   +---delete_banner.js
+|   |   |   +---delete_banner_shared_clean.js
+|   |   |   +---delete-banner.js
+|   |   |   +---set_banner_active_state.js
+|   |   |   +---set_banner_active_state_shared_clean.js
+|   |   |   +---set-banner-active-state.js
+|   |   |   +---update_banner.js
+|   |   |   +---update_banner_shared_clean.js
+|   |   |   \---update-banner.js
+|   |   +---brands
+|   |   |   +---create-brand.js
+|   |   |   +---delete-brand.js
+|   |   |   +---set-brand-active-state.js
+|   |   |   \---update-brand.js
 |   |   +---categories
+|   |   |   +---category-product-count.js
 |   |   |   +---create-category.js
 |   |   |   +---delete-category.js
 |   |   |   +---fix-category-group-sort.js
 |   |   |   +---reorder-categories.js
 |   |   |   +---set-category-active-state.js
 |   |   |   \---update-category.js
+|   |   +---utils
+|   |   |   +---callable_parsers.js
+|   |   |   \---callable-parsers.js
 |   |   +---category-product-count.js
 |   |   +---check-phone-auth-eligibility.js
 |   |   \---index.js
@@ -25,6 +49,11 @@ C.
 |   |   |   \---previous activity function.md
 |   |   +---auth
 |   |   |   \---check-phone-auth-eligibility.ts
+|   |   +---banners
+|   |   |   +---create-banner.ts
+|   |   |   +---delete-banner.ts
+|   |   |   +---set-banner-active-state.ts
+|   |   |   \---update-banner.ts
 |   |   +---brands
 |   |   |   +---create-brand.ts
 |   |   |   +---delete-brand.ts
@@ -47,6 +76,7 @@ C.
 |   |   +---services
 |   |   +---support
 |   |   +---utils
+|   |   |   \---callable-parsers.ts
 |   |   +---workflows
 |   |   \---index.ts
 |   +---.eslintrc.js
