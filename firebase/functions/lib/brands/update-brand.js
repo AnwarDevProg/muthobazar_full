@@ -33,47 +33,48 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateCategory = void 0;
+exports.updateBrand = void 0;
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const audit_log_core_1 = require("../admin/audit-log-core");
 const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
-function normalizeCategoryPayload(input) {
-    const raw = (0, callable_parsers_1.requireObjectRecord)(input, "category");
+function normalizeBrandPayload(input) {
+    const raw = (0, callable_parsers_1.requireObjectRecord)(input, "brand");
     const nameEn = (0, callable_parsers_1.asTrimmedString)(raw.nameEn);
     const nameBn = (0, callable_parsers_1.asTrimmedString)(raw.nameBn);
     const descriptionEn = (0, callable_parsers_1.asTrimmedString)(raw.descriptionEn);
     const descriptionBn = (0, callable_parsers_1.asTrimmedString)(raw.descriptionBn);
     const imageUrl = (0, callable_parsers_1.asTrimmedString)(raw.imageUrl);
-    const iconUrl = (0, callable_parsers_1.asTrimmedString)(raw.iconUrl);
+    const logoUrl = (0, callable_parsers_1.asTrimmedString)(raw.logoUrl);
     const imagePath = (0, callable_parsers_1.asTrimmedString)(raw.imagePath);
     const thumbPath = (0, callable_parsers_1.asTrimmedString)(raw.thumbPath);
-    const parentId = (0, callable_parsers_1.normalizeNullableId)(raw.parentId);
-    (0, callable_parsers_1.requireNonEmpty)(nameEn, "category.nameEn");
+    (0, callable_parsers_1.requireNonEmpty)(nameEn, "brand.nameEn");
     const normalizedSlug = (0, callable_parsers_1.slugify)((0, callable_parsers_1.asTrimmedString)(raw.slug).length > 0 ? (0, callable_parsers_1.asTrimmedString)(raw.slug) : nameEn);
-    (0, callable_parsers_1.requireNonEmpty)(normalizedSlug, "category.slug");
+    (0, callable_parsers_1.requireNonEmpty)(normalizedSlug, "brand.slug");
     const sortOrder = (0, callable_parsers_1.asInt)(raw.sortOrder, 0);
-    (0, callable_parsers_1.requireNonNegativeInt)(sortOrder, "category.sortOrder");
+    (0, callable_parsers_1.requireNonNegativeInt)(sortOrder, "brand.sortOrder");
+    if (imageUrl.length === 0 && logoUrl.length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "brand.imageUrl or brand.logoUrl is required.");
+    }
     return {
         nameEn,
         nameBn,
         descriptionEn,
         descriptionBn,
         imageUrl,
-        iconUrl,
+        logoUrl,
         imagePath,
         thumbPath,
         slug: normalizedSlug,
-        parentId,
         isFeatured: (0, callable_parsers_1.asBool)(raw.isFeatured, false),
         showOnHome: (0, callable_parsers_1.asBool)(raw.showOnHome, false),
         isActive: (0, callable_parsers_1.asBool)(raw.isActive, true),
         sortOrder,
     };
 }
-function parseExistingCategory(doc) {
+function parseExistingBrand(doc) {
     const data = doc.data() ?? {};
     return {
         id: doc.id,
@@ -82,12 +83,10 @@ function parseExistingCategory(doc) {
         descriptionEn: (0, callable_parsers_1.asTrimmedString)(data.descriptionEn),
         descriptionBn: (0, callable_parsers_1.asTrimmedString)(data.descriptionBn),
         imageUrl: (0, callable_parsers_1.asTrimmedString)(data.imageUrl),
-        iconUrl: (0, callable_parsers_1.asTrimmedString)(data.iconUrl),
+        logoUrl: (0, callable_parsers_1.asTrimmedString)(data.logoUrl),
         imagePath: (0, callable_parsers_1.asTrimmedString)(data.imagePath),
         thumbPath: (0, callable_parsers_1.asTrimmedString)(data.thumbPath),
         slug: (0, callable_parsers_1.asTrimmedString)(data.slug).toLowerCase(),
-        parentId: (0, callable_parsers_1.asTrimmedString)(data.parentId),
-        groupId: (0, callable_parsers_1.asTrimmedString)(data.groupId),
         isFeatured: (0, callable_parsers_1.asBool)(data.isFeatured, false),
         showOnHome: (0, callable_parsers_1.asBool)(data.showOnHome, false),
         isActive: (0, callable_parsers_1.asBool)(data.isActive, true),
@@ -97,19 +96,17 @@ function parseExistingCategory(doc) {
         updatedAt: data.updatedAt ?? null,
     };
 }
-function buildUpdatedCategoryDoc(payload, productsCount) {
+function buildUpdatedBrandDoc(payload, productsCount) {
     return {
         nameEn: payload.nameEn,
         nameBn: payload.nameBn,
         descriptionEn: payload.descriptionEn,
         descriptionBn: payload.descriptionBn,
         imageUrl: payload.imageUrl,
-        iconUrl: payload.iconUrl,
+        logoUrl: payload.logoUrl,
         imagePath: payload.imagePath,
         thumbPath: payload.thumbPath,
         slug: payload.slug,
-        parentId: payload.parentId ?? "",
-        groupId: (0, callable_parsers_1.groupIdFromParentId)(payload.parentId),
         isFeatured: payload.isFeatured,
         showOnHome: payload.showOnHome,
         isActive: payload.isActive,
@@ -126,12 +123,10 @@ function buildAuditBeforeData(current) {
         descriptionEn: current.descriptionEn,
         descriptionBn: current.descriptionBn,
         imageUrl: current.imageUrl,
-        iconUrl: current.iconUrl,
+        logoUrl: current.logoUrl,
         imagePath: current.imagePath,
         thumbPath: current.thumbPath,
         slug: current.slug,
-        parentId: current.parentId,
-        groupId: current.groupId,
         isFeatured: current.isFeatured,
         showOnHome: current.showOnHome,
         isActive: current.isActive,
@@ -141,20 +136,18 @@ function buildAuditBeforeData(current) {
         updatedAt: current.updatedAt ?? null,
     };
 }
-function buildAuditAfterData(categoryId, payload, productsCount, createdAt) {
+function buildAuditAfterData(brandId, payload, productsCount, createdAt) {
     return {
-        id: categoryId,
+        id: brandId,
         nameEn: payload.nameEn,
         nameBn: payload.nameBn,
         descriptionEn: payload.descriptionEn,
         descriptionBn: payload.descriptionBn,
         imageUrl: payload.imageUrl,
-        iconUrl: payload.iconUrl,
+        logoUrl: payload.logoUrl,
         imagePath: payload.imagePath,
         thumbPath: payload.thumbPath,
         slug: payload.slug,
-        parentId: payload.parentId ?? "",
-        groupId: (0, callable_parsers_1.groupIdFromParentId)(payload.parentId),
         isFeatured: payload.isFeatured,
         showOnHome: payload.showOnHome,
         isActive: payload.isActive,
@@ -163,81 +156,66 @@ function buildAuditAfterData(categoryId, payload, productsCount, createdAt) {
         createdAt: createdAt ?? null,
     };
 }
-exports.updateCategory = (0, https_1.onCall)({
+exports.updateBrand = (0, https_1.onCall)({
     region: "asia-south1",
 }, async (request) => {
     try {
-        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageCategories");
-        const categoryId = (0, callable_parsers_1.asTrimmedString)(request.data?.categoryId);
-        (0, callable_parsers_1.requireNonEmpty)(categoryId, "categoryId");
-        const payload = normalizeCategoryPayload(request.data?.category);
-        const categoryRef = db.collection("categories").doc(categoryId);
-        const nextGroupId = (0, callable_parsers_1.groupIdFromParentId)(payload.parentId);
+        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageBrands");
+        const brandId = (0, callable_parsers_1.asTrimmedString)(request.data?.brandId);
+        (0, callable_parsers_1.requireNonEmpty)(brandId, "brandId");
+        const payload = normalizeBrandPayload(request.data?.brand);
+        const brandRef = db.collection("brands").doc(brandId);
         let auditLogId = "";
         await db.runTransaction(async (tx) => {
-            const currentSnap = await tx.get(categoryRef);
+            const currentSnap = await tx.get(brandRef);
             if (!currentSnap.exists) {
-                throw new https_1.HttpsError("not-found", "Category not found.");
+                throw new https_1.HttpsError("not-found", "Brand not found.");
             }
-            const current = parseExistingCategory(currentSnap);
+            const current = parseExistingBrand(currentSnap);
             const beforeData = buildAuditBeforeData(current);
             const productsCount = current.productsCount;
-            if (payload.parentId && payload.parentId === categoryId) {
-                throw new https_1.HttpsError("failed-precondition", "A category cannot be its own parent.");
-            }
-            if (payload.parentId) {
-                const parentRef = db.collection("categories").doc(payload.parentId);
-                const parentSnap = await tx.get(parentRef);
-                if (!parentSnap.exists) {
-                    throw new https_1.HttpsError("failed-precondition", "Selected parent category was not found.");
-                }
-            }
             const slugQuery = db
-                .collection("categories")
+                .collection("brands")
                 .where("slug", "==", payload.slug)
                 .limit(10);
             const slugSnap = await tx.get(slugQuery);
-            const slugConflict = slugSnap.docs.find((doc) => doc.id !== categoryId);
+            const slugConflict = slugSnap.docs.find((doc) => doc.id !== brandId);
             if (slugConflict) {
-                throw new https_1.HttpsError("already-exists", "A category with the same slug already exists.");
+                throw new https_1.HttpsError("already-exists", "A brand with the same slug already exists.");
             }
-            const groupQuery = db
-                .collection("categories")
-                .where("groupId", "==", nextGroupId);
-            const groupSnap = await tx.get(groupQuery);
-            const sortConflict = groupSnap.docs.find((doc) => {
-                if (doc.id === categoryId)
-                    return false;
-                return (0, callable_parsers_1.asInt)(doc.data()?.sortOrder, 0) === payload.sortOrder;
-            });
+            const sortQuery = db
+                .collection("brands")
+                .where("sortOrder", "==", payload.sortOrder)
+                .limit(10);
+            const sortSnap = await tx.get(sortQuery);
+            const sortConflict = sortSnap.docs.find((doc) => doc.id !== brandId);
             if (sortConflict) {
-                throw new https_1.HttpsError("already-exists", "Sort number already exists in this group. Please use another.");
+                throw new https_1.HttpsError("already-exists", "Sort number already exists for another brand. Please use another.");
             }
-            tx.set(categoryRef, buildUpdatedCategoryDoc(payload, productsCount), { merge: true });
+            tx.set(brandRef, buildUpdatedBrandDoc(payload, productsCount), { merge: true });
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
-                action: "update_category",
-                module: "categories",
-                targetType: "category",
-                targetId: categoryId,
+                action: "update_brand",
+                module: "brands",
+                targetType: "brand",
+                targetId: brandId,
                 targetTitle: payload.nameEn,
                 status: "success",
                 beforeData,
-                afterData: buildAuditAfterData(categoryId, payload, productsCount, current.createdAt),
+                afterData: buildAuditAfterData(brandId, payload, productsCount, current.createdAt),
                 metadata: {
-                    previousParentId: current.parentId,
-                    nextParentId: payload.parentId ?? "",
-                    previousGroupId: current.groupId,
-                    nextGroupId,
                     sortOrder: payload.sortOrder,
+                    isFeatured: payload.isFeatured,
+                    showOnHome: payload.showOnHome,
+                    isActive: payload.isActive,
                 },
                 eventSource: "server_action",
             }));
         });
         return {
             success: true,
-            categoryId,
+            brandId,
             auditLogId,
         };
     }
@@ -245,7 +223,7 @@ exports.updateCategory = (0, https_1.onCall)({
         if (error instanceof https_1.HttpsError) {
             throw error;
         }
-        logger.error("updateCategory failed", error);
-        throw new https_1.HttpsError("internal", "Failed to update category.");
+        logger.error("updateBrand failed", error);
+        throw new https_1.HttpsError("internal", "Failed to update brand.");
     }
 });

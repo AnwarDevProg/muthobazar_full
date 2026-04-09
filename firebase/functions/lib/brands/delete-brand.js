@@ -33,18 +33,16 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCategory = void 0;
+exports.deleteBrand = void 0;
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const audit_log_core_1 = require("../admin/audit-log-core");
 const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
-function parseCategoryState(doc) {
+const storage = admin.storage();
+function parseExistingBrand(doc) {
     const data = doc.data() ?? {};
-    const parentId = (0, callable_parsers_1.normalizeNullableId)(data.parentId);
-    const explicitGroupId = (0, callable_parsers_1.asTrimmedString)(data.groupId);
     return {
         id: doc.id,
         nameEn: (0, callable_parsers_1.asTrimmedString)(data.nameEn),
@@ -52,111 +50,110 @@ function parseCategoryState(doc) {
         descriptionEn: (0, callable_parsers_1.asTrimmedString)(data.descriptionEn),
         descriptionBn: (0, callable_parsers_1.asTrimmedString)(data.descriptionBn),
         imageUrl: (0, callable_parsers_1.asTrimmedString)(data.imageUrl),
-        iconUrl: (0, callable_parsers_1.asTrimmedString)(data.iconUrl),
+        logoUrl: (0, callable_parsers_1.asTrimmedString)(data.logoUrl),
         imagePath: (0, callable_parsers_1.asTrimmedString)(data.imagePath),
         thumbPath: (0, callable_parsers_1.asTrimmedString)(data.thumbPath),
         slug: (0, callable_parsers_1.asTrimmedString)(data.slug).toLowerCase(),
-        parentId,
-        groupId: explicitGroupId.length > 0 ? explicitGroupId : (0, callable_parsers_1.groupIdFromParentId)(parentId),
         isFeatured: (0, callable_parsers_1.asBool)(data.isFeatured, false),
         showOnHome: (0, callable_parsers_1.asBool)(data.showOnHome, false),
         isActive: (0, callable_parsers_1.asBool)(data.isActive, true),
         sortOrder: (0, callable_parsers_1.asInt)(data.sortOrder, 0),
         productsCount: (0, callable_parsers_1.asInt)(data.productsCount, 0),
+        createdAt: data.createdAt ?? null,
+        updatedAt: data.updatedAt ?? null,
     };
 }
-function buildAuditBeforeState(existing) {
+function buildAuditBeforeData(current) {
     return {
-        id: existing.id,
-        nameEn: existing.nameEn,
-        nameBn: existing.nameBn,
-        descriptionEn: existing.descriptionEn,
-        descriptionBn: existing.descriptionBn,
-        imageUrl: existing.imageUrl,
-        iconUrl: existing.iconUrl,
-        imagePath: existing.imagePath,
-        thumbPath: existing.thumbPath,
-        slug: existing.slug,
-        parentId: existing.parentId ?? "",
-        groupId: existing.groupId,
-        isFeatured: existing.isFeatured,
-        showOnHome: existing.showOnHome,
-        isActive: existing.isActive,
-        sortOrder: existing.sortOrder,
-        productsCount: existing.productsCount,
+        id: current.id,
+        nameEn: current.nameEn,
+        nameBn: current.nameBn,
+        descriptionEn: current.descriptionEn,
+        descriptionBn: current.descriptionBn,
+        imageUrl: current.imageUrl,
+        logoUrl: current.logoUrl,
+        imagePath: current.imagePath,
+        thumbPath: current.thumbPath,
+        slug: current.slug,
+        isFeatured: current.isFeatured,
+        showOnHome: current.showOnHome,
+        isActive: current.isActive,
+        sortOrder: current.sortOrder,
+        productsCount: current.productsCount,
+        createdAt: current.createdAt ?? null,
+        updatedAt: current.updatedAt ?? null,
     };
 }
-async function deleteStoragePath(path) {
-    const normalized = path.trim();
-    if (normalized.length === 0)
+async function deleteStorageObjectIfExists(path) {
+    const safePath = path.trim();
+    if (!safePath)
         return;
     try {
-        await bucket.file(normalized).delete({ ignoreNotFound: true });
+        await storage.bucket().file(safePath).delete({ ignoreNotFound: true });
     }
     catch (error) {
-        logger.warn(`Failed to delete storage object: ${normalized}`, error);
+        logger.warn("Failed to delete brand storage object", {
+            path: safePath,
+            error,
+        });
     }
 }
-exports.deleteCategory = (0, https_1.onCall)({
+exports.deleteBrand = (0, https_1.onCall)({
     region: "asia-south1",
 }, async (request) => {
     try {
-        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageCategories");
-        const categoryId = (0, callable_parsers_1.asTrimmedString)(request.data?.categoryId);
+        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageBrands");
+        const brandId = (0, callable_parsers_1.asTrimmedString)(request.data?.brandId);
         const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
-        (0, callable_parsers_1.requireNonEmpty)(categoryId, "categoryId");
+        (0, callable_parsers_1.requireNonEmpty)(brandId, "brandId");
+        const brandRef = db.collection("brands").doc(brandId);
         let auditLogId = "";
         let imagePathToDelete = "";
         let thumbPathToDelete = "";
         await db.runTransaction(async (tx) => {
-            const categoryRef = db.collection("categories").doc(categoryId);
-            const existingSnap = await tx.get(categoryRef);
-            if (!existingSnap.exists) {
-                throw new https_1.HttpsError("not-found", "Category not found.");
+            const currentSnap = await tx.get(brandRef);
+            if (!currentSnap.exists) {
+                throw new https_1.HttpsError("not-found", "Brand not found.");
             }
-            const existing = parseCategoryState(existingSnap);
-            if (existing.productsCount > 0) {
-                throw new https_1.HttpsError("failed-precondition", `This category cannot be deleted because it contains ${existing.productsCount} product(s).`);
+            const current = parseExistingBrand(currentSnap);
+            if (current.productsCount > 0) {
+                throw new https_1.HttpsError("failed-precondition", `This brand cannot be deleted because it contains ${current.productsCount} product(s).`);
             }
-            const childQuery = db
-                .collection("categories")
-                .where("parentId", "==", categoryId)
-                .limit(1);
-            const childSnap = await tx.get(childQuery);
-            if (!childSnap.empty) {
-                throw new https_1.HttpsError("failed-precondition", "This category cannot be deleted because it has child categories.");
+            const productsSnap = await tx.get(db.collection("products").where("brandId", "==", brandId).limit(1));
+            if (!productsSnap.empty) {
+                throw new https_1.HttpsError("failed-precondition", "This brand cannot be deleted because some products still reference it.");
             }
+            tx.delete(brandRef);
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
-                action: "delete_category",
-                module: "categories",
-                targetType: "category",
-                targetId: categoryId,
-                targetTitle: existing.nameEn,
+                action: "delete_brand",
+                module: "brands",
+                targetType: "brand",
+                targetId: brandId,
+                targetTitle: current.nameEn,
                 status: "success",
                 reason,
-                beforeData: buildAuditBeforeState(existing),
+                beforeData: buildAuditBeforeData(current),
                 afterData: null,
                 metadata: {
-                    groupId: existing.groupId,
-                    parentId: existing.parentId ?? "",
-                    productsCount: existing.productsCount,
+                    slug: current.slug,
+                    imagePath: current.imagePath,
+                    thumbPath: current.thumbPath,
                 },
                 eventSource: "server_action",
             }));
-            tx.delete(categoryRef);
-            imagePathToDelete = existing.imagePath;
-            if (existing.thumbPath.length > 0 &&
-                existing.thumbPath !== existing.imagePath) {
-                thumbPathToDelete = existing.thumbPath;
+            imagePathToDelete = current.imagePath;
+            if (current.thumbPath.length > 0 &&
+                current.thumbPath !== current.imagePath) {
+                thumbPathToDelete = current.thumbPath;
             }
         });
-        await deleteStoragePath(imagePathToDelete);
-        await deleteStoragePath(thumbPathToDelete);
+        await deleteStorageObjectIfExists(imagePathToDelete);
+        await deleteStorageObjectIfExists(thumbPathToDelete);
         return {
             success: true,
-            categoryId,
+            brandId,
             auditLogId,
         };
     }
@@ -164,7 +161,7 @@ exports.deleteCategory = (0, https_1.onCall)({
         if (error instanceof https_1.HttpsError) {
             throw error;
         }
-        logger.error("deleteCategory failed", error);
-        throw new https_1.HttpsError("internal", "Failed to delete category.");
+        logger.error("deleteBrand failed", error);
+        throw new https_1.HttpsError("internal", "Failed to delete brand.");
     }
 });

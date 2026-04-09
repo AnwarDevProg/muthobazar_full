@@ -38,61 +38,30 @@ const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const audit_log_core_1 = require("../admin/audit-log-core");
+const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
-function asTrimmedString(value) {
-    return typeof value === "string" ? value.trim() : "";
-}
-function asNullableTrimmedString(value) {
-    const normalized = asTrimmedString(value);
-    return normalized.length === 0 ? null : normalized;
-}
-function asBoolOrThrow(value, fieldName) {
-    if (typeof value === "boolean") {
-        return value;
-    }
-    throw new https_1.HttpsError("invalid-argument", `${fieldName} must be a boolean.`);
-}
-function asInt(value, defaultValue = 0) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-        return Math.trunc(value);
-    }
-    const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-    return Number.isNaN(parsed) ? defaultValue : parsed;
-}
-function requireNonEmpty(value, fieldName) {
-    if (value.length === 0) {
-        throw new https_1.HttpsError("invalid-argument", `${fieldName} is required.`);
-    }
-}
-function normalizeParentId(value) {
-    const normalized = asTrimmedString(value);
-    return normalized.length === 0 ? null : normalized;
-}
-function groupIdFromParentId(parentId) {
-    return parentId == null || parentId.length === 0 ? "root" : parentId;
-}
 function parseCategoryState(doc) {
     const data = doc.data() ?? {};
-    const parentId = normalizeParentId(data.parentId);
-    const explicitGroupId = asTrimmedString(data.groupId);
+    const parentId = (0, callable_parsers_1.normalizeNullableId)(data.parentId);
+    const explicitGroupId = (0, callable_parsers_1.asTrimmedString)(data.groupId);
     return {
         id: doc.id,
-        nameEn: asTrimmedString(data.nameEn),
-        nameBn: asTrimmedString(data.nameBn),
-        descriptionEn: asTrimmedString(data.descriptionEn),
-        descriptionBn: asTrimmedString(data.descriptionBn),
-        imageUrl: asTrimmedString(data.imageUrl),
-        iconUrl: asTrimmedString(data.iconUrl),
-        imagePath: asTrimmedString(data.imagePath),
-        thumbPath: asTrimmedString(data.thumbPath),
-        slug: asTrimmedString(data.slug).toLowerCase(),
+        nameEn: (0, callable_parsers_1.asTrimmedString)(data.nameEn),
+        nameBn: (0, callable_parsers_1.asTrimmedString)(data.nameBn),
+        descriptionEn: (0, callable_parsers_1.asTrimmedString)(data.descriptionEn),
+        descriptionBn: (0, callable_parsers_1.asTrimmedString)(data.descriptionBn),
+        imageUrl: (0, callable_parsers_1.asTrimmedString)(data.imageUrl),
+        iconUrl: (0, callable_parsers_1.asTrimmedString)(data.iconUrl),
+        imagePath: (0, callable_parsers_1.asTrimmedString)(data.imagePath),
+        thumbPath: (0, callable_parsers_1.asTrimmedString)(data.thumbPath),
+        slug: (0, callable_parsers_1.asTrimmedString)(data.slug).toLowerCase(),
         parentId,
-        groupId: explicitGroupId.length > 0 ? explicitGroupId : groupIdFromParentId(parentId),
-        isFeatured: data.isFeatured === true,
-        showOnHome: data.showOnHome === true,
-        isActive: data.isActive !== false,
-        sortOrder: asInt(data.sortOrder, 0),
-        productsCount: asInt(data.productsCount, 0),
+        groupId: explicitGroupId.length > 0 ? explicitGroupId : (0, callable_parsers_1.groupIdFromParentId)(parentId),
+        isFeatured: (0, callable_parsers_1.asBool)(data.isFeatured, false),
+        showOnHome: (0, callable_parsers_1.asBool)(data.showOnHome, false),
+        isActive: (0, callable_parsers_1.asBool)(data.isActive, true),
+        sortOrder: (0, callable_parsers_1.asInt)(data.sortOrder, 0),
+        productsCount: (0, callable_parsers_1.asInt)(data.productsCount, 0),
     };
 }
 function buildAuditState(category) {
@@ -116,13 +85,15 @@ function buildAuditState(category) {
         productsCount: category.productsCount,
     };
 }
-exports.setCategoryActiveState = (0, https_1.onCall)(async (request) => {
+exports.setCategoryActiveState = (0, https_1.onCall)({
+    region: "asia-south1",
+}, async (request) => {
     try {
         const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageCategories");
-        const categoryId = asTrimmedString(request.data?.categoryId);
-        const nextIsActive = asBoolOrThrow(request.data?.isActive, "isActive");
-        const reason = asNullableTrimmedString(request.data?.reason);
-        requireNonEmpty(categoryId, "categoryId");
+        const categoryId = (0, callable_parsers_1.asTrimmedString)(request.data?.categoryId);
+        const nextIsActive = (0, callable_parsers_1.asBoolOrThrow)(request.data?.isActive, "isActive");
+        const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
+        (0, callable_parsers_1.requireNonEmpty)(categoryId, "categoryId");
         let auditLogId = "";
         await db.runTransaction(async (tx) => {
             const categoryRef = db.collection("categories").doc(categoryId);
@@ -145,9 +116,7 @@ exports.setCategoryActiveState = (0, https_1.onCall)(async (request) => {
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
-                action: nextIsActive
-                    ? "activate_category"
-                    : "deactivate_category",
+                action: nextIsActive ? "activate_category" : "deactivate_category",
                 module: "categories",
                 targetType: "category",
                 targetId: categoryId,

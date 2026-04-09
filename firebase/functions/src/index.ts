@@ -22,10 +22,9 @@ export { setCategoryActiveState } from "./categories/set-category-active-state";
 export { reorderCategoryGroup } from "./categories/reorder-categories";
 export { fixCategoryGroupSort } from "./categories/fix-category-group-sort";
 
-export { logAdminAction } from "./admin/log-admin-action";
-
-
 export { createBrand } from "./brands/create-brand";
 export { updateBrand } from "./brands/update-brand";
 export { deleteBrand } from "./brands/delete-brand";
 export { setBrandActiveState } from "./brands/set-brand-active-state";
+
+export { logAdminAction } from "./admin/log-admin-action";

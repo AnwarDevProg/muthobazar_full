@@ -7,6 +7,14 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+import {
+  asBool,
+  asInt,
+  asTrimmedString,
+  groupIdFromParentId,
+  normalizeNullableId,
+  requireNonEmpty,
+} from "../utils/callable-parsers";
 
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
@@ -42,48 +50,11 @@ type CategoryState = {
   productsCount: number;
 };
 
-function asTrimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asNullableTrimmedString(value: unknown): string | null {
-  const normalized = asTrimmedString(value);
-  return normalized.length === 0 ? null : normalized;
-}
-
-function asInt(value: unknown, defaultValue = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-  return Number.isNaN(parsed) ? defaultValue : parsed;
-}
-
-function requireNonEmpty(value: string, fieldName: string): void {
-  if (value.length === 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      `${fieldName} is required.`,
-    );
-  }
-}
-
-function normalizeParentId(value: unknown): string | null {
-  const normalized = asTrimmedString(value);
-  return normalized.length === 0 ? null : normalized;
-}
-
-function groupIdFromParentId(parentId: string | null): string {
-  return parentId == null || parentId.length === 0 ? "root" : parentId;
-}
-
 function parseCategoryState(
   doc: admin.firestore.DocumentSnapshot | admin.firestore.QueryDocumentSnapshot,
 ): CategoryState {
   const data = doc.data() ?? {};
-
-  const parentId = normalizeParentId(data.parentId);
+  const parentId = normalizeNullableId(data.parentId);
   const explicitGroupId = asTrimmedString(data.groupId);
 
   return {
@@ -98,10 +69,11 @@ function parseCategoryState(
     thumbPath: asTrimmedString(data.thumbPath),
     slug: asTrimmedString(data.slug).toLowerCase(),
     parentId,
-    groupId: explicitGroupId.length > 0 ? explicitGroupId : groupIdFromParentId(parentId),
-    isFeatured: data.isFeatured === true,
-    showOnHome: data.showOnHome === true,
-    isActive: data.isActive !== false,
+    groupId:
+      explicitGroupId.length > 0 ? explicitGroupId : groupIdFromParentId(parentId),
+    isFeatured: asBool(data.isFeatured, false),
+    showOnHome: asBool(data.showOnHome, false),
+    isActive: asBool(data.isActive, true),
     sortOrder: asInt(data.sortOrder, 0),
     productsCount: asInt(data.productsCount, 0),
   };
@@ -141,6 +113,9 @@ async function deleteStoragePath(path: string): Promise<void> {
 }
 
 export const deleteCategory = onCall<DeleteCategoryRequest>(
+  {
+    region: "asia-south1",
+  },
   async (request): Promise<DeleteCategoryResponse> => {
     try {
       const actor = await getAuthorizedAdminActor(
@@ -149,8 +124,7 @@ export const deleteCategory = onCall<DeleteCategoryRequest>(
       );
 
       const categoryId = asTrimmedString(request.data?.categoryId);
-      const reason = asNullableTrimmedString(request.data?.reason);
-
+      const reason = normalizeNullableId(request.data?.reason);
       requireNonEmpty(categoryId, "categoryId");
 
       let auditLogId = "";
@@ -160,12 +134,8 @@ export const deleteCategory = onCall<DeleteCategoryRequest>(
       await db.runTransaction(async (tx) => {
         const categoryRef = db.collection("categories").doc(categoryId);
         const existingSnap = await tx.get(categoryRef);
-
         if (!existingSnap.exists) {
-          throw new HttpsError(
-            "not-found",
-            "Category not found.",
-          );
+          throw new HttpsError("not-found", "Category not found.");
         }
 
         const existing = parseCategoryState(existingSnap);
@@ -181,9 +151,7 @@ export const deleteCategory = onCall<DeleteCategoryRequest>(
           .collection("categories")
           .where("parentId", "==", categoryId)
           .limit(1);
-
         const childSnap = await tx.get(childQuery);
-
         if (!childSnap.empty) {
           throw new HttpsError(
             "failed-precondition",
@@ -216,7 +184,6 @@ export const deleteCategory = onCall<DeleteCategoryRequest>(
         );
 
         tx.delete(categoryRef);
-
         imagePathToDelete = existing.imagePath;
         if (
           existing.thumbPath.length > 0 &&
@@ -240,11 +207,7 @@ export const deleteCategory = onCall<DeleteCategoryRequest>(
       }
 
       logger.error("deleteCategory failed", error);
-
-      throw new HttpsError(
-        "internal",
-        "Failed to delete category.",
-      );
+      throw new HttpsError("internal", "Failed to delete category.");
     }
   },
 );

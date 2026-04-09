@@ -7,6 +7,15 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+import {
+  asBool,
+  asBoolOrThrow,
+  asInt,
+  asTrimmedString,
+  groupIdFromParentId,
+  normalizeNullableId,
+  requireNonEmpty,
+} from "../utils/callable-parsers";
 
 const db = admin.firestore();
 
@@ -43,59 +52,11 @@ type CategoryState = {
   productsCount: number;
 };
 
-function asTrimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asNullableTrimmedString(value: unknown): string | null {
-  const normalized = asTrimmedString(value);
-  return normalized.length === 0 ? null : normalized;
-}
-
-function asBoolOrThrow(value: unknown, fieldName: string): boolean {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  throw new HttpsError(
-    "invalid-argument",
-    `${fieldName} must be a boolean.`,
-  );
-}
-
-function asInt(value: unknown, defaultValue = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-  return Number.isNaN(parsed) ? defaultValue : parsed;
-}
-
-function requireNonEmpty(value: string, fieldName: string): void {
-  if (value.length === 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      `${fieldName} is required.`,
-    );
-  }
-}
-
-function normalizeParentId(value: unknown): string | null {
-  const normalized = asTrimmedString(value);
-  return normalized.length === 0 ? null : normalized;
-}
-
-function groupIdFromParentId(parentId: string | null): string {
-  return parentId == null || parentId.length === 0 ? "root" : parentId;
-}
-
 function parseCategoryState(
   doc: admin.firestore.DocumentSnapshot | admin.firestore.QueryDocumentSnapshot,
 ): CategoryState {
   const data = doc.data() ?? {};
-
-  const parentId = normalizeParentId(data.parentId);
+  const parentId = normalizeNullableId(data.parentId);
   const explicitGroupId = asTrimmedString(data.groupId);
 
   return {
@@ -110,10 +71,11 @@ function parseCategoryState(
     thumbPath: asTrimmedString(data.thumbPath),
     slug: asTrimmedString(data.slug).toLowerCase(),
     parentId,
-    groupId: explicitGroupId.length > 0 ? explicitGroupId : groupIdFromParentId(parentId),
-    isFeatured: data.isFeatured === true,
-    showOnHome: data.showOnHome === true,
-    isActive: data.isActive !== false,
+    groupId:
+        explicitGroupId.length > 0 ? explicitGroupId : groupIdFromParentId(parentId),
+    isFeatured: asBool(data.isFeatured, false),
+    showOnHome: asBool(data.showOnHome, false),
+    isActive: asBool(data.isActive, true),
     sortOrder: asInt(data.sortOrder, 0),
     productsCount: asInt(data.productsCount, 0),
   };
@@ -142,6 +104,9 @@ function buildAuditState(category: CategoryState): Record<string, unknown> {
 }
 
 export const setCategoryActiveState = onCall<SetCategoryActiveStateRequest>(
+  {
+    region: "asia-south1",
+  },
   async (request): Promise<SetCategoryActiveStateResponse> => {
     try {
       const actor = await getAuthorizedAdminActor(
@@ -150,12 +115,8 @@ export const setCategoryActiveState = onCall<SetCategoryActiveStateRequest>(
       );
 
       const categoryId = asTrimmedString(request.data?.categoryId);
-      const nextIsActive = asBoolOrThrow(
-        request.data?.isActive,
-        "isActive",
-      );
-      const reason = asNullableTrimmedString(request.data?.reason);
-
+      const nextIsActive = asBoolOrThrow(request.data?.isActive, "isActive");
+      const reason = normalizeNullableId(request.data?.reason);
       requireNonEmpty(categoryId, "categoryId");
 
       let auditLogId = "";
@@ -163,16 +124,11 @@ export const setCategoryActiveState = onCall<SetCategoryActiveStateRequest>(
       await db.runTransaction(async (tx) => {
         const categoryRef = db.collection("categories").doc(categoryId);
         const existingSnap = await tx.get(categoryRef);
-
         if (!existingSnap.exists) {
-          throw new HttpsError(
-            "not-found",
-            "Category not found.",
-          );
+          throw new HttpsError("not-found", "Category not found.");
         }
 
         const existing = parseCategoryState(existingSnap);
-
         if (existing.isActive === nextIsActive) {
           throw new HttpsError(
             "failed-precondition",
@@ -200,9 +156,7 @@ export const setCategoryActiveState = onCall<SetCategoryActiveStateRequest>(
         tx.set(
           logRef,
           buildAdminAuditLogDoc(logRef.id, actor, {
-            action: nextIsActive
-              ? "activate_category"
-              : "deactivate_category",
+            action: nextIsActive ? "activate_category" : "deactivate_category",
             module: "categories",
             targetType: "category",
             targetId: categoryId,
@@ -231,7 +185,6 @@ export const setCategoryActiveState = onCall<SetCategoryActiveStateRequest>(
       }
 
       logger.error("setCategoryActiveState failed", error);
-
       throw new HttpsError(
         "internal",
         "Failed to change category active state.",

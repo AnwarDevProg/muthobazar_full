@@ -5,18 +5,39 @@ C.
 |   \---README.md
 +---functions
 |   +---lib
+|   |   +---admin
+|   |   |   +---audit-log-core.js
+|   |   |   \---log-admin-action.js
 |   |   +---categories
+|   |   |   +---create-category.js
+|   |   |   +---delete-category.js
 |   |   |   +---fix-category-group-sort.js
-|   |   |   \---reorder-categories.js
+|   |   |   +---reorder-categories.js
+|   |   |   +---set-category-active-state.js
+|   |   |   \---update-category.js
 |   |   +---category-product-count.js
 |   |   +---check-phone-auth-eligibility.js
 |   |   \---index.js
 |   +---src
 |   |   +---admin
+|   |   |   +---audit-log-core.ts
+|   |   |   +---log-admin-action.ts
+|   |   |   \---previous activity function.md
 |   |   +---auth
+|   |   |   \---check-phone-auth-eligibility.ts
+|   |   +---brands
+|   |   |   +---create-brand.ts
+|   |   |   +---delete-brand.ts
+|   |   |   +---set-brand-active-state.ts
+|   |   |   \---update-brand.ts
 |   |   +---categories
+|   |   |   +---category-product-count.ts
+|   |   |   +---create-category.ts
+|   |   |   +---delete-category.ts
 |   |   |   +---fix-category-group-sort.ts
-|   |   |   \---reorder-categories.ts
+|   |   |   +---reorder-categories.ts
+|   |   |   +---set-category-active-state.ts
+|   |   |   \---update-category.ts
 |   |   +---delivery
 |   |   +---finance
 |   |   +---inventory
@@ -27,8 +48,6 @@ C.
 |   |   +---support
 |   |   +---utils
 |   |   +---workflows
-|   |   +---category-product-count.ts
-|   |   +---check-phone-auth-eligibility.ts
 |   |   \---index.ts
 |   +---.eslintrc.js
 |   +---package.json

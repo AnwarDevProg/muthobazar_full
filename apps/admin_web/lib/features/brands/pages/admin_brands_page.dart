@@ -27,28 +27,45 @@ class AdminBrandsPage extends StatelessWidget {
           );
         }
 
+        final String errorMessage =
+        (brandController.operationError.value ?? '').trim();
+        final List<MBBrand> visibleBrands =
+        brandController.filteredBrands.toList(growable: false);
+        final List<MBBrand> allBrands = brandController.brands.toList(
+          growable: false,
+        );
+
         return Column(
           children: [
             _BrandsHeader(
+              totalCount: allBrands.length,
+              visibleCount: visibleBrands.length,
+              activeCount: allBrands.where((item) => item.isActive).length,
+              featuredCount: allBrands.where((item) => item.isFeatured).length,
+              homeShownCount: allBrands.where((item) => item.showOnHome).length,
               onAdd: () {
+                brandController.clearOperationError();
                 Get.dialog(
                   const AdminBrandFormDialog(),
                   barrierDismissible: false,
                 );
               },
             ),
-            if ((brandController.operationError.value ?? '').trim().isNotEmpty)
+            if (errorMessage.isNotEmpty)
               _BrandOperationErrorBanner(
-                message: brandController.operationError.value!.trim(),
+                message: errorMessage,
                 onClose: brandController.clearOperationError,
               ),
             Expanded(
-              child: brandController.filteredBrands.isEmpty
-                  ? const _EmptyBrandsState()
+              child: visibleBrands.isEmpty
+                  ? _EmptyBrandsState(
+                hasAnyBrand: allBrands.isNotEmpty,
+                onResetFilters: brandController.resetFilters,
+              )
                   : RefreshIndicator(
                 onRefresh: brandController.refreshBrands,
                 child: _BrandsTable(
-                  brands: brandController.filteredBrands,
+                  brands: visibleBrands,
                 ),
               ),
             ),
@@ -61,9 +78,19 @@ class AdminBrandsPage extends StatelessWidget {
 
 class _BrandsHeader extends StatelessWidget {
   const _BrandsHeader({
+    required this.totalCount,
+    required this.visibleCount,
+    required this.activeCount,
+    required this.featuredCount,
+    required this.homeShownCount,
     required this.onAdd,
   });
 
+  final int totalCount;
+  final int visibleCount;
+  final int activeCount;
+  final int featuredCount;
+  final int homeShownCount;
   final VoidCallback onAdd;
 
   @override
@@ -81,110 +108,349 @@ class _BrandsHeader extends StatelessWidget {
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: MBSpacing.md,
+            runSpacing: MBSpacing.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  'Brand Management',
-                  style: MBTextStyles.sectionTitle.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              SizedBox(
+                width: 520,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Brand Management',
+                      style: MBTextStyles.sectionTitle.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    MBSpacing.h(MBSpacing.xs),
+                    Text(
+                      'Manage brand identity, visibility, featured state, and safe admin actions.',
+                      style: MBTextStyles.body.copyWith(
+                        color: MBColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: controller.refreshBrands,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Reload'),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              ElevatedButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Brand'),
+              Wrap(
+                spacing: MBSpacing.md,
+                runSpacing: MBSpacing.md,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: controller.isAnyBusy
+                        ? null
+                        : controller.refreshBrands,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Reload'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: controller.isAnyBusy ? null : onAdd,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Add Brand'),
+                  ),
+                ],
               ),
             ],
           ),
           MBSpacing.h(MBSpacing.md),
-          Row(
+          Wrap(
+            spacing: MBSpacing.md,
+            runSpacing: MBSpacing.md,
             children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  onChanged: controller.setSearchQuery,
-                  decoration: const InputDecoration(
-                    hintText: 'Search by name, slug, description...',
-                    prefixIcon: Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
+              _SummaryChip(
+                label: 'Total',
+                value: '$totalCount',
+                icon: Icons.storefront_outlined,
               ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField(
-                  value: controller.statusFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(value: 'active', child: Text('Active')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-                  ],
-                  onChanged: (value) => controller.setStatusFilter(value ?? 'all'),
-                ),
+              _SummaryChip(
+                label: 'Visible',
+                value: '$visibleCount',
+                icon: Icons.filter_alt_outlined,
               ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField(
-                  value: controller.featuredFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Featured',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(
-                      value: 'featured',
-                      child: Text('Featured'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'notFeatured',
-                      child: Text('Not Featured'),
-                    ),
-                  ],
-                  onChanged: (value) => controller.setFeaturedFilter(value ?? 'all'),
-                ),
+              _SummaryChip(
+                label: 'Active',
+                value: '$activeCount',
+                icon: Icons.verified_outlined,
               ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField(
-                  value: controller.homeFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Home Visibility',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(
-                      value: 'showOnHome',
-                      child: Text('Show On Home'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'hideFromHome',
-                      child: Text('Hide From Home'),
-                    ),
-                  ],
-                  onChanged: (value) => controller.setHomeFilter(value ?? 'all'),
-                ),
+              _SummaryChip(
+                label: 'Featured',
+                value: '$featuredCount',
+                icon: Icons.star_outline_rounded,
               ),
-              MBSpacing.w(MBSpacing.md),
-              OutlinedButton(
-                onPressed: controller.resetFilters,
-                child: const Text('Reset'),
+              _SummaryChip(
+                label: 'Home Shown',
+                value: '$homeShownCount',
+                icon: Icons.home_outlined,
               ),
             ],
+          ),
+          MBSpacing.h(MBSpacing.md),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isTight = constraints.maxWidth < 1100;
+
+              if (isTight) {
+                return Column(
+                  children: [
+                    TextField(
+                      onChanged: controller.setSearchQuery,
+                      decoration: const InputDecoration(
+                        hintText: 'Search by name, slug, description...',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    MBSpacing.h(MBSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: controller.statusFilter.value,
+                            decoration: const InputDecoration(
+                              labelText: 'Status',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('All'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'active',
+                                child: Text('Active'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'inactive',
+                                child: Text('Inactive'),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                controller.setStatusFilter(value ?? 'all'),
+                          ),
+                        ),
+                        MBSpacing.w(MBSpacing.md),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: controller.featuredFilter.value,
+                            decoration: const InputDecoration(
+                              labelText: 'Featured',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('All'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'featured',
+                                child: Text('Featured'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'notFeatured',
+                                child: Text('Not Featured'),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                controller.setFeaturedFilter(value ?? 'all'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    MBSpacing.h(MBSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: controller.homeFilter.value,
+                            decoration: const InputDecoration(
+                              labelText: 'Home Visibility',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('All'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'showOnHome',
+                                child: Text('Show On Home'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'hideFromHome',
+                                child: Text('Hide From Home'),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                controller.setHomeFilter(value ?? 'all'),
+                          ),
+                        ),
+                        MBSpacing.w(MBSpacing.md),
+                        SizedBox(
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: controller.resetFilters,
+                            child: const Text('Reset'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      onChanged: controller.setSearchQuery,
+                      decoration: const InputDecoration(
+                        hintText: 'Search by name, slug, description...',
+                        prefixIcon: Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  MBSpacing.w(MBSpacing.md),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: controller.statusFilter.value,
+                      decoration: const InputDecoration(
+                        labelText: 'Status',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All')),
+                        DropdownMenuItem(
+                          value: 'active',
+                          child: Text('Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'inactive',
+                          child: Text('Inactive'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          controller.setStatusFilter(value ?? 'all'),
+                    ),
+                  ),
+                  MBSpacing.w(MBSpacing.md),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: controller.featuredFilter.value,
+                      decoration: const InputDecoration(
+                        labelText: 'Featured',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All')),
+                        DropdownMenuItem(
+                          value: 'featured',
+                          child: Text('Featured'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'notFeatured',
+                          child: Text('Not Featured'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          controller.setFeaturedFilter(value ?? 'all'),
+                    ),
+                  ),
+                  MBSpacing.w(MBSpacing.md),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: controller.homeFilter.value,
+                      decoration: const InputDecoration(
+                        labelText: 'Home Visibility',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All')),
+                        DropdownMenuItem(
+                          value: 'showOnHome',
+                          child: Text('Show On Home'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'hideFromHome',
+                          child: Text('Hide From Home'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          controller.setHomeFilter(value ?? 'all'),
+                    ),
+                  ),
+                  MBSpacing.w(MBSpacing.md),
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: controller.resetFilters,
+                      child: const Text('Reset'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: MBSpacing.md,
+        vertical: MBSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: MBColors.background,
+        borderRadius: BorderRadius.circular(MBRadius.lg),
+        border: Border.all(
+          color: MBColors.border.withValues(alpha: 0.9),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: MBColors.primaryOrange,
+          ),
+          MBSpacing.w(MBSpacing.sm),
+          Text(
+            label,
+            style: MBTextStyles.caption.copyWith(
+              color: MBColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          MBSpacing.w(MBSpacing.xs),
+          Text(
+            value,
+            style: MBTextStyles.body.copyWith(
+              fontWeight: FontWeight.w700,
+              color: MBColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -202,7 +468,7 @@ class _BrandOperationErrorBanner extends StatelessWidget {
   final VoidCallback onClose;
 
   String _cleanMessage(String raw) {
-    final value = raw.trim();
+    final String value = raw.trim();
     if (value.startsWith('Exception: ')) {
       return value.replaceFirst('Exception: ', '').trim();
     }
@@ -311,7 +577,7 @@ class _BrandsTable extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              final reason = reasonController.text.trim();
+              final String reason = reasonController.text.trim();
               if (!allowEmpty && reason.isEmpty) {
                 Get.snackbar(
                   'Reason Required',
@@ -338,6 +604,7 @@ class _BrandsTable extends StatelessWidget {
     final AdminBrandController controller = Get.find();
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(MBSpacing.lg),
       child: Card(
         elevation: 0,
@@ -380,24 +647,11 @@ class _BrandsTable extends StatelessWidget {
                               width: 56,
                               height: 56,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 56,
-                                height: 56,
-                                color: MBColors.background,
-                                child: const Icon(
-                                  Icons.broken_image_outlined,
-                                ),
+                              errorBuilder: (_, __, ___) => _BrandFallbackLogo(
+                                name: brand.nameEn,
                               ),
                             )
-                                : Container(
-                              width: 56,
-                              height: 56,
-                              color: MBColors.background,
-                              child: const Icon(
-                                Icons.store_outlined,
-                                color: MBColors.primaryOrange,
-                              ),
-                            ),
+                                : _BrandFallbackLogo(name: brand.nameEn),
                           ),
                           MBSpacing.w(MBSpacing.md),
                           Expanded(
@@ -409,29 +663,18 @@ class _BrandsTable extends StatelessWidget {
                                   brand.nameEn,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: MBTextStyles.bodyMedium.copyWith(
+                                  style: MBTextStyles.body.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 if (brand.nameBn.trim().isNotEmpty) ...[
-                                  MBSpacing.h(MBSpacing.xxxs),
+                                  MBSpacing.h(4),
                                   Text(
                                     brand.nameBn,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: MBTextStyles.caption.copyWith(
                                       color: MBColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                                if (brand.descriptionEn.trim().isNotEmpty) ...[
-                                  MBSpacing.h(MBSpacing.xxxs),
-                                  Text(
-                                    brand.descriptionEn,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: MBTextStyles.caption.copyWith(
-                                      color: MBColors.textMuted,
                                     ),
                                   ),
                                 ],
@@ -442,12 +685,19 @@ class _BrandsTable extends StatelessWidget {
                       ),
                     ),
                   ),
-                  DataCell(Text(brand.slug.isEmpty ? '-' : brand.slug)),
+                  DataCell(
+                    SelectableText(
+                      brand.slug,
+                      style: MBTextStyles.body.copyWith(
+                        color: MBColors.textSecondary,
+                      ),
+                    ),
+                  ),
                   DataCell(Text('${brand.productsCount}')),
                   DataCell(
-                    Switch(
-                      value: brand.isActive,
-                      onChanged: (_) async {
+                    InkWell(
+                      borderRadius: BorderRadius.circular(MBRadius.pill),
+                      onTap: () async {
                         controller.clearOperationError();
 
                         final String actionLabel =
@@ -460,7 +710,8 @@ class _BrandsTable extends StatelessWidget {
                               : 'Activate Brand',
                           message:
                           'Are you sure you want to $actionLabel "${brand.nameEn}"?',
-                          confirmText: brand.isActive ? 'Deactivate' : 'Activate',
+                          confirmText:
+                          brand.isActive ? 'Deactivate' : 'Activate',
                           allowEmpty: true,
                         );
 
@@ -471,6 +722,10 @@ class _BrandsTable extends StatelessWidget {
                           reason: reason,
                         );
                       },
+                      child: _StatusPill(
+                        label: brand.isActive ? 'Active' : 'Inactive',
+                        active: brand.isActive,
+                      ),
                     ),
                   ),
                   DataCell(
@@ -541,7 +796,7 @@ class _BrandsTable extends StatelessWidget {
                           onPressed: () async {
                             controller.clearOperationError();
 
-                            final blockReason =
+                            final String? blockReason =
                             await controller.getDeleteBlockReason(
                               brandId: brand.id,
                             );
@@ -591,6 +846,35 @@ class _BrandsTable extends StatelessWidget {
               );
             }).toList(),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandFallbackLogo extends StatelessWidget {
+  const _BrandFallbackLogo({
+    required this.name,
+  });
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final String initial = name.trim().isEmpty ? 'B' : name.trim()[0].toUpperCase();
+
+    return Container(
+      width: 56,
+      height: 56,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: MBColors.primaryOrange.withValues(alpha: 0.12),
+      ),
+      child: Text(
+        initial,
+        style: MBTextStyles.body.copyWith(
+          color: MBColors.primaryOrange,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -681,13 +965,24 @@ class _NoBrandPermissionState extends StatelessWidget {
 }
 
 class _EmptyBrandsState extends StatelessWidget {
-  const _EmptyBrandsState();
+  const _EmptyBrandsState({
+    required this.hasAnyBrand,
+    required this.onResetFilters,
+  });
+
+  final bool hasAnyBrand;
+  final VoidCallback onResetFilters;
 
   @override
   Widget build(BuildContext context) {
+    final String title = hasAnyBrand ? 'No Matching Brands' : 'No Brands Found';
+    final String message = hasAnyBrand
+        ? 'No brands matched the current filters. Reset filters and try again.'
+        : 'Create your first brand to organize products better.';
+
     return Center(
       child: Container(
-        width: 460,
+        width: 500,
         padding: const EdgeInsets.all(MBSpacing.xl),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -710,19 +1005,27 @@ class _EmptyBrandsState extends StatelessWidget {
             ),
             MBSpacing.h(MBSpacing.md),
             Text(
-              'No Brands Found',
+              title,
               style: MBTextStyles.sectionTitle.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             MBSpacing.h(MBSpacing.xs),
             Text(
-              'Create your first brand to organize products better.',
+              message,
               textAlign: TextAlign.center,
               style: MBTextStyles.body.copyWith(
                 color: MBColors.textSecondary,
               ),
             ),
+            if (hasAnyBrand) ...[
+              MBSpacing.h(MBSpacing.lg),
+              OutlinedButton.icon(
+                onPressed: onResetFilters,
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: const Text('Reset Filters'),
+              ),
+            ],
           ],
         ),
       ),

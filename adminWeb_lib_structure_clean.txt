@@ -57,10 +57,9 @@ C.
 |   |   +---admin_web_bootstrap_service.dart
 |   |   \---admin_web_session_service.dart
 |   +---shell
+|   |   +---admin_shell_host_page.dart
 |   |   +---admin_shell_state_controller.dart
-|   |   +---admin_sidebar.dart
 |   |   +---admin_sidebar_config.dart
-|   |   +---admin_topbar.dart
 |   |   \---admin_web_shell.dart
 |   +---startup
 |   |   +---admin_launch_router_page.dart

@@ -54,15 +54,14 @@ class AdminBrandController extends GetxController {
     clearOperationError();
 
     _brandsSubscription = _repository.watchBrands().listen(
-          (items) {
+          (List<MBBrand> items) {
         brands.assignAll(items);
         applyFilters();
         isLoading.value = false;
       },
-      onError: (error) {
+      onError: (Object error) {
         _setOperationError(error);
         isLoading.value = false;
-
         MBNotification.error(
           title: 'Error',
           message: error.toString(),
@@ -76,15 +75,14 @@ class AdminBrandController extends GetxController {
       isLoading.value = true;
       clearOperationError();
 
-      final items = await _repository.fetchBrandsOnce();
+      final List<MBBrand> items = await _repository.fetchBrandsOnce();
       brands.assignAll(items);
       applyFilters();
-    } catch (e) {
-      _setOperationError(e);
-
+    } catch (error) {
+      _setOperationError(error);
       MBNotification.error(
         title: 'Error',
-        message: e.toString(),
+        message: error.toString(),
       );
     } finally {
       isLoading.value = false;
@@ -120,41 +118,39 @@ class AdminBrandController extends GetxController {
   }
 
   void applyFilters() {
-    final query = searchQuery.value;
-    final status = statusFilter.value;
-    final featured = featuredFilter.value;
-    final home = homeFilter.value;
+    final String query = searchQuery.value;
+    final String status = statusFilter.value;
+    final String featured = featuredFilter.value;
+    final String home = homeFilter.value;
 
-    final result = brands.where((brand) {
-      final matchesQuery = query.isEmpty ||
-          brand.nameEn.toLowerCase().contains(query) ||
-          brand.nameBn.toLowerCase().contains(query) ||
-          brand.slug.toLowerCase().contains(query) ||
-          brand.descriptionEn.toLowerCase().contains(query) ||
-          brand.descriptionBn.toLowerCase().contains(query);
+    final List<MBBrand> result = brands.where((MBBrand brand) {
+      final bool matchesQuery =
+          query.isEmpty ||
+              brand.nameEn.toLowerCase().contains(query) ||
+              brand.nameBn.toLowerCase().contains(query) ||
+              brand.slug.toLowerCase().contains(query) ||
+              brand.descriptionEn.toLowerCase().contains(query) ||
+              brand.descriptionBn.toLowerCase().contains(query);
 
-      final matchesStatus = switch (status) {
+      final bool matchesStatus = switch (status) {
         'active' => brand.isActive,
         'inactive' => !brand.isActive,
         _ => true,
       };
 
-      final matchesFeatured = switch (featured) {
+      final bool matchesFeatured = switch (featured) {
         'featured' => brand.isFeatured,
         'notFeatured' => !brand.isFeatured,
         _ => true,
       };
 
-      final matchesHome = switch (home) {
+      final bool matchesHome = switch (home) {
         'showOnHome' => brand.showOnHome,
         'hideFromHome' => !brand.showOnHome,
         _ => true,
       };
 
-      return matchesQuery &&
-          matchesStatus &&
-          matchesFeatured &&
-          matchesHome;
+      return matchesQuery && matchesStatus && matchesFeatured && matchesHome;
     }).toList();
 
     filteredBrands.assignAll(result);
@@ -178,8 +174,8 @@ class AdminBrandController extends GetxController {
       return await _repository.suggestSortOrder(
         excludeBrandId: excludeBrandId,
       );
-    } catch (e) {
-      _setOperationError(e);
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     }
   }
@@ -194,8 +190,8 @@ class AdminBrandController extends GetxController {
         slug: normalizeSlug(slug),
         excludeBrandId: excludeBrandId,
       );
-    } catch (e) {
-      _setOperationError(e);
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     }
   }
@@ -210,8 +206,8 @@ class AdminBrandController extends GetxController {
         sortOrder: sortOrder,
         excludeBrandId: excludeBrandId,
       );
-    } catch (e) {
-      _setOperationError(e);
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     }
   }
@@ -222,8 +218,8 @@ class AdminBrandController extends GetxController {
     try {
       clearOperationError();
       return await _repository.getDeleteBlockReason(brandId);
-    } catch (e) {
-      _setOperationError(e);
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     }
   }
@@ -237,10 +233,9 @@ class AdminBrandController extends GetxController {
     clearOperationError();
 
     try {
-      final result = await MBImagePipelineService.instance.pickOriginalImage();
-      return result;
-    } catch (e) {
-      _setOperationError(e);
+      return await MBImagePipelineService.instance.pickOriginalImage();
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     } finally {
       isPickingImage.value = false;
@@ -264,8 +259,7 @@ class AdminBrandController extends GetxController {
     clearOperationError();
 
     try {
-      final result = await MBImagePipelineService.instance
-          .prepareImageSetFromOriginal(
+      return await MBImagePipelineService.instance.prepareImageSetFromOriginal(
         original: original,
         fullMaxWidth: fullMaxWidth,
         fullMaxHeight: fullMaxHeight,
@@ -274,10 +268,8 @@ class AdminBrandController extends GetxController {
         thumbJpegQuality: thumbJpegQuality,
         requestSquareCrop: requestSquareCrop,
       );
-
-      return result;
-    } catch (e) {
-      _setOperationError(e);
+    } catch (error) {
+      _setOperationError(error);
       rethrow;
     } finally {
       isResizingImage.value = false;
@@ -307,14 +299,12 @@ class AdminBrandController extends GetxController {
           message: 'Brand created successfully.',
         );
       }
-    } catch (e) {
-      _setOperationError(e);
-
+    } catch (error) {
+      _setOperationError(error);
       MBNotification.error(
         title: 'Error',
-        message: e.toString(),
+        message: error.toString(),
       );
-
       rethrow;
     } finally {
       isSaving.value = false;
@@ -345,7 +335,7 @@ class AdminBrandController extends GetxController {
     clearOperationError();
 
     try {
-      final blockReason = await _repository.getDeleteBlockReason(brandId);
+      final String? blockReason = await _repository.getDeleteBlockReason(brandId);
       if (blockReason != null && blockReason.trim().isNotEmpty) {
         throw Exception(blockReason);
       }
@@ -359,16 +349,13 @@ class AdminBrandController extends GetxController {
         title: 'Success',
         message: 'Brand deleted successfully.',
       );
-
       return true;
-    } catch (e) {
-      _setOperationError(e);
-
+    } catch (error) {
+      _setOperationError(error);
       MBNotification.error(
         title: 'Error',
-        message: e.toString(),
+        message: error.toString(),
       );
-
       return false;
     } finally {
       isDeleting.value = false;
@@ -406,14 +393,12 @@ class AdminBrandController extends GetxController {
       );
 
       return true;
-    } catch (e) {
-      _setOperationError(e);
-
+    } catch (error) {
+      _setOperationError(error);
       MBNotification.error(
         title: 'Error',
-        message: e.toString(),
+        message: error.toString(),
       );
-
       return false;
     }
   }

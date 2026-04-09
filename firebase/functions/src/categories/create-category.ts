@@ -7,6 +7,17 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+import {
+  asBool,
+  asInt,
+  asTrimmedString,
+  groupIdFromParentId,
+  normalizeNullableId,
+  requireNonEmpty,
+  requireNonNegativeInt,
+  requireObjectRecord,
+  slugify,
+} from "../utils/callable-parsers";
 
 const db = admin.firestore();
 
@@ -44,66 +55,8 @@ type ExistingCategorySnapshot = {
   sortOrder: number;
 };
 
-function asTrimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asBool(value: unknown, defaultValue = false): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true") return true;
-    if (normalized === "false") return false;
-  }
-  return defaultValue;
-}
-
-function asInt(value: unknown, defaultValue = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-  return Number.isNaN(parsed) ? defaultValue : parsed;
-}
-
-function requireNonEmpty(value: string, fieldName: string): void {
-  if (value.length === 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      `${fieldName} is required.`,
-    );
-  }
-}
-
-function normalizeParentId(value: unknown): string | null {
-  const normalized = asTrimmedString(value);
-  return normalized.length === 0 ? null : normalized;
-}
-
-function groupIdFromParentId(parentId: string | null): string {
-  return parentId == null || parentId.length === 0 ? "root" : parentId;
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-");
-}
-
 function normalizeCategoryPayload(input: unknown): CategoryPayload {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "category payload is required.",
-    );
-  }
-
-  const raw = input as Record<string, unknown>;
+  const raw = requireObjectRecord(input, "category");
 
   const nameEn = asTrimmedString(raw.nameEn);
   const nameBn = asTrimmedString(raw.nameBn);
@@ -113,24 +66,17 @@ function normalizeCategoryPayload(input: unknown): CategoryPayload {
   const iconUrl = asTrimmedString(raw.iconUrl);
   const imagePath = asTrimmedString(raw.imagePath);
   const thumbPath = asTrimmedString(raw.thumbPath);
-  const parentId = normalizeParentId(raw.parentId);
+  const parentId = normalizeNullableId(raw.parentId);
 
   requireNonEmpty(nameEn, "category.nameEn");
 
   const normalizedSlug = slugify(
     asTrimmedString(raw.slug).length > 0 ? asTrimmedString(raw.slug) : nameEn,
   );
-
   requireNonEmpty(normalizedSlug, "category.slug");
 
   const sortOrder = asInt(raw.sortOrder, 0);
-
-  if (sortOrder < 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      "category.sortOrder must be 0 or greater.",
-    );
-  }
+  requireNonNegativeInt(sortOrder, "category.sortOrder");
 
   return {
     nameEn,
@@ -202,9 +148,10 @@ function buildAuditAfterData(
   };
 }
 
-function parseExistingCategory(doc: admin.firestore.QueryDocumentSnapshot): ExistingCategorySnapshot {
+function parseExistingCategory(
+  doc: admin.firestore.QueryDocumentSnapshot,
+): ExistingCategorySnapshot {
   const data = doc.data() ?? {};
-
   return {
     id: doc.id,
     nameEn: String(data.nameEn ?? "").trim(),
@@ -214,6 +161,9 @@ function parseExistingCategory(doc: admin.firestore.QueryDocumentSnapshot): Exis
 }
 
 export const createCategory = onCall<CreateCategoryRequest>(
+  {
+    region: "asia-south1",
+  },
   async (request): Promise<CreateCategoryResponse> => {
     try {
       const actor = await getAuthorizedAdminActor(
@@ -225,14 +175,12 @@ export const createCategory = onCall<CreateCategoryRequest>(
       const categoryRef = db.collection("categories").doc();
       const categoryId = categoryRef.id;
       const groupId = groupIdFromParentId(payload.parentId);
-
       let auditLogId = "";
 
       await db.runTransaction(async (tx) => {
         if (payload.parentId) {
           const parentRef = db.collection("categories").doc(payload.parentId);
           const parentSnap = await tx.get(parentRef);
-
           if (!parentSnap.exists) {
             throw new HttpsError(
               "failed-precondition",
@@ -245,7 +193,6 @@ export const createCategory = onCall<CreateCategoryRequest>(
           .collection("categories")
           .where("slug", "==", payload.slug)
           .limit(1);
-
         const slugSnap = await tx.get(slugQuery);
         if (!slugSnap.empty) {
           throw new HttpsError(
@@ -257,10 +204,8 @@ export const createCategory = onCall<CreateCategoryRequest>(
         const groupQuery = db
           .collection("categories")
           .where("groupId", "==", groupId);
-
         const groupSnap = await tx.get(groupQuery);
         const siblings = groupSnap.docs.map(parseExistingCategory);
-
         const sortConflict = siblings.find(
           (item) => item.sortOrder === payload.sortOrder,
         );
@@ -272,10 +217,7 @@ export const createCategory = onCall<CreateCategoryRequest>(
           );
         }
 
-        tx.set(
-          categoryRef,
-          buildCategoryDoc(categoryId, payload),
-        );
+        tx.set(categoryRef, buildCategoryDoc(categoryId, payload));
 
         const logRef = newAdminAuditLogRef();
         auditLogId = logRef.id;
@@ -312,11 +254,7 @@ export const createCategory = onCall<CreateCategoryRequest>(
       }
 
       logger.error("createCategory failed", error);
-
-      throw new HttpsError(
-        "internal",
-        "Failed to create category.",
-      );
+      throw new HttpsError("internal", "Failed to create category.");
     }
   },
 );

@@ -13,9 +13,12 @@ C.
 \---scripts
     +---analyze_all.sh
     +---bootstrap_all.sh
+    +---deploy_all_functions.ps1
+    +---deploy_verify_category_backend.ps1
     +---format_all.sh
     +---generate_clean_tree.ps1
-    +---run_admin_web.sh
+    +---git_push.ps1
+    +---run_admin_web_chrome.ps1
     +---run_customer.sh
     +---run_staff.sh
     +---setup_workspace.sh

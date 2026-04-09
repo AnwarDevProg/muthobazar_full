@@ -5,9 +5,6 @@ service cloud.firestore {
     // =========================================================
     // Base helpers
     // =========================================================
-
-
-
     function signedIn() {
       return request.auth != null;
     }
@@ -21,8 +18,7 @@ service cloud.firestore {
     }
 
     function validBdPhone(phone) {
-      return phone is string
-        && phone.matches('^01[3-9][0-9]{8}$');
+      return phone is string && phone.matches('^01[3-9][0-9]{8}$');
     }
 
     function validRole(role) {
@@ -86,7 +82,6 @@ service cloud.firestore {
     // =========================================================
     // Bootstrap helpers
     // =========================================================
-
     function bootstrapDocPath() {
       return /databases/$(database)/documents/system/bootstrap;
     }
@@ -150,7 +145,6 @@ service cloud.firestore {
     // =========================================================
     // Admin permission helpers
     // =========================================================
-
     function adminPermissionDoc(uid) {
       return /databases/$(database)/documents/admin_permissions/$(uid);
     }
@@ -170,8 +164,7 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      return isActiveAdmin()
-        && adminPermission().role == 'super_admin';
+      return isActiveAdmin() && adminPermission().role == 'super_admin';
     }
 
     function canManageUsers() {
@@ -229,7 +222,6 @@ service cloud.firestore {
     // =========================================================
     // User schema helpers
     // =========================================================
-
     function validBaseUserKeys() {
       return request.resource.data.keys().hasOnly([
         'FirstName',
@@ -263,38 +255,14 @@ service cloud.firestore {
         && validRole(request.resource.data.Role)
         && validAccountStatus(request.resource.data.AccountStatus)
         && validBdPhone(request.resource.data.PhoneNumber)
-        && (
-          !('PhoneNumberE164' in request.resource.data)
-          || request.resource.data.PhoneNumberE164 is string
-        )
-        && (
-          !('Email' in request.resource.data)
-          || request.resource.data.Email is string
-        )
-        && (
-          !('FirstName' in request.resource.data)
-          || request.resource.data.FirstName is string
-        )
-        && (
-          !('LastName' in request.resource.data)
-          || request.resource.data.LastName is string
-        )
-        && (
-          !('ProfilePicture' in request.resource.data)
-          || request.resource.data.ProfilePicture is string
-        )
-        && (
-          !('Gender' in request.resource.data)
-          || request.resource.data.Gender is string
-        )
-        && (
-          !('DOB' in request.resource.data)
-          || request.resource.data.DOB is string
-        )
-        && (
-          !('DefaultAddressId' in request.resource.data)
-          || request.resource.data.DefaultAddressId is string
-        )
+        && (!('PhoneNumberE164' in request.resource.data) || request.resource.data.PhoneNumberE164 is string)
+        && (!('Email' in request.resource.data) || request.resource.data.Email is string)
+        && (!('FirstName' in request.resource.data) || request.resource.data.FirstName is string)
+        && (!('LastName' in request.resource.data) || request.resource.data.LastName is string)
+        && (!('ProfilePicture' in request.resource.data) || request.resource.data.ProfilePicture is string)
+        && (!('Gender' in request.resource.data) || request.resource.data.Gender is string)
+        && (!('DOB' in request.resource.data) || request.resource.data.DOB is string)
+        && (!('DefaultAddressId' in request.resource.data) || request.resource.data.DefaultAddressId is string)
         && request.resource.data.IsGuest is bool
         && request.resource.data.Addresses is list;
     }
@@ -302,7 +270,6 @@ service cloud.firestore {
     // =========================================================
     // User payload helpers
     // =========================================================
-
     function validCustomerUserPayload() {
       return validCommonUserFields()
         && request.resource.data.Role == 'customer'
@@ -324,18 +291,9 @@ service cloud.firestore {
         && validStaffGroup(request.resource.data.StaffGroup)
         && validStaffType(request.resource.data.StaffType)
         && validEmploymentStatus(request.resource.data.EmploymentStatus)
-        && (
-          !('AssignedBranchId' in request.resource.data)
-          || request.resource.data.AssignedBranchId is string
-        )
-        && (
-          !('AssignedZoneId' in request.resource.data)
-          || request.resource.data.AssignedZoneId is string
-        )
-        && (
-          !('AssignedManagerUid' in request.resource.data)
-          || request.resource.data.AssignedManagerUid is string
-        )
+        && (!('AssignedBranchId' in request.resource.data) || request.resource.data.AssignedBranchId is string)
+        && (!('AssignedZoneId' in request.resource.data) || request.resource.data.AssignedZoneId is string)
+        && (!('AssignedManagerUid' in request.resource.data) || request.resource.data.AssignedManagerUid is string)
         && !('AdminGroup' in request.resource.data);
     }
 
@@ -351,10 +309,7 @@ service cloud.firestore {
         && !('AssignedBranchId' in request.resource.data)
         && !('AssignedZoneId' in request.resource.data)
         && !('AssignedManagerUid' in request.resource.data)
-        && (
-          !('AdminGroup' in request.resource.data)
-          || validAdminGroup(request.resource.data.AdminGroup)
-        );
+        && (!('AdminGroup' in request.resource.data) || validAdminGroup(request.resource.data.AdminGroup));
     }
 
     function validSelfUserPayload() {
@@ -370,7 +325,6 @@ service cloud.firestore {
     // =========================================================
     // Phone index helpers
     // =========================================================
-
     function validPhoneIndexKeys() {
       return request.resource.data.keys().hasOnly([
         'Uid',
@@ -385,16 +339,12 @@ service cloud.firestore {
         && incomingUidMatchesAuth()
         && incomingPhoneMatchesDocId(phone)
         && validBdPhone(phone)
-        && (
-          !('PhoneNumberE164' in request.resource.data)
-          || request.resource.data.PhoneNumberE164 is string
-        );
+        && (!('PhoneNumberE164' in request.resource.data) || request.resource.data.PhoneNumberE164 is string);
     }
 
     // =========================================================
     // Admin invite helpers
     // =========================================================
-
     function inviteTargetsAdminRole() {
       return ('targetUid' in request.resource.data)
         && exists(/databases/$(database)/documents/users/$(request.resource.data.targetUid))
@@ -404,7 +354,6 @@ service cloud.firestore {
     // =========================================================
     // System
     // =========================================================
-
     match /system/bootstrap {
       allow get: if signedIn();
       allow list: if false;
@@ -416,20 +365,11 @@ service cloud.firestore {
     // =========================================================
     // Users
     // =========================================================
-
     match /users/{userId} {
       allow read: if isSelf(userId) || canManageUsers();
-
-      allow create: if isSelf(userId)
-        && selfRoleCreateAllowed()
-        && validSelfUserPayload();
-
-      allow update: if isSelf(userId)
-        && validSelfUserPayload();
-
-      allow update: if canManageUsers()
-        && validSelfUserPayload();
-
+      allow create: if isSelf(userId) && selfRoleCreateAllowed() && validSelfUserPayload();
+      allow update: if isSelf(userId) && validSelfUserPayload();
+      allow update: if canManageUsers() && validSelfUserPayload();
       allow delete: if isSelf(userId) || isSuperAdmin();
 
       match /cart/{cartItemId} {
@@ -444,46 +384,31 @@ service cloud.firestore {
     // =========================================================
     // Phone index / history
     // =========================================================
-
     match /phone_index/{phone} {
       allow get: if validBdPhone(phone);
       allow list: if false;
-
-      allow create: if signedIn()
-        && validPhoneIndexPayload(phone)
-        && !phoneIndexExists(phone);
-
-      allow update: if signedIn()
-        && phoneIndexExists(phone)
-        && existingPhoneUid(phone) == request.auth.uid
-        && validPhoneIndexPayload(phone);
-
-      allow delete: if signedIn()
-        && phoneIndexExists(phone)
-        && existingPhoneUid(phone) == request.auth.uid;
+      allow create: if signedIn() && validPhoneIndexPayload(phone) && !phoneIndexExists(phone);
+      allow update: if signedIn() && phoneIndexExists(phone) && existingPhoneUid(phone) == request.auth.uid && validPhoneIndexPayload(phone);
+      allow delete: if signedIn() && phoneIndexExists(phone) && existingPhoneUid(phone) == request.auth.uid;
     }
 
     match /phone_history/{historyId} {
       allow read: if signedIn() && resource.data.Uid == request.auth.uid;
-
       allow create: if signedIn()
         && request.resource.data.Uid == request.auth.uid
         && request.resource.data.OldPhoneNumber is string
         && request.resource.data.NewPhoneNumber is string
         && request.resource.data.ChangeType == 'user_phone_update'
         && request.resource.data.Sequence is int;
-
       allow update, delete: if false;
     }
 
     // =========================================================
     // Admin security collections
     // =========================================================
-
     match /admin_permissions/{uid} {
       allow get: if isSelf(uid) || canManageAdminPermissions();
       allow list: if canManageAdminPermissions() || isSuperAdmin();
-
       allow create: if validBootstrapWrite(uid) || isSuperAdmin();
       allow update: if canManageAdminPermissions() || isSuperAdmin();
       allow delete: if isSuperAdmin();
@@ -492,7 +417,6 @@ service cloud.firestore {
     match /admins/{uid} {
       allow get: if isSelf(uid) || canManageAdmins();
       allow list: if canManageAdmins() || isSuperAdmin();
-
       allow create: if validBootstrapAdminProfile(uid) || canManageAdmins() || isSuperAdmin();
       allow update: if canManageAdmins() || isSuperAdmin();
       allow delete: if isSuperAdmin();
@@ -500,10 +424,7 @@ service cloud.firestore {
 
     match /admin_invites/{inviteId} {
       allow read: if canManageAdminInvites() || isSuperAdmin();
-
-      allow create: if (canManageAdminInvites() || isSuperAdmin())
-        && inviteTargetsAdminRole();
-
+      allow create: if (canManageAdminInvites() || isSuperAdmin()) && inviteTargetsAdminRole();
       allow update: if canManageAdminInvites() || isSuperAdmin();
       allow delete: if canManageAdminInvites() || isSuperAdmin();
     }
@@ -511,12 +432,8 @@ service cloud.firestore {
     // =========================================================
     // Admin Activity Log
     // =========================================================
-
     match /admin_activity_logs/{logId} {
-      allow read: if signedIn()
-        && isActiveAdmin()
-        && canViewActivityLogs();
-
+      allow read: if signedIn() && isActiveAdmin() && canViewActivityLogs();
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -525,7 +442,6 @@ service cloud.firestore {
     // =========================================================
     // Catalog
     // =========================================================
-
     match /products/{productId} {
       allow read: if true;
       allow create, update: if canManageProducts();
@@ -541,8 +457,7 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if true;
-
-      // Category writes are server-only now.
+      // Category writes are server-only.
       allow create: if false;
       allow update: if false;
       allow delete: if false;
@@ -550,13 +465,15 @@ service cloud.firestore {
 
     match /brands/{brandId} {
       allow read: if true;
-      allow create, update, delete: if canManageBrands() || isSuperAdmin();
+      // Brand writes are also server-only now, aligned with categories.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     // =========================================================
     // Marketing
     // =========================================================
-
     match /banners/{bannerId} {
       allow read: if true;
       allow create, update, delete: if canManageBanners() || isSuperAdmin();
@@ -576,36 +493,30 @@ service cloud.firestore {
       allow read: if (signedIn() && resource.data.userId == request.auth.uid)
         || canManageCoupons()
         || isSuperAdmin();
-
       allow create, update, delete: if canManageCoupons() || isSuperAdmin();
     }
 
     // =========================================================
     // Orders
     // =========================================================
-
     match /orders/{orderId} {
       allow read: if signedIn() && (
         resource.data.userId == request.auth.uid
         || resource.data.Uid == request.auth.uid
         || isActiveAdmin()
       );
-
       allow create: if signedIn();
-
       allow update: if signedIn() && (
         resource.data.userId == request.auth.uid
         || resource.data.Uid == request.auth.uid
         || isActiveAdmin()
       );
-
       allow delete: if isSuperAdmin();
     }
 
     // =========================================================
     // Catch all
     // =========================================================
-
     match /{document=**} {
       allow read, write: if false;
     }

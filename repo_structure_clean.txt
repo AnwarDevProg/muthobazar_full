@@ -120,6 +120,7 @@ C.
 |   |   |   +---app
 |   |   |   |   +---bindings
 |   |   |   |   |   +---admin_access_binding.dart
+|   |   |   |   |   +---admin_activity_logs_binding.dart
 |   |   |   |   |   +---admin_user_binding.dart
 |   |   |   |   |   +---admin_web_binding.dart
 |   |   |   |   |   +---audit_logs_binding.dart
@@ -141,6 +142,7 @@ C.
 |   |   |   |   |   +---orders_binding.dart
 |   |   |   |   |   +---packing_binding.dart
 |   |   |   |   |   +---picking_binding.dart
+|   |   |   |   |   +---placeholder_feature_binding.dart
 |   |   |   |   |   +---products_binding.dart
 |   |   |   |   |   +---profile_binding.dart
 |   |   |   |   |   +---purchase_receiving_binding.dart
@@ -171,9 +173,9 @@ C.
 |   |   |   |   |   +---admin_web_bootstrap_service.dart
 |   |   |   |   |   \---admin_web_session_service.dart
 |   |   |   |   +---shell
+|   |   |   |   |   +---admin_shell_host_page.dart
 |   |   |   |   |   +---admin_shell_state_controller.dart
-|   |   |   |   |   +---admin_sidebar.dart
-|   |   |   |   |   +---admin_topbar.dart
+|   |   |   |   |   +---admin_sidebar_config.dart
 |   |   |   |   |   \---admin_web_shell.dart
 |   |   |   |   +---startup
 |   |   |   |   |   +---admin_launch_router_page.dart
@@ -194,8 +196,10 @@ C.
 |   |   |   |   +---audit_logs
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   \---admin_activity_log_controller.dart
-|   |   |   |   |   \---pages
-|   |   |   |   |       \---admin_activity_logs_page.dart
+|   |   |   |   |   +---pages
+|   |   |   |   |   |   \---admin_activity_logs_page.dart
+|   |   |   |   |   \---widgets
+|   |   |   |   |       \---activity_log_details_dialog.dart
 |   |   |   |   +---auth
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   \---admin_auth_controller.dart
@@ -303,8 +307,10 @@ C.
 |   |   |   |   \---zones
 |   |   |   +---l10n
 |   |   |   |   \---app_en.arb
+|   |   |   +---Activity log process. md
 |   |   |   +---firebase_options.dart
-|   |   |   \---main.dart
+|   |   |   +---main.dart
+|   |   |   \---run web server.md
 |   |   +---linux
 |   |   |   +---flutter
 |   |   |   |   +---CMakeLists.txt
@@ -1091,18 +1097,39 @@ C.
 |   |   \---README.md
 |   +---functions
 |   |   +---lib
+|   |   |   +---admin
+|   |   |   |   +---audit-log-core.js
+|   |   |   |   \---log-admin-action.js
 |   |   |   +---categories
+|   |   |   |   +---create-category.js
+|   |   |   |   +---delete-category.js
 |   |   |   |   +---fix-category-group-sort.js
-|   |   |   |   \---reorder-categories.js
+|   |   |   |   +---reorder-categories.js
+|   |   |   |   +---set-category-active-state.js
+|   |   |   |   \---update-category.js
 |   |   |   +---category-product-count.js
 |   |   |   +---check-phone-auth-eligibility.js
 |   |   |   \---index.js
 |   |   +---src
 |   |   |   +---admin
+|   |   |   |   +---audit-log-core.ts
+|   |   |   |   +---log-admin-action.ts
+|   |   |   |   \---previous activity function.md
 |   |   |   +---auth
+|   |   |   |   \---check-phone-auth-eligibility.ts
+|   |   |   +---brands
+|   |   |   |   +---create-brand.ts
+|   |   |   |   +---delete-brand.ts
+|   |   |   |   +---set-brand-active-state.ts
+|   |   |   |   \---update-brand.ts
 |   |   |   +---categories
+|   |   |   |   +---category-product-count.ts
+|   |   |   |   +---create-category.ts
+|   |   |   |   +---delete-category.ts
 |   |   |   |   +---fix-category-group-sort.ts
-|   |   |   |   \---reorder-categories.ts
+|   |   |   |   +---reorder-categories.ts
+|   |   |   |   +---set-category-active-state.ts
+|   |   |   |   \---update-category.ts
 |   |   |   +---delivery
 |   |   |   +---finance
 |   |   |   +---inventory
@@ -1113,8 +1140,6 @@ C.
 |   |   |   +---support
 |   |   |   +---utils
 |   |   |   +---workflows
-|   |   |   +---category-product-count.ts
-|   |   |   +---check-phone-auth-eligibility.ts
 |   |   |   \---index.ts
 |   |   +---.eslintrc.js
 |   |   +---package.json
@@ -1403,9 +1428,12 @@ C.
 |   \---scripts
 |       +---analyze_all.sh
 |       +---bootstrap_all.sh
+|       +---deploy_all_functions.ps1
+|       +---deploy_verify_category_backend.ps1
 |       +---format_all.sh
 |       +---generate_clean_tree.ps1
-|       +---run_admin_web.sh
+|       +---git_push.ps1
+|       +---run_admin_web_chrome.ps1
 |       +---run_customer.sh
 |       +---run_staff.sh
 |       +---setup_workspace.sh

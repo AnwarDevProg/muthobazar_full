@@ -11,6 +11,10 @@ export 'home/mb_home_repository.dart';
 export 'home/datasources/mb_home_local_data_source.dart';
 export 'home/datasources/mb_home_remote_data_source.dart';
 
+export 'admin/core/mb_admin_callable_repository_base.dart';
+export 'admin/core/mb_admin_repository_errors.dart';
+export 'admin/core/mb_admin_slug_utils.dart';
+
 export 'admin/admin_access_repository.dart';
 export 'admin/admin_activity_log_repository.dart';
 export 'admin/admin_banner_repository.dart';
@@ -22,20 +26,7 @@ export 'admin/admin_setup_repository.dart';
 export 'admin/admin_user_repository.dart';
 export 'admin/admin_promo_repository.dart';
 export 'admin/admin_offer_repository.dart';
-
 export 'admin/purchases/mobile_admin_purchase_repository.dart';
 export 'admin/admin_web_phone_auth_repository.dart';
+
 export 'auth/phone_auth_eligibility_repository.dart';
-
-
-
-
-
-
-
-
-
-
-
-
-
