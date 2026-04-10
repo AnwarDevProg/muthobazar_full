@@ -70,6 +70,8 @@ C.
 |   |   |   +---mb_category.dart
 |   |   |   +---mb_product.dart
 |   |   |   +---mb_product_attribute.dart
+|   |   |   +---mb_product_attribute_value.dart
+|   |   |   +---mb_product_media.dart
 |   |   |   +---mb_product_purchase_option.dart
 |   |   |   \---mb_product_variation.dart
 |   |   +---customer

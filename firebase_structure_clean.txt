@@ -36,6 +36,13 @@ C.
 |   |   |   +---reorder-categories.js
 |   |   |   +---set-category-active-state.js
 |   |   |   \---update-category.js
+|   |   +---products
+|   |   |   +---admin_create_product.js
+|   |   |   +---admin_delete_product.js
+|   |   |   +---admin_hard_delete_product.js
+|   |   |   +---admin_restore_product.js
+|   |   |   +---admin_set_product_enabled.js
+|   |   |   \---admin_update_product.js
 |   |   +---utils
 |   |   |   +---callable_parsers.js
 |   |   |   \---callable-parsers.js
@@ -72,6 +79,14 @@ C.
 |   |   +---inventory
 |   |   +---marketing
 |   |   +---orders
+|   |   +---products
+|   |   |   +---admin_create_product.ts
+|   |   |   +---admin_delete_product.ts
+|   |   |   +---admin_hard_delete_product.ts
+|   |   |   +---admin_restore_product.ts
+|   |   |   +---admin_set_product_enabled.ts
+|   |   |   +---admin_update_product.ts
+|   |   |   \---previous create.md
 |   |   +---purchases
 |   |   +---services
 |   |   +---support

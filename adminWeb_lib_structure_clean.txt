@@ -149,10 +149,13 @@ C.
 |   |   +---controllers
 |   |   |   \---admin_product_controller.dart
 |   |   +---pages
+|   |   |   +---admin_product_lookup_support.dart
+|   |   |   +---admin_product_page_support.dart
 |   |   |   +---admin_products_page.dart
 |   |   |   \---admin_quarantine_products_page.dart
 |   |   \---widgets
-|   |       \---admin_product_form_dialog.dart
+|   |       +---admin_product_form_dialog.dart
+|   |       \---admin_product_form_support.dart
 |   +---profile
 |   |   +---controllers
 |   |   |   \---admin_profile_controller.dart
