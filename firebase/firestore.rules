@@ -444,15 +444,20 @@ service cloud.firestore {
     // =========================================================
     match /products/{productId} {
       allow read: if true;
-      allow create, update: if canManageProducts();
-      allow delete: if canDeleteProducts() || isSuperAdmin();
+
+      // Product writes are server-only now.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     match /quarantine_products/{productId} {
+      // Legacy path: keep read access for privileged admins only if any old UI
+      // still references it, but block all client writes.
       allow read: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
-      allow create: if canDeleteProducts() || canManageProducts() || isSuperAdmin();
-      allow update: if canRestoreProducts() || canManageProducts() || isSuperAdmin();
-      allow delete: if canDeleteProducts() || isSuperAdmin();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     match /categories/{categoryId} {

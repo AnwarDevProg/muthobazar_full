@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
@@ -17,6 +18,10 @@ service firebase.storage {
       return firestore.get(adminPermissionDoc()).data;
     }
 
+    function isSuperAdmin() {
+      return hasAdminPermissionDoc() && adminPermission().role == 'super_admin';
+    }
+
     function canManageCategories() {
       return hasAdminPermissionDoc() && adminPermission().canManageCategories == true;
     }
@@ -29,6 +34,10 @@ service firebase.storage {
       return hasAdminPermissionDoc() && adminPermission().canManageBanners == true;
     }
 
+    function canManageProducts() {
+      return hasAdminPermissionDoc() && adminPermission().canManageProducts == true;
+    }
+
     match /profile_pictures/{userId}/{fileName} {
       allow read: if true;
       allow write: if signedIn() && request.auth.uid == userId;
@@ -36,22 +45,22 @@ service firebase.storage {
 
     match /product_images/{productId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn();
+      allow write: if canManageProducts() || isSuperAdmin();
     }
 
     match /category_images/{categoryId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn() && canManageCategories();
+      allow write: if canManageCategories() || isSuperAdmin();
     }
 
     match /banner_images/{bannerId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn() && canManageBanners();
+      allow write: if canManageBanners() || isSuperAdmin();
     }
 
     match /brand_images/{brandId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn() && canManageBrands();
+      allow write: if canManageBrands() || isSuperAdmin();
     }
 
     match /profile_images/{profileId}/{fileName} {
