@@ -1568,7 +1568,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     final product = _buildProductFromForm();
-    final saved = await _controller.saveProduct(
+    var saved = await _controller.saveProduct(
       product: product,
       actorUid: widget.actorUid,
       actorName: widget.actorName,
@@ -1576,7 +1576,11 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       actorRole: widget.actorRole,
     );
 
+    saved ??= await _waitForRecoveredSavedProduct(product);
+
     if (!mounted || saved == null) return;
+
+    _controller.clearError();
 
     final navigator = Navigator.of(context);
     navigator.pop(saved);
@@ -1586,6 +1590,66 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     } catch (_) {
       // Ignore callback failures after the dialog has already closed.
     }
+  }
+
+  Future<MBProduct?> _waitForRecoveredSavedProduct(MBProduct draft) async {
+    for (var attempt = 0; attempt < 12; attempt++) {
+      if (attempt > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+
+      final recovered = _matchRecoveredProduct(draft);
+      if (recovered != null) {
+        return recovered;
+      }
+    }
+
+    return null;
+  }
+
+  MBProduct? _matchRecoveredProduct(MBProduct draft) {
+    final draftId = draft.id.trim();
+    final draftSlug = draft.slug.trim().toLowerCase();
+    final draftCode = (draft.productCode ?? '').trim().toLowerCase();
+    final draftSku = (draft.sku ?? '').trim().toLowerCase();
+    final draftTitleEn = draft.titleEn.trim().toLowerCase();
+    final draftTitleBn = draft.titleBn.trim().toLowerCase();
+
+    for (final item in _controller.products) {
+      final itemId = item.id.trim();
+      final itemSlug = item.slug.trim().toLowerCase();
+      final itemCode = (item.productCode ?? '').trim().toLowerCase();
+      final itemSku = (item.sku ?? '').trim().toLowerCase();
+      final itemTitleEn = item.titleEn.trim().toLowerCase();
+      final itemTitleBn = item.titleBn.trim().toLowerCase();
+
+      if (draftId.isNotEmpty && itemId == draftId) {
+        return item;
+      }
+
+      if (draftSlug.isNotEmpty &&
+          (itemSlug == draftSlug || itemSlug.startsWith('$draftSlug-'))) {
+        return item;
+      }
+
+      if (draftCode.isNotEmpty && itemCode == draftCode) {
+        return item;
+      }
+
+      if (draftSku.isNotEmpty && itemSku == draftSku) {
+        return item;
+      }
+
+      if (draftTitleEn.isNotEmpty && itemTitleEn == draftTitleEn) {
+        return item;
+      }
+
+      if (draftTitleBn.isNotEmpty && itemTitleBn == draftTitleBn) {
+        return item;
+      }
+    }
+
+    return null;
   }
 
   MBProduct _buildProductFromForm() {

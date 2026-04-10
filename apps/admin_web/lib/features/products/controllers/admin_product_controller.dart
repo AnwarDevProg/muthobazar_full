@@ -644,10 +644,10 @@ class AdminProductController extends GetxController {
     required MBProduct originalProduct,
     required bool isCreate,
   }) async {
-    for (var attempt = 0; attempt < 6; attempt++) {
+    for (var attempt = 0; attempt < 12; attempt++) {
       try {
         if (attempt > 0) {
-          await Future<void>.delayed(const Duration(milliseconds: 350));
+          await Future<void>.delayed(const Duration(milliseconds: 500));
         }
 
         final desiredId = originalProduct.id.trim();
@@ -665,49 +665,38 @@ class AdminProductController extends GetxController {
         );
 
         final targetSlug = originalProduct.slug.trim().toLowerCase();
-        if (targetSlug.isNotEmpty) {
-          for (final item in fetched) {
-            if (item.slug.trim().toLowerCase() == targetSlug) {
-              return item;
-            }
-          }
-        }
-
         final targetCode = (originalProduct.productCode ?? '').trim().toLowerCase();
-        if (targetCode.isNotEmpty) {
-          for (final item in fetched) {
-            if ((item.productCode ?? '').trim().toLowerCase() == targetCode) {
-              return item;
-            }
-          }
-        }
-
         final targetSku = (originalProduct.sku ?? '').trim().toLowerCase();
-        if (targetSku.isNotEmpty) {
-          for (final item in fetched) {
-            if ((item.sku ?? '').trim().toLowerCase() == targetSku) {
+        final targetTitleEn = originalProduct.titleEn.trim().toLowerCase();
+        final targetTitleBn = originalProduct.titleBn.trim().toLowerCase();
+
+        for (final item in fetched) {
+          final itemSlug = item.slug.trim().toLowerCase();
+          final itemCode = (item.productCode ?? '').trim().toLowerCase();
+          final itemSku = (item.sku ?? '').trim().toLowerCase();
+          final itemTitleEn = item.titleEn.trim().toLowerCase();
+          final itemTitleBn = item.titleBn.trim().toLowerCase();
+
+          if (targetSlug.isNotEmpty) {
+            if (itemSlug == targetSlug || itemSlug.startsWith('$targetSlug-')) {
               return item;
             }
           }
-        }
 
-        final titleEn = originalProduct.titleEn.trim().toLowerCase();
-        if (titleEn.isNotEmpty) {
-          for (final item in fetched) {
-            if (item.titleEn.trim().toLowerCase() == titleEn) {
-              return item;
-            }
+          if (targetCode.isNotEmpty && itemCode == targetCode) {
+            return item;
           }
-        }
 
-        if (!isCreate) {
-          final titleBn = originalProduct.titleBn.trim().toLowerCase();
-          if (titleBn.isNotEmpty) {
-            for (final item in fetched) {
-              if (item.titleBn.trim().toLowerCase() == titleBn) {
-                return item;
-              }
-            }
+          if (targetSku.isNotEmpty && itemSku == targetSku) {
+            return item;
+          }
+
+          if (targetTitleEn.isNotEmpty && itemTitleEn == targetTitleEn) {
+            return item;
+          }
+
+          if (!isCreate && targetTitleBn.isNotEmpty && itemTitleBn == targetTitleBn) {
+            return item;
           }
         }
       } catch (_) {
