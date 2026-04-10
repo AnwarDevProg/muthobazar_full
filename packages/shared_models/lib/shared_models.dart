@@ -16,6 +16,8 @@ export 'catalog/mb_product.dart';
 export 'catalog/mb_product_attribute.dart';
 export 'catalog/mb_product_purchase_option.dart';
 export 'catalog/mb_product_variation.dart';
+export 'catalog/mb_product_media.dart';
+export 'catalog/mb_product_attribute_value.dart';
 
 export 'orders/mb_cart_item.dart';
 export 'orders/mb_order.dart';
@@ -32,6 +34,10 @@ export 'reviews/mb_review_reply.dart';
 export 'home/mb_home_cache_bundle.dart';
 export 'home/mb_home_config.dart';
 export 'home/mb_home_section.dart';
+
+
+
+
 
 
 

@@ -1,419 +1,766 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_models/catalog/mb_product.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:shared_models/shared_models.dart';
 
-import 'core/mb_admin_callable_repository_base.dart';
+// File: admin_product_repository.dart
 
-class AdminProductRepository extends MBAdminCallableRepositoryBase<MBProduct> {
-  AdminProductRepository._() : super();
+class AdminProductRepository {
+AdminProductRepository({
+FirebaseFirestore? firestore,
+FirebaseFunctions? functions,
+FirebaseStorage? storage,
+this.useCallableWrites = true,
+this.productsCollectionPath = 'products',
+this.createCallableName = 'adminCreateProduct',
+this.updateCallableName = 'adminUpdateProduct',
+this.deleteCallableName = 'adminDeleteProduct',
+this.restoreCallableName = 'adminRestoreProduct',
+this.setEnabledCallableName = 'adminSetProductEnabled',
+})  : _firestore = firestore ?? FirebaseFirestore.instance,
+_functions = functions ?? FirebaseFunctions.instance,
+_storage = storage ?? FirebaseStorage.instance;
 
-  static final AdminProductRepository instance = AdminProductRepository._();
+final FirebaseFirestore _firestore;
+final FirebaseFunctions _functions;
+final FirebaseStorage _storage;
 
-  @override
-  String get collectionPath => 'products';
+final bool useCallableWrites;
+final String productsCollectionPath;
+final String createCallableName;
+final String updateCallableName;
+final String deleteCallableName;
+final String restoreCallableName;
+final String setEnabledCallableName;
 
-  CollectionReference<Map<String, dynamic>> get productsCollection => collection;
+CollectionReference<Map<String, dynamic>> get _productsRef =>
+_firestore.collection(productsCollectionPath);
 
-  CollectionReference<Map<String, dynamic>> get quarantineCollection =>
-      firestore.collection('products_quarantine');
+FirebaseStorage get storage => _storage;
 
-  @override
-  MBProduct fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final Map<String, dynamic> data = doc.data();
-    final Map<String, dynamic> map = <String, dynamic>{
-      ...data,
-      'id': (data['id'] ?? doc.id).toString(),
-    };
+Future<List<MBProduct>> fetchProducts({
+String searchText = '',
+String? categoryId,
+String? brandId,
+bool? isEnabled,
+bool includeDeleted = false,
+bool deletedOnly = false,
+int limit = 200,
+}) async {
+try {
+Query<Map<String, dynamic>> query = _productsRef;
 
-    try {
-      return MBProduct.fromMap(map);
-    } catch (error) {
-      throw Exception(
-        'Failed to parse product document "${doc.id}". '
-            'Please check Firestore field names and types. '
-            'Original error: $error',
-      );
-    }
-  }
+if (deletedOnly) {
+query = query.where('isDeleted', isEqualTo: true);
+} else if (!includeDeleted) {
+query = query.where('isDeleted', isEqualTo: false);
+}
 
-  @override
-  List<MBProduct> sortItems(List<MBProduct> items) {
-    items.sort((a, b) {
-      final String aName = a.titleEn.trim().toLowerCase();
-      final String bName = b.titleEn.trim().toLowerCase();
-      return aName.compareTo(bName);
-    });
-    return items;
-  }
+if (categoryId != null && categoryId.trim().isNotEmpty) {
+query = query.where('categoryId', isEqualTo: categoryId.trim());
+}
 
-  Map<String, dynamic> _productPayload(MBProduct product) {
-    return <String, dynamic>{
-      ...product.toMap(),
-      'id': product.id.trim(),
-      'titleEn': product.titleEn.trim(),
-      'titleBn': product.titleBn.trim(),
-      'shortDescriptionEn': product.shortDescriptionEn.trim(),
-      'shortDescriptionBn': product.shortDescriptionBn.trim(),
-      'fullDescriptionEn': product.fullDescriptionEn.trim(),
-      'fullDescriptionBn': product.fullDescriptionBn.trim(),
-      'thumbnailUrl': product.thumbnailUrl.trim(),
-      'brandId': parseString(product.brandId),
-      'categoryId': parseString(product.categoryId),
-      'sku': product.sku.trim(),
-      'slug': normalizeSlug(product.slug),
-      'isEnabled': product.isEnabled,
-      'isFeatured': product.isFeatured,
-      'regularStockQty': product.regularStockQty,
-      'reservedInstantQty': product.reservedInstantQty,
-      'createdAt': product.createdAt?.toIso8601String(),
-      'updatedAt': product.updatedAt?.toIso8601String(),
-    };
-  }
+if (brandId != null && brandId.trim().isNotEmpty) {
+query = query.where('brandId', isEqualTo: brandId.trim());
+}
 
-  Stream<List<MBProduct>> watchProducts() {
-    return watchAll();
-  }
+if (isEnabled != null) {
+query = query.where('isEnabled', isEqualTo: isEnabled);
+}
 
-  Future<List<MBProduct>> fetchProductsOnce() {
-    return fetchAll(
-      timeoutMessage:
-      'Timed out while loading products from Firestore. '
-          'Check internet connection, Firebase config, or browser console.',
-    );
-  }
+query = query.orderBy('sortOrder').orderBy('updatedAt', descending: true);
 
-  Stream<List<MBProduct>> watchEnabledProducts() {
-    return productsCollection
-        .where('isEnabled', isEqualTo: true)
-        .snapshots()
-        .map(
-          (snapshot) => sortItems(
-        snapshot.docs.map((doc) => fromDoc(doc)).toList(),
-      ),
-    );
-  }
+final snapshot = await query.limit(limit).get();
+var products = snapshot.docs
+    .map((doc) => _productFromDocument(doc))
+    .where((product) => product.id.trim().isNotEmpty)
+    .toList();
 
-  Future<MBProduct?> getProductById(String productId) async {
-    final String id = productId.trim();
-    if (id.isEmpty) return null;
+final normalizedSearch = searchText.trim().toLowerCase();
+if (normalizedSearch.isNotEmpty) {
+products = products.where((product) {
+return _matchesSearch(product, normalizedSearch);
+}).toList();
+}
 
-    return guardFirestore(() async {
-      final doc = await productsCollection.doc(id).get().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while loading product details.');
-        },
-      );
+return products;
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to fetch products.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-      if (!doc.exists || doc.data() == null) {
-        return null;
-      }
+Stream<List<MBProduct>> watchProducts({
+String searchText = '',
+String? categoryId,
+String? brandId,
+bool? isEnabled,
+bool includeDeleted = false,
+bool deletedOnly = false,
+int limit = 200,
+}) {
+Query<Map<String, dynamic>> query = _productsRef;
 
-      return MBProduct.fromMap({
-        ...doc.data()!,
-        'id': doc.data()!['id'] ?? doc.id,
-      });
-    });
-  }
+if (deletedOnly) {
+query = query.where('isDeleted', isEqualTo: true);
+} else if (!includeDeleted) {
+query = query.where('isDeleted', isEqualTo: false);
+}
 
-  Future<bool> slugExists({
-    required String slug,
-    String? excludeProductId,
-  }) {
-    return super.slugExists(
-      slug: slug,
-      excludeId: excludeProductId,
-      timeoutMessage: 'Timed out while checking product slug uniqueness.',
-    );
-  }
+if (categoryId != null && categoryId.trim().isNotEmpty) {
+query = query.where('categoryId', isEqualTo: categoryId.trim());
+}
 
-  Future<void> createProduct(MBProduct product) async {
-    await guardFirestore(() async {
-      final docRef = productsCollection.doc();
-      final now = DateTime.now();
-      final payload = product.copyWith(
-        id: docRef.id,
-        createdAt: now,
-        updatedAt: now,
-      );
+if (brandId != null && brandId.trim().isNotEmpty) {
+query = query.where('brandId', isEqualTo: brandId.trim());
+}
 
-      await docRef.set(_productPayload(payload)).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while creating product.');
-        },
-      );
-    });
-  }
+if (isEnabled != null) {
+query = query.where('isEnabled', isEqualTo: isEnabled);
+}
 
-  Future<void> updateProduct(MBProduct product) async {
-    final String productId = product.id.trim();
-    if (productId.isEmpty) {
-      throw Exception('Product id is required for update.');
-    }
+query = query.orderBy('sortOrder').orderBy('updatedAt', descending: true);
 
-    await guardFirestore(() async {
-      final payload = product.copyWith(updatedAt: DateTime.now());
-      await productsCollection.doc(productId).set(
-        _productPayload(payload),
-        SetOptions(merge: true),
-      ).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while updating product.');
-        },
-      );
-    });
-  }
+final normalizedSearch = searchText.trim().toLowerCase();
 
-  Future<void> setProductEnabledState({
-    required String productId,
-    required bool isEnabled,
-  }) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for status update.');
-    }
+return query.limit(limit).snapshots().map((snapshot) {
+var products = snapshot.docs
+    .map((doc) => _productFromDocument(doc))
+    .where((product) => product.id.trim().isNotEmpty)
+    .toList();
 
-    await guardFirestore(() async {
-      await productsCollection.doc(id).update({
-        'isEnabled': isEnabled,
-        'updatedAt': DateTime.now().toIso8601String(),
-      }).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while updating product status.');
-        },
-      );
-    });
-  }
+if (normalizedSearch.isNotEmpty) {
+products = products.where((product) {
+return _matchesSearch(product, normalizedSearch);
+}).toList();
+}
 
-  Future<void> increaseStock({
-    required String productId,
-    required int quantity,
-  }) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for stock increase.');
-    }
+return products;
+});
+}
 
-    await guardFirestore(() async {
-      await productsCollection.doc(id).update({
-        'regularStockQty': FieldValue.increment(quantity),
-        'updatedAt': DateTime.now().toIso8601String(),
-      }).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while increasing stock.');
-        },
-      );
-    });
-  }
+Future<MBProduct?> getProductById(String productId) async {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) return null;
 
-  Future<void> applyInventoryPurchase({
-    required String productId,
-    required int purchasedQty,
-    required int scheduledDemand,
-  }) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for purchase inventory logic.');
-    }
+try {
+final doc = await _productsRef.doc(normalizedId).get();
+if (!doc.exists || doc.data() == null) return null;
+return _productFromDocument(doc);
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to load product details.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-    await guardFirestore(() async {
-      final doc = await productsCollection.doc(id).get().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while loading product for inventory update.');
-        },
-      );
+Future<bool> slugExists(
+String slug, {
+String? excludeProductId,
+}) async {
+final normalizedSlug = _normalizeSlug(slug);
+if (normalizedSlug.isEmpty) return false;
 
-      if (!doc.exists || doc.data() == null) {
-        return;
-      }
+try {
+final snapshot = await _productsRef
+    .where('slug', isEqualTo: normalizedSlug)
+    .limit(5)
+    .get();
 
-      final product = MBProduct.fromMap({
-        ...doc.data()!,
-        'id': doc.data()!['id'] ?? doc.id,
-      });
+for (final doc in snapshot.docs) {
+if (excludeProductId != null && doc.id == excludeProductId.trim()) {
+continue;
+}
+return true;
+}
+return false;
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to validate product slug.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-      int remaining = purchasedQty;
-      if (scheduledDemand > 0) {
-        final int usedForScheduled =
-        remaining >= scheduledDemand ? scheduledDemand : remaining;
-        remaining -= usedForScheduled;
-      }
+Future<String> ensureUniqueSlug({
+required String preferredSlug,
+String? titleFallback,
+String? excludeProductId,
+}) async {
+var baseSlug = _normalizeSlug(preferredSlug);
+if (baseSlug.isEmpty) {
+baseSlug = _normalizeSlug(titleFallback ?? 'product');
+}
+if (baseSlug.isEmpty) {
+baseSlug = 'product';
+}
 
-      final int updatedStock = product.regularStockQty + remaining;
+if (!await slugExists(baseSlug, excludeProductId: excludeProductId)) {
+return baseSlug;
+}
 
-      await productsCollection.doc(id).update({
-        'regularStockQty': updatedStock,
-        'updatedAt': DateTime.now().toIso8601String(),
-      }).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while applying purchase inventory logic.');
-        },
-      );
-    });
-  }
+for (var index = 2; index <= 9999; index++) {
+final candidate = '$baseSlug-$index';
+if (!await slugExists(candidate, excludeProductId: excludeProductId)) {
+return candidate;
+}
+}
 
-  Future<String?> getDeleteBlockReason(String productId) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      return 'Product id is required for delete.';
-    }
+throw AdminProductRepositoryException(
+message: 'Could not generate a unique slug for the product.',
+);
+}
 
-    return null;
-  }
+Future<MBProduct> createProduct({
+required MBProduct product,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+try {
+final normalized = await prepareProductForWrite(
+actorUid: actorUid,
+isCreate: true, product: product,
+);
 
-  Future<void> moveToQuarantine({
-    required MBProduct product,
-    required String deletedByUid,
-    required String deletedByName,
-  }) async {
-    if (product.id.trim().isEmpty) {
-      throw Exception('Product id is required for quarantine.');
-    }
+if (useCallableWrites) {
+return _createViaCallable(
+product: normalized,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+);
+}
 
-    await guardFirestore(() async {
-      final now = DateTime.now();
-      await quarantineCollection.doc(product.id).set({
-        'id': product.id,
-        'productId': product.id,
-        'productData': _productPayload(product),
-        'deletedByUid': deletedByUid,
-        'deletedByName': deletedByName,
-        'deletedAt': now.toIso8601String(),
-        'autoDeleteAt': now.add(const Duration(days: 30)).toIso8601String(),
-      }).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while moving product to quarantine.');
-        },
-      );
+return _createDirect(normalized);
+} catch (error, stackTrace) {
+if (error is AdminProductRepositoryException) rethrow;
+throw AdminProductRepositoryException(
+message: 'Failed to create product.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-      await productsCollection.doc(product.id).delete().timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while deleting live product during quarantine.');
-        },
-      );
-    });
-  }
+Future<MBProduct> updateProduct({
+required MBProduct product,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+final productId = product.id.trim();
+if (productId.isEmpty) {
+throw AdminProductRepositoryException(
+message: 'Product id is required for update.',
+);
+}
 
-  Stream<List<Map<String, dynamic>>> watchQuarantineProducts() {
-    return quarantineCollection
-        .orderBy('deletedAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          ...data,
-          'id': data['id'] ?? doc.id,
-        };
-      }).toList(),
-    );
-  }
+try {
+final normalized = await prepareProductForWrite(
+actorUid: actorUid,
+isCreate: false, product: product,
+);
 
-  Future<List<Map<String, dynamic>>> fetchQuarantineProductsOnce() async {
-    return guardFirestore(() async {
-      final snapshot = await quarantineCollection
-          .orderBy('deletedAt', descending: true)
-          .get()
-          .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while loading quarantine products.');
-        },
-      );
+if (useCallableWrites) {
+return _updateViaCallable(
+product: normalized,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+);
+}
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          ...data,
-          'id': data['id'] ?? doc.id,
-        };
-      }).toList();
-    });
-  }
+return _updateDirect(normalized);
+} catch (error, stackTrace) {
+if (error is AdminProductRepositoryException) rethrow;
+throw AdminProductRepositoryException(
+message: 'Failed to update product.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-  Future<void> restoreFromQuarantine(String productId) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for restore.');
-    }
+Future<void> softDeleteProduct({
+required String productId,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+String? reason,
+}) async {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+throw AdminProductRepositoryException(
+message: 'Product id is required for delete.',
+);
+}
 
-    await guardFirestore(() async {
-      final doc = await quarantineCollection.doc(id).get().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timed out while loading quarantine product.');
-        },
-      );
+try {
+if (useCallableWrites) {
+final callable = _functions.httpsCallable(deleteCallableName);
+await callable.call(<String, dynamic>{
+'productId': normalizedId,
+'reason': reason,
+'actorUid': actorUid,
+'actorName': actorName,
+'actorPhone': actorPhone,
+'actorRole': actorRole,
+});
+return;
+}
 
-      if (!doc.exists || doc.data() == null) {
-        throw Exception('Quarantine product not found.');
-      }
+await _productsRef.doc(normalizedId).set({
+'isDeleted': true,
+'deletedAt': DateTime.now().toIso8601String(),
+'deletedBy': actorUid,
+'deleteReason': reason,
+'updatedBy': actorUid,
+'updatedAt': DateTime.now().toIso8601String(),
+}, SetOptions(merge: true));
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to delete product.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-      final data = doc.data()!;
-      final Map<String, dynamic> productData =
-      Map<String, dynamic>.from(data['productData'] as Map? ?? const {});
-      if (productData.isEmpty) {
-        throw Exception('Quarantine product data is empty.');
-      }
+Future<void> restoreProduct({
+required String productId,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+throw AdminProductRepositoryException(
+message: 'Product id is required for restore.',
+);
+}
 
-      await productsCollection.doc(id).set(productData).timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while restoring product.');
-        },
-      );
+try {
+if (useCallableWrites) {
+final callable = _functions.httpsCallable(restoreCallableName);
+await callable.call(<String, dynamic>{
+'productId': normalizedId,
+'actorUid': actorUid,
+'actorName': actorName,
+'actorPhone': actorPhone,
+'actorRole': actorRole,
+});
+return;
+}
 
-      await quarantineCollection.doc(id).delete().timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while cleaning quarantine record.');
-        },
-      );
-    });
-  }
+await _productsRef.doc(normalizedId).set({
+'isDeleted': false,
+'deletedAt': null,
+'deletedBy': null,
+'deleteReason': null,
+'updatedBy': actorUid,
+'updatedAt': DateTime.now().toIso8601String(),
+}, SetOptions(merge: true));
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to restore product.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-  Future<void> hardDeleteFromQuarantine(String productId) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for hard delete.');
-    }
+Future<void> setProductEnabled({
+required String productId,
+required bool isEnabled,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+throw AdminProductRepositoryException(
+message: 'Product id is required to change product status.',
+);
+}
 
-    await guardFirestore(() async {
-      await quarantineCollection.doc(id).delete().timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw Exception('Timed out while hard deleting quarantine product.');
-        },
-      );
-    });
-  }
+try {
+if (useCallableWrites) {
+final callable = _functions.httpsCallable(setEnabledCallableName);
+await callable.call(<String, dynamic>{
+'productId': normalizedId,
+'isEnabled': isEnabled,
+'actorUid': actorUid,
+'actorName': actorName,
+'actorPhone': actorPhone,
+'actorRole': actorRole,
+});
+return;
+}
 
-  Future<void> deleteProduct(String productId) async {
-    final String id = productId.trim();
-    if (id.isEmpty) {
-      throw Exception('Product id is required for delete.');
-    }
+await _productsRef.doc(normalizedId).set({
+'isEnabled': isEnabled,
+'updatedBy': actorUid,
+'updatedAt': DateTime.now().toIso8601String(),
+}, SetOptions(merge: true));
+} catch (error, stackTrace) {
+throw AdminProductRepositoryException(
+message: 'Failed to update product status.',
+cause: error,
+stackTrace: stackTrace,
+);
+}
+}
 
-    final product = await getProductById(id);
-    if (product == null) {
-      return;
-    }
+Future<MBProduct> prepareProductForWrite({
+required MBProduct product,
+required String actorUid,
+required bool isCreate,
+}) async {
+final now = DateTime.now();
+final productId = product.id.trim().isEmpty ? _productsRef.doc().id : product.id.trim();
 
-    await moveToQuarantine(
-      product: product,
-      deletedByUid: '',
-      deletedByName: '',
-    );
-  }
+final uniqueSlug = await ensureUniqueSlug(
+preferredSlug: product.slug,
+titleFallback: product.titleEn,
+excludeProductId: isCreate ? null : productId,
+);
 
-  Future<void> restoreProduct(String productId) async {
-    await restoreFromQuarantine(productId);
-  }
+final normalizedMediaItems = _normalizeMediaItems(
+product.mediaItems,
+fallbackThumbnailUrl: product.thumbnailUrl,
+fallbackImageUrls: product.imageUrls,
+);
+
+final resolvedThumbnailUrl = _resolveThumbnailUrl(
+explicitThumbnailUrl: product.thumbnailUrl,
+mediaItems: normalizedMediaItems,
+);
+
+final resolvedImageUrls = _resolveImageUrls(
+explicitImageUrls: product.imageUrls,
+mediaItems: normalizedMediaItems,
+);
+
+return product.copyWith(
+id: productId,
+slug: uniqueSlug,
+mediaItems: normalizedMediaItems,
+thumbnailUrl: resolvedThumbnailUrl,
+imageUrls: resolvedImageUrls,
+createdBy: isCreate ? actorUid : null,
+updatedBy: actorUid,
+createdAt: isCreate ? now : product.createdAt,
+updatedAt: now,
+);
+}
+
+Future<MBProduct> _createViaCallable({
+required MBProduct product,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+final callable = _functions.httpsCallable(createCallableName);
+final response = await callable.call(<String, dynamic>{
+'product': product.toMap(),
+'actorUid': actorUid,
+'actorName': actorName,
+'actorPhone': actorPhone,
+'actorRole': actorRole,
+});
+
+final productData = _extractProductMap(response.data);
+if (productData != null) {
+return MBProduct.fromMap(productData);
+}
+
+final productId = _extractProductId(response.data) ?? product.id;
+final saved = await getProductById(productId);
+if (saved != null) return saved;
+
+return product;
+}
+
+Future<MBProduct> _updateViaCallable({
+required MBProduct product,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+final callable = _functions.httpsCallable(updateCallableName);
+final response = await callable.call(<String, dynamic>{
+'product': product.toMap(),
+'actorUid': actorUid,
+'actorName': actorName,
+'actorPhone': actorPhone,
+'actorRole': actorRole,
+});
+
+final productData = _extractProductMap(response.data);
+if (productData != null) {
+return MBProduct.fromMap(productData);
+}
+
+final productId = _extractProductId(response.data) ?? product.id;
+final saved = await getProductById(productId);
+if (saved != null) return saved;
+
+return product;
+}
+
+Future<MBProduct> _createDirect(MBProduct product) async {
+await _productsRef.doc(product.id).set(product.toMap(), SetOptions(merge: true));
+final saved = await getProductById(product.id);
+return saved ?? product;
+}
+
+Future<MBProduct> _updateDirect(MBProduct product) async {
+await _productsRef.doc(product.id).set(product.toMap(), SetOptions(merge: true));
+final saved = await getProductById(product.id);
+return saved ?? product;
+}
+
+MBProduct _productFromDocument(DocumentSnapshot<Map<String, dynamic>> doc) {
+final raw = doc.data() ?? const <String, dynamic>{};
+final normalized = _normalizeFirestoreMap(raw);
+normalized['id'] = (normalized['id'] ?? doc.id).toString();
+return MBProduct.fromMap(normalized);
+}
+
+bool _matchesSearch(MBProduct product, String normalizedSearch) {
+final haystacks = <String>[
+product.id,
+product.slug,
+product.productCode ?? '',
+product.sku ?? '',
+product.titleEn,
+product.titleBn,
+product.categoryNameEn ?? '',
+product.categoryNameBn ?? '',
+product.brandNameEn ?? '',
+product.brandNameBn ?? '',
+...product.tags,
+...product.keywords,
+];
+
+for (final value in haystacks) {
+if (value.toLowerCase().contains(normalizedSearch)) {
+return true;
+}
+}
+
+return false;
+}
+
+List<MBProductMedia> _normalizeMediaItems(
+List<MBProductMedia> mediaItems, {
+required String fallbackThumbnailUrl,
+required List<String> fallbackImageUrls,
+}) {
+if (mediaItems.isNotEmpty) {
+final items = [...mediaItems]
+..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+var hasPrimary = items.any((item) => item.isPrimary);
+if (!hasPrimary) {
+for (var index = 0; index < items.length; index++) {
+final item = items[index];
+if (index == 0) {
+items[index] = item.copyWith(isPrimary: true);
+hasPrimary = true;
+}
+}
+}
+
+return items;
+}
+
+final generated = <MBProductMedia>[];
+if (fallbackThumbnailUrl.trim().isNotEmpty) {
+generated.add(
+MBProductMedia.fromLegacyUrl(
+fallbackThumbnailUrl.trim(),
+id: 'thumbnail',
+role: 'thumbnail',
+sortOrder: 0,
+isPrimary: true,
+),
+);
+}
+
+for (var index = 0; index < fallbackImageUrls.length; index++) {
+final url = fallbackImageUrls[index].trim();
+if (url.isEmpty) continue;
+if (url == fallbackThumbnailUrl.trim()) continue;
+generated.add(
+MBProductMedia.fromLegacyUrl(
+url,
+id: 'gallery_$index',
+role: 'gallery',
+sortOrder: index + 1,
+isPrimary: generated.isEmpty && index == 0,
+),
+);
+}
+
+return generated;
+}
+
+String _resolveThumbnailUrl({
+required String explicitThumbnailUrl,
+required List<MBProductMedia> mediaItems,
+}) {
+final normalizedExplicit = explicitThumbnailUrl.trim();
+if (normalizedExplicit.isNotEmpty) return normalizedExplicit;
+
+for (final item in mediaItems) {
+if (!item.isEnabled) continue;
+if (item.role == 'thumbnail' || item.isPrimary) {
+final url = item.url.trim();
+if (url.isNotEmpty) return url;
+}
+}
+
+for (final item in mediaItems) {
+if (!item.isEnabled) continue;
+final url = item.url.trim();
+if (url.isNotEmpty) return url;
+}
+
+return '';
+}
+
+List<String> _resolveImageUrls({
+required List<String> explicitImageUrls,
+required List<MBProductMedia> mediaItems,
+}) {
+if (explicitImageUrls.isNotEmpty) {
+return explicitImageUrls
+    .map((item) => item.trim())
+    .where((item) => item.isNotEmpty)
+    .toSet()
+    .toList();
+}
+
+return mediaItems
+    .where((item) => item.isEnabled && item.type == 'image')
+    .map((item) => item.url.trim())
+    .where((item) => item.isNotEmpty)
+    .toSet()
+    .toList();
+}
+
+Map<String, dynamic>? _extractProductMap(dynamic data) {
+if (data is Map<String, dynamic>) {
+if (data['product'] is Map<String, dynamic>) {
+return Map<String, dynamic>.from(data['product'] as Map<String, dynamic>);
+}
+if (data['data'] is Map<String, dynamic>) {
+final nested = data['data'];
+if (nested is Map && nested['product'] is Map) {
+return Map<String, dynamic>.from(nested['product'] as Map);
+}
+}
+if (data.containsKey('id') && data.containsKey('titleEn')) {
+return Map<String, dynamic>.from(data);
+}
+}
+if (data is Map) {
+return _extractProductMap(Map<String, dynamic>.from(data));
+}
+return null;
+}
+
+String? _extractProductId(dynamic data) {
+if (data is Map<String, dynamic>) {
+final directId = data['productId'] ?? data['id'];
+if (directId != null && directId.toString().trim().isNotEmpty) {
+return directId.toString().trim();
+}
+
+final nested = data['data'];
+if (nested is Map) {
+final nestedId = nested['productId'] ?? nested['id'];
+if (nestedId != null && nestedId.toString().trim().isNotEmpty) {
+return nestedId.toString().trim();
+}
+}
+}
+if (data is Map) {
+return _extractProductId(Map<String, dynamic>.from(data));
+}
+return null;
+}
+}
+
+class AdminProductRepositoryException implements Exception {
+const AdminProductRepositoryException({
+required this.message,
+this.cause,
+this.stackTrace,
+});
+
+final String message;
+final Object? cause;
+final StackTrace? stackTrace;
+
+@override
+String toString() {
+if (cause == null) return 'AdminProductRepositoryException: $message';
+return 'AdminProductRepositoryException: $message Cause: $cause';
+}
+}
+
+String _normalizeSlug(String input) {
+var value = input.trim().toLowerCase();
+value = value.replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+value = value.replaceAll(RegExp(r'-+'), '-');
+value = value.replaceAll(RegExp(r'^-|-$'), '');
+return value;
+}
+
+Map<String, dynamic> _normalizeFirestoreMap(Map<String, dynamic> source) {
+final result = <String, dynamic>{};
+
+source.forEach((key, value) {
+result[key] = _normalizeFirestoreValue(value);
+});
+
+return result;
+}
+
+dynamic _normalizeFirestoreValue(dynamic value) {
+if (value is Timestamp) {
+return value.toDate().toIso8601String();
+}
+
+if (value is Map<String, dynamic>) {
+return _normalizeFirestoreMap(value);
+}
+
+if (value is Map) {
+return _normalizeFirestoreMap(Map<String, dynamic>.from(value));
+}
+
+if (value is List) {
+return value.map(_normalizeFirestoreValue).toList();
+}
+
+return value;
 }

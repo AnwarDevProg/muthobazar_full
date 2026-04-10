@@ -1,457 +1,648 @@
-import 'package:admin_web/app/shell/admin_web_shell.dart';
-import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:admin_web/features/products/widgets/admin_product_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shared_ui/shared_ui.dart';
+import 'package:shared_models/shared_models.dart';
+import '../controllers/admin_product_controller.dart';
 
-class AdminProductsPage extends GetView<AdminProductController> {
-  const AdminProductsPage({super.key});
+
+// File: admin_product_page.dart (Part 1 of 3)
+
+class AdminProductPage extends StatefulWidget {
+  const AdminProductPage({
+    super.key,
+    this.controller,
+    this.actorUid = '',
+    this.actorName,
+    this.actorPhone,
+    this.actorRole,
+    this.availableCategories = const <AdminProductRelationOption>[],
+    this.availableBrands = const <AdminProductRelationOption>[],
+  });
+
+  final AdminProductController? controller;
+  final String actorUid;
+  final String? actorName;
+  final String? actorPhone;
+  final String? actorRole;
+  final List<AdminProductRelationOption> availableCategories;
+  final List<AdminProductRelationOption> availableBrands;
+
+  @override
+  State<AdminProductPage> createState() => _AdminProductPageState();
+}
+
+class _AdminProductPageState extends State<AdminProductPage> {
+  late final AdminProductController _controller;
+  late final bool _ownsController;
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller ?? Get.put(AdminProductController());
+    _ownsController = widget.controller == null;
+    _searchController = TextEditingController(text: _controller.searchQuery.value);
+
+    if (_controller.products.isEmpty && !_controller.isLoading.value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller.loadProducts(clearMessages: false);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    if (_ownsController) {
+      Get.delete<AdminProductController>();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AdminWebShell(
-      child: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+    return Scaffold(
+      body: SafeArea(
+        child: Obx(
+              () => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              _buildToolbar(context),
+              _buildStats(context),
+              if (_controller.hasError) _buildErrorBanner(context),
+              Expanded(child: _buildBody(context)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-        return Column(
-          children: [
-            _ProductsToolbar(controller: controller),
-            Expanded(
-              child: controller.filteredProducts.isEmpty
-                  ? const _EmptyProductsState()
-                  : _ProductsTable(controller: controller),
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Products',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage products, pricing, attributes, variations, media, and lifecycle states.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
-          ],
+          ),
+          FilledButton.icon(
+            onPressed: _handleCreate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create Product'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SizedBox(
+            width: 320,
+            child: TextField(
+              controller: _searchController,
+              onChanged: _controller.setSearchQuery,
+              decoration: InputDecoration(
+                hintText: 'Search by title, slug, sku, tags...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.trim().isEmpty
+                    ? null
+                    : IconButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    _controller.setSearchQuery('');
+                  },
+                  icon: const Icon(Icons.clear),
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ),
+          _buildCategoryFilter(context),
+          _buildBrandFilter(context),
+          _buildStatusFilter(context),
+          FilterChip(
+            label: const Text('Include Deleted'),
+            selected: _controller.includeDeleted.value,
+            onSelected: (value) => _controller.setIncludeDeleted(value),
+          ),
+          FilterChip(
+            label: const Text('Deleted Only'),
+            selected: _controller.deletedOnly.value,
+            onSelected: (value) => _controller.setDeletedOnly(value),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _controller.clearFilters(),
+            icon: const Icon(Icons.filter_alt_off_outlined),
+            label: const Text('Clear Filters'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _controller.loadProducts(clearMessages: false),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Refresh'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Category',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String?>(
+            isExpanded: true,
+            value: _normalizeOptionValue(
+              _controller.selectedCategoryId.value,
+              widget.availableCategories.map((e) => e.id).toList(),
+            ),
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All categories'),
+              ),
+              ...widget.availableCategories.map(
+                    (item) => DropdownMenuItem<String?>(
+                  value: item.id,
+                  child: Text(item.nameEn),
+                ),
+              ),
+            ],
+            onChanged: (value) => _controller.setCategoryFilter(value),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandFilter(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Brand',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String?>(
+            isExpanded: true,
+            value: _normalizeOptionValue(
+              _controller.selectedBrandId.value,
+              widget.availableBrands.map((e) => e.id).toList(),
+            ),
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('All brands'),
+              ),
+              ...widget.availableBrands.map(
+                    (item) => DropdownMenuItem<String?>(
+                  value: item.id,
+                  child: Text(item.nameEn),
+                ),
+              ),
+            ],
+            onChanged: (value) => _controller.setBrandFilter(value),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusFilter(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Status',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<bool?>(
+            isExpanded: true,
+            value: _controller.selectedEnabled.value,
+            items: const [
+              DropdownMenuItem<bool?>(value: null, child: Text('All statuses')),
+              DropdownMenuItem<bool?>(value: true, child: Text('Enabled')),
+              DropdownMenuItem<bool?>(value: false, child: Text('Disabled')),
+            ],
+            onChanged: (value) => _controller.setEnabledFilter(value),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStats(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          _StatCard(title: 'Total', value: _controller.totalCount.toString()),
+          _StatCard(title: 'Active', value: _controller.activeCount.toString()),
+          _StatCard(title: 'Inactive', value: _controller.inactiveCount.toString()),
+          _StatCard(title: 'Deleted', value: _controller.deletedCount.toString()),
+          _StatCard(title: 'Featured', value: _controller.featuredCount.toString()),
+          _StatCard(title: 'Flash Sale', value: _controller.flashSaleCount.toString()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Material(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _controller.errorMessage.value,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _controller.clearError,
+                child: const Text('Dismiss'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_controller.isLoading.value && _controller.products.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_controller.isEmptyState) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 56),
+              const SizedBox(height: 16),
+              Text(
+                'No products found',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Create your first product or adjust your filters.',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _handleCreate,
+                icon: const Icon(Icons.add),
+                label: const Text('Create Product'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      itemCount: _controller.products.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final product = _controller.products[index];
+        return _ProductListTile(
+          product: product,
+          onEdit: () => _handleEdit(product),
+          onToggleEnabled: () => _handleToggleEnabled(product),
+          onDelete: () => _handleDelete(product),
+          onRestore: () => _handleRestore(product),
         );
-      }),
+      },
+    );
+  }
+
+  String? _normalizeOptionValue(String? value, List<String> options) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) return null;
+    return options.contains(normalized) ? normalized : null;
+  }
+
+  Future<void> _handleCreate() async {
+    await AdminProductFormDialog.show(
+      context,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
+      controller: _controller,
+      availableCategories: widget.availableCategories,
+      availableBrands: widget.availableBrands,
+    );
+  }
+
+  Future<void> _handleEdit(MBProduct product) async {
+    await AdminProductFormDialog.show(
+      context,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
+      controller: _controller,
+      initialProduct: product,
+      availableCategories: widget.availableCategories,
+      availableBrands: widget.availableBrands,
+      dialogTitle: 'Edit Product',
+    );
+  }
+
+  Future<void> _handleToggleEnabled(MBProduct product) async {
+    await _controller.setProductEnabled(
+      productId: product.id,
+      isEnabled: !product.isEnabled,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
+    );
+  }
+
+  Future<void> _handleDelete(MBProduct product) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to delete "${product.titleEn}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _controller.deleteProduct(
+      productId: product.id,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
+    );
+  }
+
+  Future<void> _handleRestore(MBProduct product) async {
+    await _controller.restoreProduct(
+      productId: product.id,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
     );
   }
 }
 
-class _ProductsToolbar extends StatelessWidget {
-  const _ProductsToolbar({
-    required this.controller,
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.title,
+    required this.value,
   });
 
-  final AdminProductController controller;
+  final String title;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(MBSpacing.lg),
+      width: 140,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.85),
-          ),
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Product Management',
-                  style: MBTextStyles.sectionTitle.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Get.dialog(
-                    const AdminProductFormDialog(),
-                    barrierDismissible: false,
-                  );
-                },
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Product'),
-              ),
-            ],
-          ),
-          MBSpacing.h(MBSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: controller.searchController,
-                  onChanged: controller.setSearchQuery,
-                  decoration: const InputDecoration(
-                    hintText: 'Search by title, SKU, code, tags, category, brand...',
-                    prefixIcon: Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: controller.statusFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All')),
-                    DropdownMenuItem(value: 'enabled', child: Text('Enabled')),
-                    DropdownMenuItem(value: 'disabled', child: Text('Disabled')),
-                    DropdownMenuItem(value: 'featured', child: Text('Featured')),
-                    DropdownMenuItem(value: 'bestSeller', child: Text('Best Seller')),
-                    DropdownMenuItem(value: 'newArrival', child: Text('New Arrival')),
-                    DropdownMenuItem(value: 'flashSale', child: Text('Flash Sale')),
-                    DropdownMenuItem(value: 'inStock', child: Text('In Stock')),
-                    DropdownMenuItem(value: 'outOfStock', child: Text('Out of Stock')),
-                  ],
-                  onChanged: (value) =>
-                      controller.setStatusFilter(value ?? 'all'),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: controller.categoryFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: 'all', child: Text('All')),
-                    ...controller.categories.map(
-                          (e) => DropdownMenuItem(
-                        value: e.id,
-                        child: Text(e.name),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      controller.setCategoryFilter(value ?? 'all'),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: controller.brandFilter.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Brand',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: 'all', child: Text('All')),
-                    ...controller.brands.map(
-                          (e) => DropdownMenuItem(
-                        value: e.id,
-                        child: Text(e.name),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      controller.setBrandFilter(value ?? 'all'),
-                ),
-              ),
-              MBSpacing.w(MBSpacing.md),
-              OutlinedButton(
-                onPressed: controller.resetFilters,
-                child: const Text('Reset'),
-              ),
-            ],
-          ),
+          Text(title, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          Text(value, style: Theme.of(context).textTheme.headlineSmall),
         ],
       ),
     );
   }
 }
 
-class _ProductsTable extends StatelessWidget {
-  const _ProductsTable({
-    required this.controller,
+class _ProductListTile extends StatelessWidget {
+  const _ProductListTile({
+    required this.product,
+    required this.onEdit,
+    required this.onToggleEnabled,
+    required this.onDelete,
+    required this.onRestore,
   });
 
-  final AdminProductController controller;
+  final MBProduct product;
+  final VoidCallback onEdit;
+  final VoidCallback onToggleEnabled;
+  final VoidCallback onDelete;
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(MBRadius.lg),
-          side: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.9),
-          ),
+    final title = product.titleEn.trim().isEmpty ? product.id : product.titleEn;
+
+    return Material(
+      borderRadius: BorderRadius.circular(16),
+      color: Theme.of(context).colorScheme.surface,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 24,
-            headingRowHeight: 56,
-            dataRowMinHeight: 84,
-            dataRowMaxHeight: 96,
-            columns: const [
-              DataColumn(label: Text('Product')),
-              DataColumn(label: Text('Category')),
-              DataColumn(label: Text('Brand')),
-              DataColumn(label: Text('Price')),
-              DataColumn(label: Text('Inventory')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Updated')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: controller.filteredProducts.map((product) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    SizedBox(
-                      width: 340,
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(MBRadius.md),
-                            child: product.thumbnailUrl.isNotEmpty
-                                ? Image.network(
-                              product.thumbnailUrl,
-                              width: 54,
-                              height: 54,
-                              fit: BoxFit.cover,
-                            )
-                                : Container(
-                              width: 54,
-                              height: 54,
-                              color: MBColors.background,
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                          ),
-                          MBSpacing.w(MBSpacing.md),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.titleEn,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: MBTextStyles.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                MBSpacing.h(MBSpacing.xxxs),
-                                Text(
-                                  product.titleBn,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: MBTextStyles.caption.copyWith(
-                                    color: MBColors.textSecondary,
-                                  ),
-                                ),
-                                MBSpacing.h(MBSpacing.xxxs),
-                                Text(
-                                  'SKU: ${product.sku ?? '-'} | Code: ${product.productCode ?? '-'}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: MBTextStyles.caption.copyWith(
-                                    color: MBColors.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ProductThumb(url: product.resolvedThumbnailUrl),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                    ),
+                      if (product.isDeleted)
+                        const Chip(label: Text('Deleted'))
+                      else if (product.isEnabled)
+                        const Chip(label: Text('Enabled'))
+                      else
+                        const Chip(label: Text('Disabled')),
+                    ],
                   ),
-                  DataCell(Text(product.categoryId ?? '-')),
-                  DataCell(Text(product.brandId ?? '-')),
-                  DataCell(
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('৳ ${product.effectivePrice.toStringAsFixed(2)}'),
-                        if (product.hasDiscount)
-                          Text(
-                            'Base: ৳ ${product.price.toStringAsFixed(2)}',
-                            style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                      ],
-                    ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'slug: ${product.slug.isEmpty ? '-' : product.slug}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  DataCell(
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Stock: ${product.stockQty}'),
-                        Text(
-                          'Instant: ${product.instantAvailableToday}',
-                          style: MBTextStyles.caption.copyWith(
-                            color: MBColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      children: [
-                        Switch(
-                          value: product.isEnabled,
-                          onChanged: (value) =>
-                              controller.toggleEnabled(product, value),
-                        ),
-                        Text(product.isEnabled ? 'Enabled' : 'Disabled'),
-                      ],
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      product.updatedAt.toString().split('.').first,
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Edit product',
-                          onPressed: () {
-                            Get.dialog(
-                              AdminProductFormDialog(product: product),
-                              barrierDismissible: false,
-                            );
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton(
-                          tooltip: 'Disable product',
-                          onPressed: () async {
-                            final confirm = await Get.dialog<bool>(
-                              AlertDialog(
-                                title: const Text('Disable product'),
-                                content: Text(
-                                  'Do you want to disable "${product.titleEn}"?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(result: false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Get.back(result: true),
-                                    child: const Text('Disable'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirm == true) {
-                              await controller.softDisableProduct(product);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.visibility_off_outlined,
-                            color: MBColors.error,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete product',
-                          onPressed: () async {
-                            final confirm = await Get.dialog<bool>(
-                              AlertDialog(
-                                title: const Text('Delete product'),
-                                content: Text(
-                                  'This will permanently delete "${product.titleEn}". Continue?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(result: false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Get.back(result: true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirm == true) {
-                              await controller.deleteProduct(product);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: MBColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _InfoChip(text: 'price: ${product.price.toStringAsFixed(2)}'),
+                      _InfoChip(text: 'stock: ${product.stockQty}'),
+                      _InfoChip(text: 'type: ${product.productType}'),
+                      _InfoChip(text: 'category: ${product.categoryNameEn ?? '-'}'),
+                      _InfoChip(text: 'brand: ${product.brandNameEn ?? '-'}'),
+                      _InfoChip(text: 'featured: ${product.isFeatured}'),
+                    ],
                   ),
                 ],
-              );
-            }).toList(),
-          ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onToggleEnabled,
+                  icon: Icon(product.isEnabled ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  label: Text(product.isEnabled ? 'Disable' : 'Enable'),
+                ),
+                if (product.isDeleted)
+                  FilledButton.tonalIcon(
+                    onPressed: onRestore,
+                    icon: const Icon(Icons.restore),
+                    label: const Text('Restore'),
+                  )
+                else
+                  FilledButton.tonalIcon(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _EmptyProductsState extends StatelessWidget {
-  const _EmptyProductsState();
+class _ProductThumb extends StatelessWidget {
+  const _ProductThumb({required this.url});
+
+  final String url;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 420,
-        padding: const EdgeInsets.all(MBSpacing.xl),
+    if (url.trim().isEmpty) {
+      return Container(
+        width: 84,
+        height: 84,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: MBColors.shadow.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          color: Colors.black12,
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.inventory_2_outlined,
-              size: 44,
-              color: MBColors.primaryOrange,
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              'No products found',
-              style: MBTextStyles.sectionTitle.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.xs),
-            Text(
-              'Create your first product or adjust the current filters.',
-              textAlign: TextAlign.center,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
-              ),
-            ),
-          ],
+        alignment: Alignment.center,
+        child: const Icon(Icons.image_outlined),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Image.network(
+        url,
+        width: 84,
+        height: 84,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            color: Colors.black12,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.broken_image_outlined),
         ),
       ),
     );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(label: Text(text));
   }
 }

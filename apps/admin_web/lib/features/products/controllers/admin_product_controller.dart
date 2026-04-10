@@ -1,488 +1,670 @@
 import 'dart:async';
-import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_repositories/shared_repositories.dart';
+
+// File: admin_product_controller.dart
 
 class AdminProductController extends GetxController {
-  AdminProductController({
-    FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
-
-  final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
-
-  final RxBool isLoading = true.obs;
-  final RxBool isSaving = false.obs;
-  final RxBool isQuarantineLoading = false.obs;
-
-  final RxList<MBProduct> products = <MBProduct>[].obs;
-  final RxList<MBProduct> filteredProducts = <MBProduct>[].obs;
-  final RxList<Map<String, dynamic>> quarantineProducts =
-      <Map<String, dynamic>>[].obs;
-
-  final RxList<AdminLookupOption> categories = <AdminLookupOption>[].obs;
-  final RxList<AdminLookupOption> brands = <AdminLookupOption>[].obs;
-
-  final TextEditingController searchController = TextEditingController();
-
-  final RxString searchQuery = ''.obs;
-  final RxString statusFilter = 'all'.obs;
-  final RxString categoryFilter = 'all'.obs;
-  final RxString brandFilter = 'all'.obs;
-
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _productsSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _quarantineSub;
-
-  CollectionReference<Map<String, dynamic>> get productsCollection =>
-      _firestore.collection('products');
-
-  CollectionReference<Map<String, dynamic>> get categoriesCollection =>
-      _firestore.collection('categories');
-
-  CollectionReference<Map<String, dynamic>> get brandsCollection =>
-      _firestore.collection('brands');
-
-  CollectionReference<Map<String, dynamic>> get quarantineCollection =>
-      _firestore.collection('product_quarantine');
-
-  @override
-  void onInit() {
-    super.onInit();
-    _initialize();
-  }
-
-  @override
-  void onClose() {
-    _productsSub?.cancel();
-    _quarantineSub?.cancel();
-    searchController.dispose();
-    super.onClose();
-  }
-
-  Future<void> _initialize() async {
-    try {
-      isLoading.value = true;
-      await Future.wait([
-        loadCategories(),
-        loadBrands(),
-      ]);
-      _listenToProducts();
-      _listenToQuarantineProducts();
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> loadCategories() async {
-    final query = await categoriesCollection
-        .where('isActive', isEqualTo: true)
-        .orderBy('sortOrder')
-        .get();
-
-    categories.assignAll(
-      query.docs.map((doc) {
-        final data = doc.data();
-        return AdminLookupOption(
-          id: doc.id,
-          name: (data['name'] ?? data['titleEn'] ?? '').toString(),
-        );
-      }).toList(),
-    );
-  }
-
-  Future<void> loadBrands() async {
-    final query = await brandsCollection
-        .where('isActive', isEqualTo: true)
-        .orderBy('sortOrder')
-        .get();
-
-    brands.assignAll(
-      query.docs.map((doc) {
-        final data = doc.data();
-        return AdminLookupOption(
-          id: doc.id,
-          name: (data['name'] ?? data['titleEn'] ?? '').toString(),
-        );
-      }).toList(),
-    );
-  }
-
-  void _listenToProducts() {
-    _productsSub?.cancel();
-
-    _productsSub = productsCollection
-        .orderBy('updatedAt', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-      final items = snapshot.docs
-          .map((doc) => MBProduct.fromMap(doc.data()))
-          .where((e) => e.id.isNotEmpty)
-          .toList();
-
-      products.assignAll(items);
-      applyFilters();
-    });
-  }
-
-  void _listenToQuarantineProducts() {
-    isQuarantineLoading.value = true;
-    _quarantineSub?.cancel();
-
-    _quarantineSub = quarantineCollection
-        .orderBy('deletedAt', descending: true)
-        .snapshots()
-        .listen(
-          (snapshot) {
-        quarantineProducts.assignAll(
-          snapshot.docs.map((doc) {
-            final data = Map<String, dynamic>.from(doc.data());
-            data['id'] = doc.id;
-            return data;
-          }).toList(),
-        );
-        isQuarantineLoading.value = false;
-      },
-      onError: (_) {
-        isQuarantineLoading.value = false;
-      },
-    );
-  }
-
-  void setSearchQuery(String value) {
-    searchQuery.value = value.trim().toLowerCase();
-    applyFilters();
-  }
-
-  void setStatusFilter(String value) {
-    statusFilter.value = value;
-    applyFilters();
-  }
-
-  void setCategoryFilter(String value) {
-    categoryFilter.value = value;
-    applyFilters();
-  }
-
-  void setBrandFilter(String value) {
-    brandFilter.value = value;
-    applyFilters();
-  }
-
-  void resetFilters() {
-    searchController.clear();
-    searchQuery.value = '';
-    statusFilter.value = 'all';
-    categoryFilter.value = 'all';
-    brandFilter.value = 'all';
-    applyFilters();
-  }
-
-  void applyFilters() {
-    final query = searchQuery.value;
-    final status = statusFilter.value;
-    final category = categoryFilter.value;
-    final brand = brandFilter.value;
-
-    final result = products.where((product) {
-      final matchesQuery = query.isEmpty ||
-          product.titleEn.toLowerCase().contains(query) ||
-          product.titleBn.toLowerCase().contains(query) ||
-          (product.sku ?? '').toLowerCase().contains(query) ||
-          (product.productCode ?? '').toLowerCase().contains(query) ||
-          product.tags.any((e) => e.toLowerCase().contains(query)) ||
-          product.keywords.any((e) => e.toLowerCase().contains(query));
-
-      final matchesStatus = switch (status) {
-        'enabled' => product.isEnabled,
-        'disabled' => !product.isEnabled,
-        'featured' => product.isFeatured,
-        'bestSeller' => product.isBestSeller,
-        'newArrival' => product.isNewArrival,
-        'flashSale' => product.isFlashSale,
-        'withAttributes' => product.hasAttributes,
-        'withVariations' => product.hasVariations,
-        'withPurchaseOptions' => product.hasPurchaseOptions,
-        'inStock' => product.inStock,
-        'outOfStock' => !product.inStock,
-        _ => true,
-      };
-
-      final matchesCategory =
-          category == 'all' || (product.categoryId ?? '') == category;
-
-      final matchesBrand = brand == 'all' || (product.brandId ?? '') == brand;
-
-      return matchesQuery && matchesStatus && matchesCategory && matchesBrand;
-    }).toList();
-
-    filteredProducts.assignAll(result);
-  }
-
-  Future<void> createProduct({
-    required MBProduct product,
-    AdminPickedImageFile? thumbnailFile,
-    List<AdminPickedImageFile> galleryFiles = const <AdminPickedImageFile>[],
-    Map<String, AdminPickedImageFile> variationImageFiles =
-    const <String, AdminPickedImageFile>{},
-  }) async {
-    try {
-      isSaving.value = true;
-
-      final doc = productsCollection.doc();
-      final productId = doc.id;
-
-      final thumbnailUrl = await _uploadOptionalImage(
-        productId: productId,
-        folder: 'thumbnail',
-        file: thumbnailFile,
-      );
-
-      final galleryUrls = await _uploadGalleryImages(
-        productId: productId,
-        files: galleryFiles,
-      );
-
-      final processedVariations = await _uploadVariationImages(
-        productId: productId,
-        variations: product.variations,
-        variationImageFiles: variationImageFiles,
-      );
-
-      final newProduct = product.copyWith(
-        id: productId,
-        thumbnailUrl: thumbnailUrl ?? product.thumbnailUrl,
-        imageUrls: galleryUrls.isEmpty ? product.imageUrls : galleryUrls,
-        variations: processedVariations,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await doc.set(newProduct.toMap());
-    } finally {
-      isSaving.value = false;
-    }
-  }
-
-  Future<void> updateProduct({
-    required MBProduct existing,
-    required MBProduct product,
-    AdminPickedImageFile? thumbnailFile,
-    List<AdminPickedImageFile> galleryFiles = const <AdminPickedImageFile>[],
-    Map<String, AdminPickedImageFile> variationImageFiles =
-    const <String, AdminPickedImageFile>{},
-  }) async {
-    try {
-      isSaving.value = true;
-
-      String thumbnailUrl = product.thumbnailUrl;
-      List<String> imageUrls = List<String>.from(product.imageUrls);
-
-      if (thumbnailFile != null) {
-        final uploaded = await _uploadOptionalImage(
-          productId: existing.id,
-          folder: 'thumbnail',
-          file: thumbnailFile,
-        );
-        if (uploaded != null && uploaded.isNotEmpty) {
-          thumbnailUrl = uploaded;
-        }
-      }
-
-      if (galleryFiles.isNotEmpty) {
-        imageUrls = await _uploadGalleryImages(
-          productId: existing.id,
-          files: galleryFiles,
-        );
-      }
-
-      final processedVariations = await _uploadVariationImages(
-        productId: existing.id,
-        variations: product.variations,
-        variationImageFiles: variationImageFiles,
-      );
-
-      final updated = product.copyWith(
-        id: existing.id,
-        thumbnailUrl: thumbnailUrl,
-        imageUrls: imageUrls,
-        variations: processedVariations,
-        createdAt: existing.createdAt,
-        updatedAt: DateTime.now(),
-      );
-
-      await productsCollection.doc(existing.id).set(updated.toMap());
-    } finally {
-      isSaving.value = false;
-    }
-  }
-
-  Future<void> toggleEnabled(MBProduct product, bool value) async {
-    final updated = product.copyWith(
-      isEnabled: value,
-      updatedAt: DateTime.now(),
-    );
-
-    await productsCollection.doc(product.id).set(updated.toMap());
-  }
-
-  Future<void> softDisableProduct(MBProduct product) async {
-    final updated = product.copyWith(
-      isEnabled: false,
-      updatedAt: DateTime.now(),
-    );
-
-    await productsCollection.doc(product.id).set(updated.toMap());
-  }
-
-  Future<void> softDeleteProduct(MBProduct product) async {
-    final now = DateTime.now();
-    final deleteAfterAt = now.add(const Duration(days: 30));
-
-    final quarantineDoc = quarantineCollection.doc(product.id);
-
-    await _firestore.runTransaction((transaction) async {
-      transaction.set(quarantineDoc, {
-        'id': product.id,
-        'productData': product.toMap(),
-        'deletedAt': now.toIso8601String(),
-        'deleteAfterAt': deleteAfterAt.toIso8601String(),
-      });
-
-      transaction.delete(productsCollection.doc(product.id));
-    });
-  }
-
-  Future<void> restoreProduct(String productId) async {
-    final quarantineDoc = await quarantineCollection.doc(productId).get();
-    if (!quarantineDoc.exists) return;
-
-    final data = quarantineDoc.data();
-    if (data == null) return;
-
-    final productData =
-    Map<String, dynamic>.from(data['productData'] as Map<String, dynamic>? ?? {});
-
-    final restored = MBProduct.fromMap(productData).copyWith(
-      updatedAt: DateTime.now(),
-    );
-
-    await _firestore.runTransaction((transaction) async {
-      transaction.set(productsCollection.doc(productId), restored.toMap());
-      transaction.delete(quarantineCollection.doc(productId));
-    });
-  }
-
-  Future<void> hardDeleteQuarantineProduct(String productId) async {
-    await quarantineCollection.doc(productId).delete();
-  }
-
-  Future<void> deleteProduct(MBProduct product) async {
-    await productsCollection.doc(product.id).delete();
-  }
-
-  Future<String?> _uploadOptionalImage({
-    required String productId,
-    required String folder,
-    required AdminPickedImageFile? file,
-  }) async {
-    if (file == null || file.bytes == null) return null;
-
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-    final ref = _storage.ref().child('products/$productId/$folder/$fileName');
-
-    await ref.putData(
-      file.bytes!,
-      SettableMetadata(contentType: file.mimeType),
-    );
-
-    return ref.getDownloadURL();
-  }
-
-  Future<List<String>> _uploadGalleryImages({
-    required String productId,
-    required List<AdminPickedImageFile> files,
-  }) async {
-    if (files.isEmpty) return <String>[];
-
-    final urls = <String>[];
-
-    for (final file in files) {
-      if (file.bytes == null) continue;
-
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final ref = _storage.ref().child('products/$productId/gallery/$fileName');
-
-      await ref.putData(
-        file.bytes!,
-        SettableMetadata(contentType: file.mimeType),
-      );
-
-      urls.add(await ref.getDownloadURL());
-    }
-
-    return urls;
-  }
-
-  Future<List<MBProductVariation>> _uploadVariationImages({
-    required String productId,
-    required List<MBProductVariation> variations,
-    required Map<String, AdminPickedImageFile> variationImageFiles,
-  }) async {
-    if (variations.isEmpty) return variations;
-
-    final result = <MBProductVariation>[];
-
-    for (final variation in variations) {
-      final imageFile = variationImageFiles[variation.id];
-
-      if (imageFile == null || imageFile.bytes == null) {
-        result.add(variation);
-        continue;
-      }
-
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
-      final ref = _storage
-          .ref()
-          .child('products/$productId/variations/${variation.id}/$fileName');
-
-      await ref.putData(
-        imageFile.bytes!,
-        SettableMetadata(contentType: imageFile.mimeType),
-      );
-
-      final imageUrl = await ref.getDownloadURL();
-      result.add(variation.copyWith(imageUrl: imageUrl));
-    }
-
-    return result;
-  }
+AdminProductController({
+AdminProductRepository? repository,
+this.autoLoadOnInit = true,
+this.liveStreamEnabled = false,
+}) : _repository = repository ?? AdminProductRepository();
+
+final AdminProductRepository _repository;
+final bool autoLoadOnInit;
+final bool liveStreamEnabled;
+
+final RxBool isLoading = false.obs;
+final RxBool isSaving = false.obs;
+final RxBool isDeleting = false.obs;
+final RxBool isRestoring = false.obs;
+final RxBool isStatusUpdating = false.obs;
+
+final RxString errorMessage = ''.obs;
+final RxString successMessage = ''.obs;
+
+final RxList<MBProduct> products = <MBProduct>[].obs;
+
+final RxString searchQuery = ''.obs;
+final RxnString selectedCategoryId = RxnString();
+final RxnString selectedBrandId = RxnString();
+final RxnBool selectedEnabled = RxnBool();
+
+final RxBool includeDeleted = false.obs;
+final RxBool deletedOnly = false.obs;
+
+final RxInt fetchLimit = 200.obs;
+
+Worker? _searchDebounceWorker;
+StreamSubscription<List<MBProduct>>? _productsSubscription;
+
+List<MBProduct> get items => products;
+
+bool get hasError => errorMessage.value.trim().isNotEmpty;
+
+bool get hasSuccess => successMessage.value.trim().isNotEmpty;
+
+bool get hasData => products.isNotEmpty;
+
+bool get isEmptyState => !isLoading.value && !hasError && products.isEmpty;
+
+int get totalCount => products.length;
+
+int get activeCount =>
+products.where((product) => product.isEnabled && !product.isDeleted).length;
+
+int get inactiveCount =>
+products.where((product) => !product.isEnabled && !product.isDeleted).length;
+
+int get deletedCount =>
+products.where((product) => product.isDeleted).length;
+
+int get featuredCount =>
+products.where((product) => product.isFeatured && !product.isDeleted).length;
+
+int get flashSaleCount =>
+products.where((product) => product.isFlashSale && !product.isDeleted).length;
+
+List<MBProduct> get enabledProducts =>
+products.where((product) => product.isEnabled && !product.isDeleted).toList();
+
+List<MBProduct> get disabledProducts =>
+products.where((product) => !product.isEnabled && !product.isDeleted).toList();
+
+List<MBProduct> get deletedProducts =>
+products.where((product) => product.isDeleted).toList();
+
+List<MBProduct> get inStockProducts =>
+products.where((product) => product.inStock && !product.isDeleted).toList();
+
+@override
+void onInit() {
+super.onInit();
+
+_searchDebounceWorker = debounce<String>(
+searchQuery,
+(_) => refreshProducts(),
+time: const Duration(milliseconds: 350),
+);
+
+if (autoLoadOnInit) {
+if (liveStreamEnabled) {
+startWatchingProducts();
+} else {
+unawaited(loadProducts());
+}
+}
 }
 
-class AdminLookupOption {
-  AdminLookupOption({
-    required this.id,
-    required this.name,
-  });
-
-  final String id;
-  final String name;
+@override
+void onClose() {
+_searchDebounceWorker?.dispose();
+_productsSubscription?.cancel();
+super.onClose();
 }
 
-class AdminPickedImageFile {
-  AdminPickedImageFile({
-    required this.name,
-    required this.bytes,
-    required this.mimeType,
-  });
+Future<void> loadProducts({
+bool clearMessages = false,
+}) async {
+if (isLoading.value) return;
 
-  final String name;
-  final Uint8List? bytes;
-  final String mimeType;
+if (clearMessages) {
+clearStatus();
+} else {
+clearError();
+}
+
+isLoading.value = true;
+
+try {
+final result = await _repository.fetchProducts(
+searchText: searchQuery.value,
+categoryId: selectedCategoryId.value,
+brandId: selectedBrandId.value,
+isEnabled: selectedEnabled.value,
+includeDeleted: includeDeleted.value,
+deletedOnly: deletedOnly.value,
+limit: fetchLimit.value,
+);
+
+products.assignAll(result);
+} catch (error) {
+errorMessage.value = _readableError(error, fallback: 'Failed to load products.');
+products.clear();
+} finally {
+isLoading.value = false;
+}
+}
+
+Future<void> refreshProducts() async {
+if (liveStreamEnabled) {
+startWatchingProducts();
+return;
+}
+await loadProducts();
+}
+
+void startWatchingProducts() {
+clearError();
+isLoading.value = true;
+
+_productsSubscription?.cancel();
+_productsSubscription = _repository
+    .watchProducts(
+searchText: searchQuery.value,
+categoryId: selectedCategoryId.value,
+brandId: selectedBrandId.value,
+isEnabled: selectedEnabled.value,
+includeDeleted: includeDeleted.value,
+deletedOnly: deletedOnly.value,
+limit: fetchLimit.value,
+)
+    .listen(
+(items) {
+products.assignAll(items);
+isLoading.value = false;
+},
+onError: (error) {
+errorMessage.value =
+_readableError(error, fallback: 'Failed to watch products.');
+products.clear();
+isLoading.value = false;
+},
+);
+}
+
+Future<void> reloadWithLiveMode(bool enabled) async {
+await _productsSubscription?.cancel();
+_productsSubscription = null;
+
+if (enabled) {
+startWatchingProducts();
+return;
+}
+
+await loadProducts(clearMessages: false);
+}
+
+void setSearchQuery(String value) {
+final normalized = value.trim();
+if (searchQuery.value == normalized) return;
+searchQuery.value = normalized;
+}
+
+Future<void> setCategoryFilter(String? categoryId) async {
+final normalized = _normalizeNullable(categoryId);
+if (selectedCategoryId.value == normalized) return;
+selectedCategoryId.value = normalized;
+await refreshProducts();
+}
+
+Future<void> setBrandFilter(String? brandId) async {
+final normalized = _normalizeNullable(brandId);
+if (selectedBrandId.value == normalized) return;
+selectedBrandId.value = normalized;
+await refreshProducts();
+}
+
+Future<void> setEnabledFilter(bool? isEnabled) async {
+if (selectedEnabled.value == isEnabled) return;
+selectedEnabled.value = isEnabled;
+await refreshProducts();
+}
+
+Future<void> setIncludeDeleted(bool value) async {
+if (includeDeleted.value == value && !deletedOnly.value) return;
+includeDeleted.value = value;
+if (!value && deletedOnly.value) {
+deletedOnly.value = false;
+}
+await refreshProducts();
+}
+
+Future<void> setDeletedOnly(bool value) async {
+if (deletedOnly.value == value) return;
+deletedOnly.value = value;
+if (value) {
+includeDeleted.value = true;
+}
+await refreshProducts();
+}
+
+Future<void> setFetchLimit(int value) async {
+final normalized = value < 1 ? 1 : value;
+if (fetchLimit.value == normalized) return;
+fetchLimit.value = normalized;
+await refreshProducts();
+}
+
+Future<void> clearFilters({
+bool keepSearch = false,
+}) async {
+if (!keepSearch) {
+searchQuery.value = '';
+}
+selectedCategoryId.value = null;
+selectedBrandId.value = null;
+selectedEnabled.value = null;
+includeDeleted.value = false;
+deletedOnly.value = false;
+await refreshProducts();
+}
+
+MBProduct? findProductById(String productId) {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) return null;
+
+for (final product in products) {
+if (product.id == normalizedId) {
+return product;
+}
+}
+return null;
+}
+
+Future<MBProduct?> fetchProductDetails(String productId) async {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) return null;
+
+clearError();
+
+try {
+final product = await _repository.getProductById(normalizedId);
+if (product == null) {
+errorMessage.value = 'Product not found.';
+return null;
+}
+
+_upsertLocalProduct(product);
+return product;
+} catch (error) {
+errorMessage.value =
+_readableError(error, fallback: 'Failed to load product details.');
+return null;
+}
+}
+
+Future<MBProduct?> saveProduct({
+required MBProduct product,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+if (isSaving.value) return null;
+
+clearStatus();
+isSaving.value = true;
+
+try {
+_validateProduct(product);
+
+final isCreate = product.id.trim().isEmpty;
+final saved = isCreate
+? await _repository.createProduct(
+product: product,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+)
+    : await _repository.updateProduct(
+product: product,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+);
+
+_upsertLocalProduct(saved);
+successMessage.value =
+isCreate ? 'Product created successfully.' : 'Product updated successfully.';
+return saved;
+} catch (error) {
+errorMessage.value = _readableError(
+error,
+fallback: 'Failed to save product.',
+);
+return null;
+} finally {
+isSaving.value = false;
+}
+}
+
+Future<bool> deleteProduct({
+required String productId,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+String? reason,
+}) async {
+if (isDeleting.value) return false;
+
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+errorMessage.value = 'Product id is required for delete.';
+return false;
+}
+
+clearStatus();
+isDeleting.value = true;
+
+try {
+await _repository.softDeleteProduct(
+productId: normalizedId,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+reason: reason,
+);
+
+final existing = findProductById(normalizedId);
+if (existing != null) {
+_upsertLocalProduct(
+existing.copyWith(
+isDeleted: true,
+deletedAt: DateTime.now(),
+deletedBy: actorUid,
+deleteReason: reason,
+updatedBy: actorUid,
+updatedAt: DateTime.now(),
+),
+);
+}
+
+if (!liveStreamEnabled) {
+await loadProducts();
+}
+
+successMessage.value = 'Product deleted successfully.';
+return true;
+} catch (error) {
+errorMessage.value = _readableError(
+error,
+fallback: 'Failed to delete product.',
+);
+return false;
+} finally {
+isDeleting.value = false;
+}
+}
+
+Future<bool> restoreProduct({
+required String productId,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+if (isRestoring.value) return false;
+
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+errorMessage.value = 'Product id is required for restore.';
+return false;
+}
+
+clearStatus();
+isRestoring.value = true;
+
+try {
+await _repository.restoreProduct(
+productId: normalizedId,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+);
+
+final existing = findProductById(normalizedId);
+if (existing != null) {
+_upsertLocalProduct(
+existing.copyWith(
+isDeleted: false,
+clearDeletedAt: true,
+clearDeletedBy: true,
+clearDeleteReason: true,
+updatedBy: actorUid,
+updatedAt: DateTime.now(),
+),
+);
+}
+
+if (!liveStreamEnabled) {
+await loadProducts();
+}
+
+successMessage.value = 'Product restored successfully.';
+return true;
+} catch (error) {
+errorMessage.value = _readableError(
+error,
+fallback: 'Failed to restore product.',
+);
+return false;
+} finally {
+isRestoring.value = false;
+}
+}
+
+Future<bool> setProductEnabled({
+required String productId,
+required bool isEnabled,
+required String actorUid,
+String? actorName,
+String? actorPhone,
+String? actorRole,
+}) async {
+if (isStatusUpdating.value) return false;
+
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) {
+errorMessage.value = 'Product id is required to change status.';
+return false;
+}
+
+clearStatus();
+isStatusUpdating.value = true;
+
+try {
+await _repository.setProductEnabled(
+productId: normalizedId,
+isEnabled: isEnabled,
+actorUid: actorUid,
+actorName: actorName,
+actorPhone: actorPhone,
+actorRole: actorRole,
+);
+
+final existing = findProductById(normalizedId);
+if (existing != null) {
+_upsertLocalProduct(
+existing.copyWith(
+isEnabled: isEnabled,
+updatedBy: actorUid,
+updatedAt: DateTime.now(),
+),
+);
+}
+
+if (!liveStreamEnabled) {
+await loadProducts();
+}
+
+successMessage.value = isEnabled
+? 'Product activated successfully.'
+    : 'Product deactivated successfully.';
+return true;
+} catch (error) {
+errorMessage.value = _readableError(
+error,
+fallback: 'Failed to update product status.',
+);
+return false;
+} finally {
+isStatusUpdating.value = false;
+}
+}
+
+Future<String> buildUniqueSlug({
+required String preferredSlug,
+String? titleFallback,
+String? excludeProductId,
+}) async {
+clearError();
+
+try {
+return await _repository.ensureUniqueSlug(
+preferredSlug: preferredSlug,
+titleFallback: titleFallback,
+excludeProductId: excludeProductId,
+);
+} catch (error) {
+errorMessage.value = _readableError(
+error,
+fallback: 'Failed to generate product slug.',
+);
+rethrow;
+}
+}
+
+void removeLocalProduct(String productId) {
+final normalizedId = productId.trim();
+if (normalizedId.isEmpty) return;
+
+products.removeWhere((product) => product.id == normalizedId);
+}
+
+void clearError() {
+errorMessage.value = '';
+}
+
+void clearSuccess() {
+successMessage.value = '';
+}
+
+void clearStatus() {
+clearError();
+clearSuccess();
+}
+
+void _upsertLocalProduct(MBProduct product) {
+final index = products.indexWhere((item) => item.id == product.id);
+if (index == -1) {
+products.add(product);
+} else {
+products[index] = product;
+}
+
+final sorted = [...products]
+..sort((a, b) {
+final bySort = a.sortOrder.compareTo(b.sortOrder);
+if (bySort != 0) return bySort;
+return b.updatedAt.compareTo(a.updatedAt);
+});
+
+products.assignAll(sorted);
+}
+
+void _validateProduct(MBProduct product) {
+if (product.titleEn.trim().isEmpty) {
+throw const AdminProductControllerException(
+message: 'English product title is required.',
+);
+}
+
+if (product.titleBn.trim().isEmpty) {
+throw const AdminProductControllerException(
+message: 'Bangla product title is required.',
+);
+}
+
+if (product.price < 0) {
+throw const AdminProductControllerException(
+message: 'Price cannot be negative.',
+);
+}
+
+if (product.salePrice != null && product.salePrice! < 0) {
+throw const AdminProductControllerException(
+message: 'Sale price cannot be negative.',
+);
+}
+
+if (product.costPrice != null && product.costPrice! < 0) {
+throw const AdminProductControllerException(
+message: 'Cost price cannot be negative.',
+);
+}
+
+if (product.minOrderQty != null && product.minOrderQty! < 0) {
+throw const AdminProductControllerException(
+message: 'Minimum order quantity cannot be negative.',
+);
+}
+
+if (product.maxOrderQty != null && product.maxOrderQty! < 0) {
+throw const AdminProductControllerException(
+message: 'Maximum order quantity cannot be negative.',
+);
+}
+
+if (product.stepQty != null && product.stepQty! < 0) {
+throw const AdminProductControllerException(
+message: 'Step quantity cannot be negative.',
+);
+}
+
+if (product.salePrice != null && product.salePrice! >= product.price) {
+throw const AdminProductControllerException(
+message: 'Sale price must be smaller than regular price.',
+);
+}
+
+if (product.maxOrderQty != null &&
+product.minOrderQty != null &&
+product.maxOrderQty! < product.minOrderQty!) {
+throw const AdminProductControllerException(
+message: 'Maximum order quantity cannot be smaller than minimum order quantity.',
+);
+}
+}
+
+String _readableError(
+Object error, {
+required String fallback,
+}) {
+if (error is AdminProductControllerException) {
+return error.message;
+}
+
+if (error is AdminProductRepositoryException) {
+return error.message;
+}
+
+final raw = error.toString().trim();
+if (raw.isEmpty) return fallback;
+return raw;
+}
+
+String? _normalizeNullable(String? value) {
+final normalized = value?.trim() ?? '';
+return normalized.isEmpty ? null : normalized;
+}
+}
+
+class AdminProductControllerException implements Exception {
+const AdminProductControllerException({
+required this.message,
+});
+
+final String message;
+
+@override
+String toString() => 'AdminProductControllerException: $message';
 }
