@@ -1,49 +1,87 @@
+import 'dart:async';
+
 import 'package:admin_web/app/shell/admin_web_shell.dart';
 import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
 import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-class AdminQuarantineProductsPage extends StatelessWidget {
-  const AdminQuarantineProductsPage({super.key});
+class AdminQuarantineProductsPage extends StatefulWidget {
+  const AdminQuarantineProductsPage({
+    super.key,
+    this.actorUid = '',
+    this.actorName,
+    this.actorPhone,
+    this.actorRole,
+  });
+
+  final String actorUid;
+  final String? actorName;
+  final String? actorPhone;
+  final String? actorRole;
+
+  @override
+  State<AdminQuarantineProductsPage> createState() =>
+      _AdminQuarantineProductsPageState();
+}
+
+class _AdminQuarantineProductsPageState
+    extends State<AdminQuarantineProductsPage> {
+  late final AdminAccessController _accessController;
+  late final AdminProductController _productController;
+
+  @override
+  void initState() {
+    super.initState();
+    _accessController = Get.find<AdminAccessController>();
+    _productController = Get.find<AdminProductController>();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _productController.setDeletedOnly(true);
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_productController.setDeletedOnly(false));
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final AdminAccessController accessController =
-    Get.find<AdminAccessController>();
-    final AdminProductController productController =
-    Get.find<AdminProductController>();
-
     return AdminWebShell(
       child: Obx(() {
-        if (!accessController.canRestoreProducts) {
+        if (!_accessController.canRestoreProducts) {
           return const _NoRestorePermissionState();
         }
 
-        if (productController.isQuarantineLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+        if (_productController.isLoading.value &&
+            _productController.products.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        if (productController.quarantineProducts.isEmpty) {
+        if (_productController.products.isEmpty) {
           return const _EmptyQuarantineState();
         }
 
         return Column(
           children: [
             _QuarantineHeader(
-              count: productController.quarantineProducts.length,
+              count: _productController.products.length,
             ),
             Expanded(
               child: _QuarantineProductsTable(
-                items: productController.quarantineProducts,
-                onRestore: (id) async {
-                  await productController.restoreProduct(id);
-                },
-                onPermanentDelete: (id) async {
-                  await productController.hardDeleteQuarantineProduct(id);
+                items: _productController.products,
+                onRestore: (product) async {
+                  await _productController.restoreProduct(
+                    productId: product.id,
+                    actorUid: widget.actorUid,
+                    actorName: widget.actorName,
+                    actorPhone: widget.actorPhone,
+                    actorRole: widget.actorRole,
+                  );
                 },
               ),
             ),
@@ -87,7 +125,7 @@ class _QuarantineHeader extends StatelessWidget {
                 ),
                 MBSpacing.h(MBSpacing.xxxs),
                 Text(
-                  'Products moved here can be restored or permanently deleted.',
+                  'Deleted products can be restored from here.',
                   style: MBTextStyles.body.copyWith(
                     color: MBColors.textSecondary,
                   ),
@@ -122,12 +160,10 @@ class _QuarantineProductsTable extends StatelessWidget {
   const _QuarantineProductsTable({
     required this.items,
     required this.onRestore,
-    required this.onPermanentDelete,
   });
 
-  final List<Map<String, dynamic>> items;
-  final Future<void> Function(String id) onRestore;
-  final Future<void> Function(String id) onPermanentDelete;
+  final List<MBProduct> items;
+  final Future<void> Function(MBProduct product) onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -151,25 +187,19 @@ class _QuarantineProductsTable extends StatelessWidget {
             columns: const [
               DataColumn(label: Text('Product')),
               DataColumn(label: Text('Deleted At')),
-              DataColumn(label: Text('Auto Delete After')),
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Actions')),
             ],
             rows: items.map((item) {
-              final Map<String, dynamic> productData = Map<String, dynamic>.from(
-                item['productData'] as Map<String, dynamic>? ?? const {},
-              );
-
-              final String id = item['id'].toString();
-              final String titleEn =
-              (productData['titleEn'] ?? 'Untitled Product').toString();
-              final String titleBn =
-              (productData['titleBn'] ?? '').toString();
-              final String thumbnailUrl =
-              (productData['thumbnailUrl'] ?? '').toString();
-              final String sku = (productData['sku'] ?? '-').toString();
-              final String deletedAt = _prettyDate(item['deletedAt']);
-              final String deleteAfterAt = _prettyDate(item['deleteAfterAt']);
+              final String titleEn = item.titleEn.trim().isEmpty
+                  ? 'Untitled Product'
+                  : item.titleEn;
+              final String titleBn = item.titleBn.trim();
+              final String thumbnailUrl = item.resolvedThumbnailUrl;
+              final String sku = (item.sku ?? '-').trim().isEmpty
+                  ? '-'
+                  : item.sku!.trim();
+              final String deletedAt = _prettyDate(item.deletedAt);
 
               return DataRow(
                 cells: [
@@ -246,7 +276,6 @@ class _QuarantineProductsTable extends StatelessWidget {
                     ),
                   ),
                   DataCell(Text(deletedAt)),
-                  DataCell(Text(deleteAfterAt)),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -274,7 +303,7 @@ class _QuarantineProductsTable extends StatelessWidget {
                           expand: false,
                           height: 40,
                           onPressed: () async {
-                            final bool? confirmed = await Get.dialog<bool>(
+                            final bool? confirmed = await Get.dialog(
                               AlertDialog(
                                 title: const Text('Restore product'),
                                 content: Text(
@@ -294,41 +323,29 @@ class _QuarantineProductsTable extends StatelessWidget {
                             );
 
                             if (confirmed == true) {
-                              await onRestore(id);
+                              await onRestore(item);
                             }
                           },
                         ),
                         MBSpacing.w(MBSpacing.sm),
-                        MBSecondaryButton(
-                          text: 'Delete Permanently',
-                          expand: false,
-                          height: 40,
-                          foregroundColor: MBColors.error,
-                          borderColor: MBColors.error,
-                          onPressed: () async {
-                            final bool? confirmed = await Get.dialog<bool>(
-                              AlertDialog(
-                                title: const Text('Delete permanently'),
-                                content: Text(
-                                  'Delete "$titleEn" permanently from quarantine?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(result: false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Get.back(result: true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirmed == true) {
-                              await onPermanentDelete(id);
-                            }
-                          },
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: MBSpacing.md,
+                            vertical: MBSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: MBColors.textMuted.withValues(alpha: 0.35),
+                            ),
+                            borderRadius: BorderRadius.circular(MBRadius.pill),
+                          ),
+                          child: Text(
+                            'Permanent delete not wired',
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -342,14 +359,9 @@ class _QuarantineProductsTable extends StatelessWidget {
     );
   }
 
-  static String _prettyDate(dynamic value) {
-    final raw = (value ?? '').toString().trim();
-    if (raw.isEmpty) return '-';
-
-    final parsed = DateTime.tryParse(raw);
-    if (parsed == null) return raw;
-
-    return parsed.toString().split('.').first;
+  static String _prettyDate(DateTime? value) {
+    if (value == null) return '-';
+    return value.toString().split('.').first;
   }
 }
 

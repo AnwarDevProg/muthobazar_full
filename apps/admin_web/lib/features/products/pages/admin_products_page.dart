@@ -1,14 +1,12 @@
+import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
+import 'package:admin_web/features/products/pages/admin_product_lookup_support.dart';
 import 'package:admin_web/features/products/widgets/admin_product_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
-import '../controllers/admin_product_controller.dart';
 
-
-// File: admin_product_page.dart (Part 1 of 3)
-
-class AdminProductPage extends StatefulWidget {
-  const AdminProductPage({
+class AdminProductsPage extends StatefulWidget {
+  const AdminProductsPage({
     super.key,
     this.controller,
     this.actorUid = '',
@@ -28,13 +26,18 @@ class AdminProductPage extends StatefulWidget {
   final List<AdminProductRelationOption> availableBrands;
 
   @override
-  State<AdminProductPage> createState() => _AdminProductPageState();
+  State<AdminProductsPage> createState() => _AdminProductsPageState();
 }
 
-class _AdminProductPageState extends State<AdminProductPage> {
+class _AdminProductsPageState extends State<AdminProductsPage> {
   late final AdminProductController _controller;
   late final bool _ownsController;
   late final TextEditingController _searchController;
+  late final AdminProductLookupSupport _lookupSupport;
+
+  List<AdminProductRelationOption> _categoryOptions = <AdminProductRelationOption>[];
+  List<AdminProductRelationOption> _brandOptions = <AdminProductRelationOption>[];
+  bool _isLookupLoading = false;
 
   @override
   void initState() {
@@ -42,12 +45,20 @@ class _AdminProductPageState extends State<AdminProductPage> {
     _controller = widget.controller ?? Get.put(AdminProductController());
     _ownsController = widget.controller == null;
     _searchController = TextEditingController(text: _controller.searchQuery.value);
+    _lookupSupport = AdminProductLookupSupport();
+
+    _categoryOptions = [...widget.availableCategories];
+    _brandOptions = [...widget.availableBrands];
 
     if (_controller.products.isEmpty && !_controller.isLoading.value) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _controller.loadProducts(clearMessages: false);
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLookupOptions();
+    });
   }
 
   @override
@@ -57,6 +68,28 @@ class _AdminProductPageState extends State<AdminProductPage> {
       Get.delete<AdminProductController>();
     }
     super.dispose();
+  }
+
+  Future<void> _loadLookupOptions() async {
+    if (_isLookupLoading) return;
+
+    setState(() {
+      _isLookupLoading = true;
+    });
+
+    final bundle = await _lookupSupport.safeLoadLookupBundle(onlyActive: true);
+
+    if (!mounted) return;
+
+    setState(() {
+      if (bundle.categories.isNotEmpty) {
+        _categoryOptions = bundle.categories;
+      }
+      if (bundle.brands.isNotEmpty) {
+        _brandOptions = bundle.brands;
+      }
+      _isLookupLoading = false;
+    });
   }
 
   @override
@@ -122,7 +155,10 @@ class _AdminProductPageState extends State<AdminProductPage> {
             width: 320,
             child: TextField(
               controller: _searchController,
-              onChanged: _controller.setSearchQuery,
+              onChanged: (_) {
+                _controller.setSearchQuery(_searchController.text);
+                setState(() {});
+              },
               decoration: InputDecoration(
                 hintText: 'Search by title, slug, sku, tags...',
                 prefixIcon: const Icon(Icons.search),
@@ -132,6 +168,7 @@ class _AdminProductPageState extends State<AdminProductPage> {
                   onPressed: () {
                     _searchController.clear();
                     _controller.setSearchQuery('');
+                    setState(() {});
                   },
                   icon: const Icon(Icons.clear),
                 ),
@@ -158,8 +195,17 @@ class _AdminProductPageState extends State<AdminProductPage> {
             label: const Text('Clear Filters'),
           ),
           OutlinedButton.icon(
-            onPressed: () => _controller.loadProducts(clearMessages: false),
-            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              await _loadLookupOptions();
+              await _controller.loadProducts(clearMessages: false);
+            },
+            icon: _controller.isLoading.value || _isLookupLoading
+                ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : const Icon(Icons.refresh),
             label: const Text('Refresh'),
           ),
         ],
@@ -181,14 +227,14 @@ class _AdminProductPageState extends State<AdminProductPage> {
             isExpanded: true,
             value: _normalizeOptionValue(
               _controller.selectedCategoryId.value,
-              widget.availableCategories.map((e) => e.id).toList(),
+              _categoryOptions.map((e) => e.id).toList(),
             ),
             items: [
               const DropdownMenuItem<String?>(
                 value: null,
                 child: Text('All categories'),
               ),
-              ...widget.availableCategories.map(
+              ..._categoryOptions.map(
                     (item) => DropdownMenuItem<String?>(
                   value: item.id,
                   child: Text(item.nameEn),
@@ -216,14 +262,14 @@ class _AdminProductPageState extends State<AdminProductPage> {
             isExpanded: true,
             value: _normalizeOptionValue(
               _controller.selectedBrandId.value,
-              widget.availableBrands.map((e) => e.id).toList(),
+              _brandOptions.map((e) => e.id).toList(),
             ),
             items: [
               const DropdownMenuItem<String?>(
                 value: null,
                 child: Text('All brands'),
               ),
-              ...widget.availableBrands.map(
+              ..._brandOptions.map(
                     (item) => DropdownMenuItem<String?>(
                   value: item.id,
                   child: Text(item.nameEn),
@@ -382,8 +428,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
       actorPhone: widget.actorPhone,
       actorRole: widget.actorRole,
       controller: _controller,
-      availableCategories: widget.availableCategories,
-      availableBrands: widget.availableBrands,
+      availableCategories: _categoryOptions,
+      availableBrands: _brandOptions,
     );
   }
 
@@ -396,8 +442,8 @@ class _AdminProductPageState extends State<AdminProductPage> {
       actorRole: widget.actorRole,
       controller: _controller,
       initialProduct: product,
-      availableCategories: widget.availableCategories,
-      availableBrands: widget.availableBrands,
+      availableCategories: _categoryOptions,
+      availableBrands: _brandOptions,
       dialogTitle: 'Edit Product',
     );
   }
@@ -570,7 +616,9 @@ class _ProductListTile extends StatelessWidget {
                 ),
                 OutlinedButton.icon(
                   onPressed: onToggleEnabled,
-                  icon: Icon(product.isEnabled ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  icon: Icon(product.isEnabled
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined),
                   label: Text(product.isEnabled ? 'Disable' : 'Enable'),
                 ),
                 if (product.isDeleted)

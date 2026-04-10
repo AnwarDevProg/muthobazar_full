@@ -1,11 +1,9 @@
-import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:get/get.dart';
 import 'package:shared_repositories/shared_repositories.dart';
 
+import '../../features/products/controllers/admin_product_controller.dart';
 
-// File: admin_product_binding.dart
-
-class AdminProductBinding extends Bindings {
+class ProductsBinding extends Bindings {
   @override
   void dependencies() {
     if (!Get.isRegistered<AdminProductRepository>()) {
