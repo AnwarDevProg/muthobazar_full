@@ -133,7 +133,10 @@ class AdminProductController extends GetxController {
 
       products.assignAll(result);
     } catch (error) {
-      errorMessage.value = _readableError(error, fallback: 'Failed to load products.');
+      errorMessage.value = _readableError(
+        error,
+        fallback: 'Failed to load products.',
+      );
       products.clear();
     } finally {
       isLoading.value = false;
@@ -169,8 +172,10 @@ class AdminProductController extends GetxController {
         isLoading.value = false;
       },
       onError: (error) {
-        errorMessage.value =
-            _readableError(error, fallback: 'Failed to watch products.');
+        errorMessage.value = _readableError(
+          error,
+          fallback: 'Failed to watch products.',
+        );
         products.clear();
         isLoading.value = false;
       },
@@ -282,8 +287,10 @@ class AdminProductController extends GetxController {
       _upsertLocalProduct(product);
       return product;
     } catch (error) {
-      errorMessage.value =
-          _readableError(error, fallback: 'Failed to load product details.');
+      errorMessage.value = _readableError(
+        error,
+        fallback: 'Failed to load product details.',
+      );
       return null;
     }
   }
@@ -297,13 +304,14 @@ class AdminProductController extends GetxController {
   }) async {
     if (isSaving.value) return null;
 
+    final isCreate = product.id.trim().isEmpty;
+
     clearStatus();
     isSaving.value = true;
 
     try {
       _validateProduct(product);
 
-      final isCreate = product.id.trim().isEmpty;
       final saved = isCreate
           ? await _repository.createProduct(
         product: product,
@@ -321,11 +329,29 @@ class AdminProductController extends GetxController {
       );
 
       _upsertLocalProduct(saved);
-      successMessage.value =
-      isCreate ? 'Product created successfully.' : 'Product updated successfully.';
+      successMessage.value = isCreate
+          ? 'Product created successfully.'
+          : 'Product updated successfully.';
+
+      _refreshProductsBestEffort();
       return saved;
     } catch (error) {
-      errorMessage.value = _readableError(
+      final recovered = await _tryRecoverSavedProduct(
+        originalProduct: product,
+        isCreate: isCreate,
+      );
+
+      if (recovered != null) {
+        clearError();
+        _upsertLocalProduct(recovered);
+        successMessage.value = isCreate
+            ? 'Product created successfully.'
+            : 'Product updated successfully.';
+        _refreshProductsBestEffort();
+        return recovered;
+      }
+
+      errorMessage.value = _safeUiErrorMessage(
         error,
         fallback: 'Failed to save product.',
       );
@@ -378,11 +404,8 @@ class AdminProductController extends GetxController {
         );
       }
 
-      if (!liveStreamEnabled) {
-        await loadProducts();
-      }
-
       successMessage.value = 'Product deleted successfully.';
+      _refreshProductsBestEffort();
       return true;
     } catch (error) {
       errorMessage.value = _readableError(
@@ -426,11 +449,8 @@ class AdminProductController extends GetxController {
 
       products.removeWhere((item) => item.id == normalizedId);
 
-      if (!liveStreamEnabled) {
-        await loadProducts();
-      }
-
       successMessage.value = 'Product permanently deleted successfully.';
+      _refreshProductsBestEffort();
       return true;
     } catch (error) {
       errorMessage.value = _readableError(
@@ -484,11 +504,8 @@ class AdminProductController extends GetxController {
         );
       }
 
-      if (!liveStreamEnabled) {
-        await loadProducts();
-      }
-
       successMessage.value = 'Product restored successfully.';
+      _refreshProductsBestEffort();
       return true;
     } catch (error) {
       errorMessage.value = _readableError(
@@ -499,9 +516,7 @@ class AdminProductController extends GetxController {
     } finally {
       isRestoring.value = false;
     }
-  }
-
-  Future<bool> setProductEnabled({
+  }  Future<bool> setProductEnabled({
     required String productId,
     required bool isEnabled,
     required String actorUid,
@@ -541,13 +556,10 @@ class AdminProductController extends GetxController {
         );
       }
 
-      if (!liveStreamEnabled) {
-        await loadProducts();
-      }
-
       successMessage.value = isEnabled
           ? 'Product activated successfully.'
           : 'Product deactivated successfully.';
+      _refreshProductsBestEffort();
       return true;
     } catch (error) {
       errorMessage.value = _readableError(
@@ -600,6 +612,91 @@ class AdminProductController extends GetxController {
   void clearStatus() {
     clearError();
     clearSuccess();
+  }
+
+  Future<MBProduct?> _tryRecoverSavedProduct({
+    required MBProduct originalProduct,
+    required bool isCreate,
+  }) async {
+    try {
+      final desiredId = originalProduct.id.trim();
+      if (desiredId.isNotEmpty) {
+        final byId = await _repository.getProductById(desiredId);
+        if (byId != null) {
+          return byId;
+        }
+      }
+
+      final fetched = await _repository.fetchProducts(
+        includeDeleted: true,
+        deletedOnly: false,
+        limit: fetchLimit.value,
+      );
+
+      MBProduct? bySlug;
+      final targetSlug = originalProduct.slug.trim().toLowerCase();
+      if (targetSlug.isNotEmpty) {
+        for (final item in fetched) {
+          if (item.slug.trim().toLowerCase() == targetSlug) {
+            bySlug = item;
+            break;
+          }
+        }
+      }
+      if (bySlug != null) return bySlug;
+
+      final targetCode = (originalProduct.productCode ?? '').trim().toLowerCase();
+      if (targetCode.isNotEmpty) {
+        for (final item in fetched) {
+          if ((item.productCode ?? '').trim().toLowerCase() == targetCode) {
+            return item;
+          }
+        }
+      }
+
+      final targetSku = (originalProduct.sku ?? '').trim().toLowerCase();
+      if (targetSku.isNotEmpty) {
+        for (final item in fetched) {
+          if ((item.sku ?? '').trim().toLowerCase() == targetSku) {
+            return item;
+          }
+        }
+      }
+
+      if (!isCreate) {
+        final titleEn = originalProduct.titleEn.trim().toLowerCase();
+        final titleBn = originalProduct.titleBn.trim().toLowerCase();
+
+        for (final item in fetched) {
+          if (titleEn.isNotEmpty &&
+              item.titleEn.trim().toLowerCase() == titleEn) {
+            return item;
+          }
+          if (titleBn.isNotEmpty &&
+              item.titleBn.trim().toLowerCase() == titleBn) {
+            return item;
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore recovery failures. The caller will show a safe error message.
+    }
+
+    return null;
+  }
+
+  void _refreshProductsBestEffort() {
+    Future<void>.microtask(() async {
+      try {
+        if (liveStreamEnabled) {
+          startWatchingProducts();
+        } else {
+          await loadProducts(clearMessages: false);
+        }
+      } catch (_) {
+        // Ignore refresh failure after successful save/action.
+      }
+    });
   }
 
   void _upsertLocalProduct(MBProduct product) {
@@ -679,9 +776,26 @@ class AdminProductController extends GetxController {
         product.minOrderQty != null &&
         product.maxOrderQty! < product.minOrderQty!) {
       throw const AdminProductControllerException(
-        message: 'Maximum order quantity cannot be smaller than minimum order quantity.',
+        message:
+        'Maximum order quantity cannot be smaller than minimum order quantity.',
       );
     }
+  }
+
+  String _safeUiErrorMessage(
+      Object error, {
+        required String fallback,
+      }) {
+    final raw = _readableError(error, fallback: fallback).trim();
+    final lower = raw.toLowerCase();
+
+    if (raw.isEmpty) return fallback;
+    if (lower.contains('stack overflow')) return fallback;
+    if (lower.contains('firebase_functions/internal')) return fallback;
+    if (lower.contains('internal')) return fallback;
+    if (raw.length > 300) return fallback;
+
+    return raw;
   }
 
   String _readableError(
