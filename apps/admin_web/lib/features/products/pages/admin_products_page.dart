@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:admin_web/features/products/pages/admin_product_lookup_support.dart';
 import 'package:admin_web/features/products/widgets/admin_product_form_dialog.dart';
@@ -421,7 +423,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   }
 
   Future<void> _handleCreate() async {
-    await AdminProductFormDialog.show(
+    final MBProduct? saved = await AdminProductFormDialog.show(
       context,
       actorUid: widget.actorUid,
       actorName: widget.actorName,
@@ -431,10 +433,22 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       availableCategories: _categoryOptions,
       availableBrands: _brandOptions,
     );
+
+    if (!mounted || saved == null) return;
+
+    _controller.clearError();
+
+    final fetched = await _controller.fetchProductDetails(saved.id);
+    if (fetched == null) {
+      await _controller.loadProducts(clearMessages: false);
+      return;
+    }
+
+    unawaited(_controller.loadProducts(clearMessages: false));
   }
 
   Future<void> _handleEdit(MBProduct product) async {
-    await AdminProductFormDialog.show(
+    final MBProduct? saved = await AdminProductFormDialog.show(
       context,
       actorUid: widget.actorUid,
       actorName: widget.actorName,
@@ -446,6 +460,18 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
       availableBrands: _brandOptions,
       dialogTitle: 'Edit Product',
     );
+
+    if (!mounted || saved == null) return;
+
+    _controller.clearError();
+
+    final fetched = await _controller.fetchProductDetails(saved.id);
+    if (fetched == null) {
+      await _controller.loadProducts(clearMessages: false);
+      return;
+    }
+
+    unawaited(_controller.loadProducts(clearMessages: false));
   }
 
   Future<void> _handleToggleEnabled(MBProduct product) async {
