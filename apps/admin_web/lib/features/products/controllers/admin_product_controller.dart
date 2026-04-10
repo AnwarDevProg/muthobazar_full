@@ -45,11 +45,8 @@ class AdminProductController extends GetxController {
   List<MBProduct> get items => products;
 
   bool get hasError => errorMessage.value.trim().isNotEmpty;
-
   bool get hasSuccess => successMessage.value.trim().isNotEmpty;
-
   bool get hasData => products.isNotEmpty;
-
   bool get isEmptyState => !isLoading.value && !hasError && products.isEmpty;
 
   int get totalCount => products.length;
@@ -329,6 +326,7 @@ class AdminProductController extends GetxController {
       );
 
       _upsertLocalProduct(saved);
+
       successMessage.value = isCreate
           ? 'Product created successfully.'
           : 'Product updated successfully.';
@@ -344,9 +342,11 @@ class AdminProductController extends GetxController {
       if (recovered != null) {
         clearError();
         _upsertLocalProduct(recovered);
+
         successMessage.value = isCreate
             ? 'Product created successfully.'
             : 'Product updated successfully.';
+
         _refreshProductsBestEffort();
         return recovered;
       }
@@ -559,6 +559,7 @@ class AdminProductController extends GetxController {
       successMessage.value = isEnabled
           ? 'Product activated successfully.'
           : 'Product deactivated successfully.';
+
       _refreshProductsBestEffort();
       return true;
     } catch (error) {
@@ -618,68 +619,75 @@ class AdminProductController extends GetxController {
     required MBProduct originalProduct,
     required bool isCreate,
   }) async {
-    try {
-      final desiredId = originalProduct.id.trim();
-      if (desiredId.isNotEmpty) {
-        final byId = await _repository.getProductById(desiredId);
-        if (byId != null) {
-          return byId;
+    for (var attempt = 0; attempt < 6; attempt++) {
+      try {
+        if (attempt > 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 350));
         }
-      }
 
-      final fetched = await _repository.fetchProducts(
-        includeDeleted: true,
-        deletedOnly: false,
-        limit: fetchLimit.value,
-      );
-
-      MBProduct? bySlug;
-      final targetSlug = originalProduct.slug.trim().toLowerCase();
-      if (targetSlug.isNotEmpty) {
-        for (final item in fetched) {
-          if (item.slug.trim().toLowerCase() == targetSlug) {
-            bySlug = item;
-            break;
+        final desiredId = originalProduct.id.trim();
+        if (desiredId.isNotEmpty) {
+          final byId = await _repository.getProductById(desiredId);
+          if (byId != null) {
+            return byId;
           }
         }
-      }
-      if (bySlug != null) return bySlug;
 
-      final targetCode = (originalProduct.productCode ?? '').trim().toLowerCase();
-      if (targetCode.isNotEmpty) {
-        for (final item in fetched) {
-          if ((item.productCode ?? '').trim().toLowerCase() == targetCode) {
-            return item;
+        final fetched = await _repository.fetchProducts(
+          includeDeleted: true,
+          deletedOnly: false,
+          limit: fetchLimit.value,
+        );
+
+        final targetSlug = originalProduct.slug.trim().toLowerCase();
+        if (targetSlug.isNotEmpty) {
+          for (final item in fetched) {
+            if (item.slug.trim().toLowerCase() == targetSlug) {
+              return item;
+            }
           }
         }
-      }
 
-      final targetSku = (originalProduct.sku ?? '').trim().toLowerCase();
-      if (targetSku.isNotEmpty) {
-        for (final item in fetched) {
-          if ((item.sku ?? '').trim().toLowerCase() == targetSku) {
-            return item;
+        final targetCode = (originalProduct.productCode ?? '').trim().toLowerCase();
+        if (targetCode.isNotEmpty) {
+          for (final item in fetched) {
+            if ((item.productCode ?? '').trim().toLowerCase() == targetCode) {
+              return item;
+            }
           }
         }
-      }
 
-      if (!isCreate) {
+        final targetSku = (originalProduct.sku ?? '').trim().toLowerCase();
+        if (targetSku.isNotEmpty) {
+          for (final item in fetched) {
+            if ((item.sku ?? '').trim().toLowerCase() == targetSku) {
+              return item;
+            }
+          }
+        }
+
         final titleEn = originalProduct.titleEn.trim().toLowerCase();
-        final titleBn = originalProduct.titleBn.trim().toLowerCase();
-
-        for (final item in fetched) {
-          if (titleEn.isNotEmpty &&
-              item.titleEn.trim().toLowerCase() == titleEn) {
-            return item;
-          }
-          if (titleBn.isNotEmpty &&
-              item.titleBn.trim().toLowerCase() == titleBn) {
-            return item;
+        if (titleEn.isNotEmpty) {
+          for (final item in fetched) {
+            if (item.titleEn.trim().toLowerCase() == titleEn) {
+              return item;
+            }
           }
         }
+
+        if (!isCreate) {
+          final titleBn = originalProduct.titleBn.trim().toLowerCase();
+          if (titleBn.isNotEmpty) {
+            for (final item in fetched) {
+              if (item.titleBn.trim().toLowerCase() == titleBn) {
+                return item;
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // Ignore recovery failures here and retry.
       }
-    } catch (_) {
-      // Ignore recovery failures. The caller will show a safe error message.
     }
 
     return null;
@@ -694,7 +702,7 @@ class AdminProductController extends GetxController {
           await loadProducts(clearMessages: false);
         }
       } catch (_) {
-        // Ignore refresh failure after successful save/action.
+        // Ignore refresh failures after successful actions.
       }
     });
   }
