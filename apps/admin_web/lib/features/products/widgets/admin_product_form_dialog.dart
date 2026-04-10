@@ -1578,8 +1578,14 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
     if (!mounted || saved == null) return;
 
-    widget.onSaved?.call(saved);
-    Navigator.of(context).pop(saved);
+    final navigator = Navigator.of(context);
+    navigator.pop(saved);
+
+    try {
+      widget.onSaved?.call(saved);
+    } catch (_) {
+      // Ignore callback failures after the dialog has already closed.
+    }
   }
 
   MBProduct _buildProductFromForm() {

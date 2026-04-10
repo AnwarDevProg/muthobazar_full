@@ -325,13 +325,10 @@ class AdminProductController extends GetxController {
         actorRole: actorRole,
       );
 
-      _upsertLocalProduct(saved);
-
-      successMessage.value = isCreate
-          ? 'Product created successfully.'
-          : 'Product updated successfully.';
-
-      _refreshProductsBestEffort();
+      _finalizeSuccessfulSave(
+        saved,
+        isCreate: isCreate,
+      );
       return saved;
     } catch (error) {
       final recovered = await _tryRecoverSavedProduct(
@@ -341,13 +338,10 @@ class AdminProductController extends GetxController {
 
       if (recovered != null) {
         clearError();
-        _upsertLocalProduct(recovered);
-
-        successMessage.value = isCreate
-            ? 'Product created successfully.'
-            : 'Product updated successfully.';
-
-        _refreshProductsBestEffort();
+        _finalizeSuccessfulSave(
+          recovered,
+          isCreate: isCreate,
+        );
         return recovered;
       }
 
@@ -615,6 +609,37 @@ class AdminProductController extends GetxController {
     clearSuccess();
   }
 
+  void _finalizeSuccessfulSave(
+      MBProduct saved, {
+        required bool isCreate,
+      }) {
+    try {
+      _upsertLocalProduct(saved);
+    } catch (_) {
+      // Ignore local list update failures after a successful backend save.
+    }
+
+    successMessage.value = isCreate
+        ? 'Product created successfully.'
+        : 'Product updated successfully.';
+
+    _refreshProductsBestEffort();
+  }
+
+  Future<void> _reloadProductsSilently() async {
+    final result = await _repository.fetchProducts(
+      searchText: searchQuery.value,
+      categoryId: selectedCategoryId.value,
+      brandId: selectedBrandId.value,
+      isEnabled: selectedEnabled.value,
+      includeDeleted: includeDeleted.value,
+      deletedOnly: deletedOnly.value,
+      limit: fetchLimit.value,
+    );
+
+    products.assignAll(result);
+  }
+
   Future<MBProduct?> _tryRecoverSavedProduct({
     required MBProduct originalProduct,
     required bool isCreate,
@@ -699,7 +724,7 @@ class AdminProductController extends GetxController {
         if (liveStreamEnabled) {
           startWatchingProducts();
         } else {
-          await loadProducts(clearMessages: false);
+          await _reloadProductsSilently();
         }
       } catch (_) {
         // Ignore refresh failures after successful actions.
