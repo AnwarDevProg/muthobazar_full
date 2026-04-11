@@ -436,12 +436,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     if (!mounted || saved == null) return;
 
     _controller.clearError();
-    final fetched = await _controller.fetchProductDetails(saved.id);
-    if (fetched == null) {
-      await _controller.loadProducts(clearMessages: false);
-      return;
-    }
-
     unawaited(_controller.loadProducts(clearMessages: false));
   }
 
@@ -462,12 +456,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     if (!mounted || saved == null) return;
 
     _controller.clearError();
-    final fetched = await _controller.fetchProductDetails(saved.id);
-    if (fetched == null) {
-      await _controller.loadProducts(clearMessages: false);
-      return;
-    }
-
     unawaited(_controller.loadProducts(clearMessages: false));
   }
 
