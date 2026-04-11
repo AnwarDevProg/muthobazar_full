@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 
 import '../controllers/admin_product_controller.dart';
+import 'admin_product_card_style_selector.dart';
 import 'admin_product_form_support.dart';
 
 // File: admin_product_form_dialog.dart
@@ -158,6 +159,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   late String _quantityType;
   late String _toleranceType;
   late String _deliveryShift;
+  late String _cardLayoutType;
 
   late bool _trackInventory;
   late bool _supportsInstantOrder;
@@ -348,6 +350,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     _deliveryShift = _source.deliveryShift.isEmpty
         ? 'any'
         : _source.deliveryShift;
+    _cardLayoutType = MBProductCardLayoutHelper.normalize(
+      _source.cardLayoutType,
+    );
 
     _trackInventory = _source.trackInventory;
     _supportsInstantOrder = _source.supportsInstantOrder;
@@ -481,6 +486,16 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         _buildMediaSection(context),
                         const SizedBox(height: 16),
                         _buildPricingSection(context),
+                        const SizedBox(height: 16),
+                        _buildInventorySection(context),
+                        const SizedBox(height: 16),
+                        _buildQuantitySection(context),
+                        const SizedBox(height: 16),
+                        _buildAttributesSection(context),
+                        const SizedBox(height: 16),
+                        _buildVariationsSection(context),
+                        const SizedBox(height: 16),
+                        _buildPurchaseOptionsSection(context),
                       ],
                     ),
                   ),
@@ -494,6 +509,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildVisibilitySection(context),
+                        const SizedBox(height: 16),
+                        _buildCardStyleSection(context),
                         const SizedBox(height: 16),
                         _buildAuditSection(context),
                         const SizedBox(height: 16),
@@ -534,8 +551,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 const SizedBox(height: 4),
                 Text(
                   isCreate
-                      ? 'Create a product with media, attributes, variations, and purchase options.'
-                      : 'Update product information and advanced selling rules.',
+                      ? 'Create a product with media, attributes, variations, purchase options, inventory rules, and customer card style.'
+                      : 'Update product information, advanced selling rules, and customer card presentation.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -1477,6 +1494,21 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
   }
 
+
+  Widget _buildCardStyleSection(BuildContext context) {
+    return SectionCard(
+      title: 'Customer App Card Style',
+      subtitle:
+      'Choose how this product should appear in the customer app. Unsupported sections can still fall back safely.',
+      child: AdminProductCardStyleSelector(
+        value: _cardLayoutType,
+        onChanged: (value) {
+          setState(() => _cardLayoutType = value);
+        },
+      ),
+    );
+  }
+
   Widget _buildAuditSection(BuildContext context) {
     return SectionCard(
       title: 'Audit Metadata',
@@ -1548,6 +1580,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               buildInfoChip('attributes: ${preview.attributes.length}'),
               buildInfoChip('variations: ${preview.variations.length}'),
               buildInfoChip('options: ${preview.purchaseOptions.length}'),
+              buildInfoChip('card: ${preview.cardLayoutType}'),
             ],
           ),
           const SizedBox(height: 12),
@@ -1762,6 +1795,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       purchaseOptions: [..._purchaseOptions]
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+      cardLayoutType: MBProductCardLayoutHelper.normalize(_cardLayoutType),
       isFeatured: _isFeatured,
       isFlashSale: _isFlashSale,
       isEnabled: _isEnabled,

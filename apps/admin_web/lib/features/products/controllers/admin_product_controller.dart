@@ -33,10 +33,8 @@ class AdminProductController extends GetxController {
   final RxnString selectedCategoryId = RxnString();
   final RxnString selectedBrandId = RxnString();
   final RxnBool selectedEnabled = RxnBool();
-
   final RxBool includeDeleted = false.obs;
   final RxBool deletedOnly = false.obs;
-
   final RxInt fetchLimit = 200.obs;
 
   Worker? _searchDebounceWorker;
@@ -50,31 +48,58 @@ class AdminProductController extends GetxController {
   bool get isEmptyState => !isLoading.value && !hasError && products.isEmpty;
 
   int get totalCount => products.length;
-
   int get activeCount =>
       products.where((product) => product.isEnabled && !product.isDeleted).length;
-
   int get inactiveCount =>
       products.where((product) => !product.isEnabled && !product.isDeleted).length;
-
-  int get deletedCount =>
-      products.where((product) => product.isDeleted).length;
-
+  int get deletedCount => products.where((product) => product.isDeleted).length;
   int get featuredCount =>
       products.where((product) => product.isFeatured && !product.isDeleted).length;
-
   int get flashSaleCount =>
       products.where((product) => product.isFlashSale && !product.isDeleted).length;
 
+  int get standardCardCount => products
+      .where(
+        (product) =>
+    product.normalizedCardLayoutType ==
+        MBProductCardLayout.standard.value &&
+        !product.isDeleted,
+  )
+      .length;
+
+  int get compactCardCount => products
+      .where(
+        (product) =>
+    product.normalizedCardLayoutType ==
+        MBProductCardLayout.compact.value &&
+        !product.isDeleted,
+  )
+      .length;
+
+  int get dealCardCount => products
+      .where(
+        (product) =>
+    product.normalizedCardLayoutType ==
+        MBProductCardLayout.deal.value &&
+        !product.isDeleted,
+  )
+      .length;
+
+  int get featuredCardCount => products
+      .where(
+        (product) =>
+    product.normalizedCardLayoutType ==
+        MBProductCardLayout.featured.value &&
+        !product.isDeleted,
+  )
+      .length;
+
   List<MBProduct> get enabledProducts =>
       products.where((product) => product.isEnabled && !product.isDeleted).toList();
-
   List<MBProduct> get disabledProducts =>
       products.where((product) => !product.isEnabled && !product.isDeleted).toList();
-
   List<MBProduct> get deletedProducts =>
       products.where((product) => product.isDeleted).toList();
-
   List<MBProduct> get inStockProducts =>
       products.where((product) => product.inStock && !product.isDeleted).toList();
 
@@ -82,7 +107,7 @@ class AdminProductController extends GetxController {
   void onInit() {
     super.onInit();
 
-    _searchDebounceWorker = debounce<String>(
+    _searchDebounceWorker = debounce(
       searchQuery,
           (_) => refreshProducts(),
       time: const Duration(milliseconds: 350),
@@ -128,7 +153,7 @@ class AdminProductController extends GetxController {
         limit: fetchLimit.value,
       );
 
-      products.assignAll(result);
+      products.assignAll(result.map(_normalizeProduct));
     } catch (error) {
       errorMessage.value = _readableError(
         error,
@@ -145,14 +170,15 @@ class AdminProductController extends GetxController {
       startWatchingProducts();
       return;
     }
+
     await loadProducts();
   }
 
   void startWatchingProducts() {
     clearError();
     isLoading.value = true;
-
     _productsSubscription?.cancel();
+
     _productsSubscription = _repository
         .watchProducts(
       searchText: searchQuery.value,
@@ -165,7 +191,7 @@ class AdminProductController extends GetxController {
     )
         .listen(
           (items) {
-        products.assignAll(items);
+        products.assignAll(items.map(_normalizeProduct));
         isLoading.value = false;
       },
       onError: (error) {
@@ -248,11 +274,13 @@ class AdminProductController extends GetxController {
     if (!keepSearch) {
       searchQuery.value = '';
     }
+
     selectedCategoryId.value = null;
     selectedBrandId.value = null;
     selectedEnabled.value = null;
     includeDeleted.value = false;
     deletedOnly.value = false;
+
     await refreshProducts();
   }
 
@@ -265,6 +293,7 @@ class AdminProductController extends GetxController {
         return product;
       }
     }
+
     return null;
   }
 
@@ -281,8 +310,9 @@ class AdminProductController extends GetxController {
         return null;
       }
 
-      _upsertLocalProduct(product);
-      return product;
+      final normalized = _normalizeProduct(product);
+      _upsertLocalProduct(normalized);
+      return normalized;
     } catch (error) {
       errorMessage.value = _readableError(
         error,
@@ -301,38 +331,40 @@ class AdminProductController extends GetxController {
   }) async {
     if (isSaving.value) return null;
 
-    final isCreate = product.id.trim().isEmpty;
+    final preparedProduct = _normalizeProduct(product);
+    final isCreate = preparedProduct.id.trim().isEmpty;
 
     clearStatus();
     isSaving.value = true;
 
     try {
-      _validateProduct(product);
+      _validateProduct(preparedProduct);
 
       final saved = isCreate
           ? await _repository.createProduct(
-        product: product,
+        product: preparedProduct,
         actorUid: actorUid,
         actorName: actorName,
         actorPhone: actorPhone,
         actorRole: actorRole,
       )
           : await _repository.updateProduct(
-        product: product,
+        product: preparedProduct,
         actorUid: actorUid,
         actorName: actorName,
         actorPhone: actorPhone,
         actorRole: actorRole,
       );
 
+      final normalizedSaved = _normalizeProduct(saved);
       _finalizeSuccessfulSave(
-        saved,
+        normalizedSaved,
         isCreate: isCreate,
       );
-      return saved;
+      return normalizedSaved;
     } catch (error) {
       final recovered = await _tryRecoverSavedProduct(
-        originalProduct: product,
+        originalProduct: preparedProduct,
         isCreate: isCreate,
       );
 
@@ -387,13 +419,15 @@ class AdminProductController extends GetxController {
       final existing = findProductById(normalizedId);
       if (existing != null) {
         _upsertLocalProduct(
-          existing.copyWith(
-            isDeleted: true,
-            deletedAt: DateTime.now(),
-            deletedBy: actorUid,
-            deleteReason: reason,
-            updatedBy: actorUid,
-            updatedAt: DateTime.now(),
+          _normalizeProduct(
+            existing.copyWith(
+              isDeleted: true,
+              deletedAt: DateTime.now(),
+              deletedBy: actorUid,
+              deleteReason: reason,
+              updatedBy: actorUid,
+              updatedAt: DateTime.now(),
+            ),
           ),
         );
       }
@@ -442,7 +476,6 @@ class AdminProductController extends GetxController {
       );
 
       products.removeWhere((item) => item.id == normalizedId);
-
       successMessage.value = 'Product permanently deleted successfully.';
       _refreshProductsBestEffort();
       return true;
@@ -487,13 +520,15 @@ class AdminProductController extends GetxController {
       final existing = findProductById(normalizedId);
       if (existing != null) {
         _upsertLocalProduct(
-          existing.copyWith(
-            isDeleted: false,
-            clearDeletedAt: true,
-            clearDeletedBy: true,
-            clearDeleteReason: true,
-            updatedBy: actorUid,
-            updatedAt: DateTime.now(),
+          _normalizeProduct(
+            existing.copyWith(
+              isDeleted: false,
+              clearDeletedAt: true,
+              clearDeletedBy: true,
+              clearDeleteReason: true,
+              updatedBy: actorUid,
+              updatedAt: DateTime.now(),
+            ),
           ),
         );
       }
@@ -510,7 +545,9 @@ class AdminProductController extends GetxController {
     } finally {
       isRestoring.value = false;
     }
-  }  Future<bool> setProductEnabled({
+  }
+
+  Future<bool> setProductEnabled({
     required String productId,
     required bool isEnabled,
     required String actorUid,
@@ -542,10 +579,12 @@ class AdminProductController extends GetxController {
       final existing = findProductById(normalizedId);
       if (existing != null) {
         _upsertLocalProduct(
-          existing.copyWith(
-            isEnabled: isEnabled,
-            updatedBy: actorUid,
-            updatedAt: DateTime.now(),
+          _normalizeProduct(
+            existing.copyWith(
+              isEnabled: isEnabled,
+              updatedBy: actorUid,
+              updatedAt: DateTime.now(),
+            ),
           ),
         );
       }
@@ -553,7 +592,6 @@ class AdminProductController extends GetxController {
       successMessage.value = isEnabled
           ? 'Product activated successfully.'
           : 'Product deactivated successfully.';
-
       _refreshProductsBestEffort();
       return true;
     } catch (error) {
@@ -592,7 +630,6 @@ class AdminProductController extends GetxController {
   void removeLocalProduct(String productId) {
     final normalizedId = productId.trim();
     if (normalizedId.isEmpty) return;
-
     products.removeWhere((product) => product.id == normalizedId);
   }
 
@@ -637,7 +674,7 @@ class AdminProductController extends GetxController {
       limit: fetchLimit.value,
     );
 
-    products.assignAll(result);
+    products.assignAll(result.map(_normalizeProduct));
   }
 
   Future<MBProduct?> _tryRecoverSavedProduct({
@@ -647,14 +684,14 @@ class AdminProductController extends GetxController {
     for (var attempt = 0; attempt < 12; attempt++) {
       try {
         if (attempt > 0) {
-          await Future<void>.delayed(const Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
         }
 
         final desiredId = originalProduct.id.trim();
         if (desiredId.isNotEmpty) {
           final byId = await _repository.getProductById(desiredId);
           if (byId != null) {
-            return byId;
+            return _normalizeProduct(byId);
           }
         }
 
@@ -679,24 +716,24 @@ class AdminProductController extends GetxController {
 
           if (targetSlug.isNotEmpty) {
             if (itemSlug == targetSlug || itemSlug.startsWith('$targetSlug-')) {
-              return item;
+              return _normalizeProduct(item);
             }
           }
 
           if (targetCode.isNotEmpty && itemCode == targetCode) {
-            return item;
+            return _normalizeProduct(item);
           }
 
           if (targetSku.isNotEmpty && itemSku == targetSku) {
-            return item;
+            return _normalizeProduct(item);
           }
 
           if (targetTitleEn.isNotEmpty && itemTitleEn == targetTitleEn) {
-            return item;
+            return _normalizeProduct(item);
           }
 
           if (!isCreate && targetTitleBn.isNotEmpty && itemTitleBn == targetTitleBn) {
-            return item;
+            return _normalizeProduct(item);
           }
         }
       } catch (_) {
@@ -708,7 +745,7 @@ class AdminProductController extends GetxController {
   }
 
   void _refreshProductsBestEffort() {
-    Future<void>.microtask(() async {
+    Future.microtask(() async {
       try {
         if (liveStreamEnabled) {
           startWatchingProducts();
@@ -722,11 +759,13 @@ class AdminProductController extends GetxController {
   }
 
   void _upsertLocalProduct(MBProduct product) {
-    final index = products.indexWhere((item) => item.id == product.id);
+    final normalized = _normalizeProduct(product);
+    final index = products.indexWhere((item) => item.id == normalized.id);
+
     if (index == -1) {
-      products.add(product);
+      products.add(normalized);
     } else {
-      products[index] = product;
+      products[index] = normalized;
     }
 
     final sorted = [...products]
@@ -798,10 +837,17 @@ class AdminProductController extends GetxController {
         product.minOrderQty != null &&
         product.maxOrderQty! < product.minOrderQty!) {
       throw const AdminProductControllerException(
-        message:
-        'Maximum order quantity cannot be smaller than minimum order quantity.',
+        message: 'Maximum order quantity cannot be smaller than minimum order quantity.',
       );
     }
+  }
+
+  MBProduct _normalizeProduct(MBProduct product) {
+    return product.copyWith(
+      cardLayoutType: MBProductCardLayoutHelper.normalize(
+        product.cardLayoutType,
+      ),
+    );
   }
 
   String _safeUiErrorMessage(
