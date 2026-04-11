@@ -23,6 +23,12 @@ export 'widgets/common/mb_section_header.dart';
 export 'widgets/common/mb_section_title.dart';
 export 'widgets/common/mb_text_field.dart';
 
+export 'widgets/common/product_cards/mb_product_card_standard.dart';
+export 'widgets/common/product_cards/mb_product_card_compact.dart';
+export 'widgets/common/product_cards/mb_product_card_deal.dart';
+export 'widgets/common/product_cards/mb_product_card_featured.dart';
+export 'widgets/common/product_cards/mb_product_card_renderer.dart';
+
 export 'widgets/dialogs/mb_dialogs.dart';
 export 'widgets/feedback/mb_notification.dart';
 

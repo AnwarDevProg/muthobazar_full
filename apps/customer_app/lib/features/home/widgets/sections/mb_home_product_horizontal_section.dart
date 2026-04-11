@@ -4,14 +4,10 @@ import 'package:shared_ui/shared_ui.dart';
 
 // MB Home Product Horizontal Section
 // ----------------------------------
-// Styled to match old MuthoBazar cards, but in a horizontal layout.
+// Uses MBProductCardRenderer so each product can choose its card layout,
+// while still enforcing horizontal-safe fallback behavior.
 
 class MBHomeProductHorizontalSection extends StatelessWidget {
-  final MBHomeSection section;
-  final List<MBProduct> products;
-  final void Function(MBProduct product)? onProductTap;
-  final VoidCallback? onViewAllTap;
-
   const MBHomeProductHorizontalSection({
     super.key,
     required this.section,
@@ -19,6 +15,11 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
     this.onProductTap,
     this.onViewAllTap,
   });
+
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final void Function(MBProduct product)? onProductTap;
+  final VoidCallback? onViewAllTap;
 
   @override
   Widget build(BuildContext context) {
@@ -34,26 +35,23 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
         ),
         MBSpacing.h(MBSpacing.sm),
         SizedBox(
-          height: 255,
+          height: 320,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (_, __) => MBSpacing.w(MBSpacing.sm),
+            separatorBuilder: (context, index) => MBSpacing.w(MBSpacing.sm),
             itemBuilder: (context, index) {
               final product = products[index];
 
               return SizedBox(
-                width: 170,
-                child: GestureDetector(
+                width: 210,
+                child: MBProductCardRenderer(
+                  product: product,
+                  contextType: MBProductCardRenderContext.horizontal,
                   onTap: () => onProductTap?.call(product),
-                  child: MBProductCard(
-                    title: product.titleEn,
-                    priceText: '৳${product.effectivePrice.toStringAsFixed(0)}',
-                    oldPriceText: product.hasDiscount
-                        ? '৳${product.price.toStringAsFixed(0)}'
-                        : null,
-                    imageUrl: product.thumbnailUrl,
-                  ),
+                  showAddToCart: true,
+                  showFavorite: true,
+                  featuredHeight: 320,
                 ),
               );
             },

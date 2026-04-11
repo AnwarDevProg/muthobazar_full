@@ -7,6 +7,7 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+
 import {
   asTrimmedString,
   normalizeNullableId,
@@ -16,8 +17,10 @@ import {
 
 const db = admin.firestore();
 
+type JsonMap = Record<string, unknown>;
+
 type CreateProductRequest = {
-  product?: Record<string, unknown>;
+  product?: JsonMap;
   reason?: string | null;
 };
 
@@ -56,11 +59,12 @@ function sanitizeFirestoreValue(value: unknown): unknown {
   }
 
   if (typeof value === "object") {
-    const input = value as Record<string, unknown>;
-    const output: Record<string, unknown> = {};
+    const input = value as JsonMap;
+    const output: JsonMap = {};
 
     for (const [key, rawValue] of Object.entries(input)) {
       if (key.startsWith("clear")) continue;
+
       const sanitized = sanitizeFirestoreValue(rawValue);
       if (sanitized !== undefined) {
         output[key] = sanitized;
@@ -73,18 +77,183 @@ function sanitizeFirestoreValue(value: unknown): unknown {
   return undefined;
 }
 
-function sanitizeProductInput(
-  input: Record<string, unknown>,
-): Record<string, unknown> {
+function sanitizeProductInput(input: JsonMap): JsonMap {
   const sanitized = sanitizeFirestoreValue(input);
   if (!sanitized || typeof sanitized !== "object" || Array.isArray(sanitized)) {
     return {};
   }
-  return sanitized as Record<string, unknown>;
+  return sanitized as JsonMap;
 }
 
 function asBool(value: unknown, fallback = false): boolean {
   return typeof value === "boolean" ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asTrimmedString(item))
+    .filter((item) => item.length > 0);
+}
+
+function normalizeCardLayoutType(value: unknown): string {
+  const normalized = asTrimmedString(value).toLowerCase();
+
+  switch (normalized) {
+    case "compact":
+    case "deal":
+    case "featured":
+    case "standard":
+      return normalized;
+    default:
+      return "standard";
+  }
+}
+
+function normalizeProductPayload(
+  input: JsonMap,
+  actorUid: string,
+  productId: string,
+): JsonMap {
+  const titleEn = asTrimmedString(input.titleEn);
+  const slug = asTrimmedString(input.slug).toLowerCase();
+
+  const normalized: JsonMap = {
+    ...input,
+    id: productId,
+    titleEn,
+    slug,
+
+    titleBn: asTrimmedString(input.titleBn),
+    shortDescriptionEn: asTrimmedString(input.shortDescriptionEn),
+    shortDescriptionBn: asTrimmedString(input.shortDescriptionBn),
+    descriptionEn: asTrimmedString(input.descriptionEn),
+    descriptionBn: asTrimmedString(input.descriptionBn),
+
+    productCode:
+      asTrimmedString(input.productCode).length > 0
+        ? asTrimmedString(input.productCode)
+        : null,
+    sku:
+      asTrimmedString(input.sku).length > 0 ? asTrimmedString(input.sku) : null,
+
+    productType:
+      asTrimmedString(input.productType).length > 0
+        ? asTrimmedString(input.productType)
+        : "simple",
+
+    inventoryMode:
+      asTrimmedString(input.inventoryMode).length > 0
+        ? asTrimmedString(input.inventoryMode)
+        : "stocked",
+
+    schedulePriceType:
+      asTrimmedString(input.schedulePriceType).length > 0
+        ? asTrimmedString(input.schedulePriceType)
+        : "fixed",
+
+    quantityType:
+      asTrimmedString(input.quantityType).length > 0
+        ? asTrimmedString(input.quantityType)
+        : "pcs",
+
+    toleranceType:
+      asTrimmedString(input.toleranceType).length > 0
+        ? asTrimmedString(input.toleranceType)
+        : "g",
+
+    deliveryShift:
+      asTrimmedString(input.deliveryShift).length > 0
+        ? asTrimmedString(input.deliveryShift)
+        : "any",
+
+    cardLayoutType: normalizeCardLayoutType(input.cardLayoutType),
+
+    tags: asStringArray(input.tags),
+    keywords: asStringArray(input.keywords),
+
+    price: asNumber(input.price, 0),
+    stockQty: Math.trunc(asNumber(input.stockQty, 0)),
+    regularStockQty: Math.trunc(asNumber(input.regularStockQty, 0)),
+    reservedInstantQty: Math.trunc(asNumber(input.reservedInstantQty, 0)),
+    todayInstantCap: Math.trunc(asNumber(input.todayInstantCap, 999999)),
+    todayInstantSold: Math.trunc(asNumber(input.todayInstantSold, 0)),
+    maxScheduleQtyPerDay: Math.trunc(
+      asNumber(input.maxScheduleQtyPerDay, 999999),
+    ),
+    minScheduleNoticeHours: Math.trunc(
+      asNumber(input.minScheduleNoticeHours, 0),
+    ),
+    reorderLevel: Math.trunc(asNumber(input.reorderLevel, 0)),
+    sortOrder: Math.trunc(asNumber(input.sortOrder, 0)),
+    views: Math.trunc(asNumber(input.views, 0)),
+    totalSold: Math.trunc(asNumber(input.totalSold, 0)),
+    addToCartCount: Math.trunc(asNumber(input.addToCartCount, 0)),
+    quantityValue: asNumber(input.quantityValue, 0),
+    tolerance: asNumber(input.tolerance, 0),
+
+    trackInventory: asBool(input.trackInventory, true),
+    supportsInstantOrder: asBool(input.supportsInstantOrder, true),
+    supportsScheduledOrder: asBool(input.supportsScheduledOrder, false),
+    allowBackorder: asBool(input.allowBackorder, false),
+    isFeatured: asBool(input.isFeatured, false),
+    isFlashSale: asBool(input.isFlashSale, false),
+    isEnabled: asBool(input.isEnabled, true),
+    isNewArrival: asBool(input.isNewArrival, false),
+    isBestSeller: asBool(input.isBestSeller, false),
+    isToleranceActive: asBool(input.isToleranceActive, false),
+
+    isDeleted: false,
+    deletedAt: null,
+    deletedBy: null,
+    deleteReason: null,
+
+    createdBy:
+      asTrimmedString(input.createdBy).length > 0
+        ? asTrimmedString(input.createdBy)
+        : actorUid,
+    updatedBy: actorUid,
+  };
+
+  const nullableIdKeys = [
+    "categoryId",
+    "brandId",
+    "categoryNameEn",
+    "categoryNameBn",
+    "categorySlug",
+    "brandNameEn",
+    "brandNameBn",
+    "brandSlug",
+    "instantCutoffTime",
+    "unitLabelEn",
+    "unitLabelBn",
+  ] as const;
+
+  for (const key of nullableIdKeys) {
+    const value = asTrimmedString(input[key]);
+    normalized[key] = value.length > 0 ? value : null;
+  }
+
+  const nullableNumberKeys = [
+    "salePrice",
+    "costPrice",
+    "estimatedSchedulePrice",
+    "minOrderQty",
+    "maxOrderQty",
+    "stepQty",
+  ] as const;
+
+  for (const key of nullableNumberKeys) {
+    const raw = input[key];
+    normalized[key] =
+      typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  }
+
+  return normalized;
 }
 
 export const adminCreateProduct = onCall<
@@ -100,13 +269,13 @@ export const adminCreateProduct = onCall<
         request.data?.product &&
         typeof request.data.product === "object" &&
         !Array.isArray(request.data.product)
-          ? (request.data.product as Record<string, unknown>).id ?? null
+          ? (request.data.product as JsonMap).id ?? null
           : null,
       titleEn:
         request.data?.product &&
         typeof request.data.product === "object" &&
         !Array.isArray(request.data.product)
-          ? (request.data.product as Record<string, unknown>).titleEn ?? null
+          ? (request.data.product as JsonMap).titleEn ?? null
           : null,
     });
 
@@ -119,8 +288,8 @@ export const adminCreateProduct = onCall<
     const reason = normalizeNullableId(request.data?.reason);
 
     const sanitizedInput = sanitizeProductInput(productInput);
-
     const requestedId = asTrimmedString(sanitizedInput.id);
+
     const titleEn = asTrimmedString(sanitizedInput.titleEn);
     const slug = asTrimmedString(sanitizedInput.slug).toLowerCase();
 
@@ -146,20 +315,16 @@ export const adminCreateProduct = onCall<
 
       const now = admin.firestore.FieldValue.serverTimestamp();
 
-      const docData: Record<string, unknown> = {
-        ...sanitizedInput,
-        id: productId,
-        titleEn,
-        slug,
-        isDeleted: false,
-        deletedAt: null,
-        deletedBy: null,
-        deleteReason: null,
+      const normalizedData = normalizeProductPayload(
+        sanitizedInput,
+        actor.uid,
+        productId,
+      );
+
+      const docData: JsonMap = {
+        ...normalizedData,
         createdAt: sanitizedInput.createdAt ?? now,
         updatedAt: now,
-        createdBy: asTrimmedString(sanitizedInput.createdBy) || actor.uid,
-        updatedBy: actor.uid,
-        isEnabled: asBool(sanitizedInput.isEnabled, true),
       };
 
       tx.set(productRef, docData);
@@ -182,13 +347,15 @@ export const adminCreateProduct = onCall<
             id: productId,
             titleEn,
             slug,
-            isEnabled: docData.isEnabled,
+            isEnabled: docData.isEnabled ?? true,
             categoryId: docData.categoryId ?? null,
             brandId: docData.brandId ?? null,
+            cardLayoutType: docData.cardLayoutType ?? "standard",
           },
           metadata: {
             sku: docData.sku ?? null,
             productCode: docData.productCode ?? null,
+            productType: docData.productType ?? null,
           },
           eventSource: "server_action",
         }),

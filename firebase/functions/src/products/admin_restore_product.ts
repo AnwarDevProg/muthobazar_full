@@ -7,6 +7,7 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+
 import {
   asTrimmedString,
   normalizeNullableId,
@@ -26,11 +27,64 @@ type RestoreProductResponse = {
   auditLogId: string;
 };
 
+type JsonMap = Record<string, unknown>;
+
+function normalizeCardLayoutType(value: unknown): string {
+  const normalized = asTrimmedString(value).toLowerCase();
+
+  switch (normalized) {
+    case "compact":
+    case "deal":
+    case "featured":
+    case "standard":
+      return normalized;
+    default:
+      return "standard";
+  }
+}
+
+function normalizeExistingProductData(input: JsonMap): JsonMap {
+  const output: JsonMap = { ...input };
+
+  output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+
+  if (asTrimmedString(output.productType).length === 0) {
+    output.productType = "simple";
+  }
+
+  if (asTrimmedString(output.inventoryMode).length === 0) {
+    output.inventoryMode = "stocked";
+  }
+
+  if (asTrimmedString(output.schedulePriceType).length === 0) {
+    output.schedulePriceType = "fixed";
+  }
+
+  if (asTrimmedString(output.quantityType).length === 0) {
+    output.quantityType = "pcs";
+  }
+
+  if (asTrimmedString(output.toleranceType).length === 0) {
+    output.toleranceType = "g";
+  }
+
+  if (asTrimmedString(output.deliveryShift).length === 0) {
+    output.deliveryShift = "any";
+  }
+
+  return output;
+}
+
 export const adminRestoreProduct = onCall<
   RestoreProductRequest,
   Promise<RestoreProductResponse>
 >(async (request) => {
   try {
+    logger.info("adminRestoreProduct invoked", {
+      uid: request.auth?.uid ?? null,
+      productId: request.data?.productId ?? null,
+    });
+
     const actor = await getAuthorizedAdminActor(
       request.auth?.uid,
       "canRestoreProducts",
@@ -46,11 +100,14 @@ export const adminRestoreProduct = onCall<
 
     await db.runTransaction(async (tx) => {
       const currentSnap = await tx.get(productRef);
+
       if (!currentSnap.exists) {
         throw new HttpsError("not-found", "Product not found.");
       }
 
-      const currentData = (currentSnap.data() ?? {}) as Record<string, unknown>;
+      const currentData = normalizeExistingProductData(
+        (currentSnap.data() ?? {}) as JsonMap,
+      );
 
       if (currentData.isDeleted !== true) {
         throw new HttpsError(
@@ -60,7 +117,8 @@ export const adminRestoreProduct = onCall<
       }
 
       const now = admin.firestore.FieldValue.serverTimestamp();
-      const nextData: Record<string, unknown> = {
+
+      const nextData: JsonMap = {
         ...currentData,
         isDeleted: false,
         deletedAt: null,
@@ -70,7 +128,7 @@ export const adminRestoreProduct = onCall<
         updatedBy: actor.uid,
       };
 
-      tx.set(productRef, nextData);
+      tx.set(productRef, nextData, { merge: false });
 
       const logRef = newAdminAuditLogRef();
       auditLogId = logRef.id;
@@ -85,10 +143,25 @@ export const adminRestoreProduct = onCall<
           targetTitle: asTrimmedString(currentData.titleEn) || productId,
           status: "success",
           reason,
-          beforeData: currentData,
-          afterData: nextData,
+          beforeData: {
+            isDeleted: currentData.isDeleted ?? null,
+            isEnabled: currentData.isEnabled ?? null,
+            deletedBy: currentData.deletedBy ?? null,
+            deleteReason: currentData.deleteReason ?? null,
+            cardLayoutType: currentData.cardLayoutType ?? "standard",
+          },
+          afterData: {
+            isDeleted: false,
+            isEnabled: nextData.isEnabled ?? null,
+            deletedBy: null,
+            deleteReason: null,
+            cardLayoutType: nextData.cardLayoutType ?? "standard",
+          },
           metadata: {
             restoredFromQuarantine: true,
+            productType: currentData.productType ?? null,
+            categoryId: currentData.categoryId ?? null,
+            brandId: currentData.brandId ?? null,
           },
           eventSource: "server_action",
         }),
@@ -101,9 +174,16 @@ export const adminRestoreProduct = onCall<
       auditLogId,
     };
   } catch (error) {
-    if (error instanceof HttpsError) throw error;
+    if (error instanceof HttpsError) {
+      throw error;
+    }
 
-    logger.error("adminRestoreProduct failed", error);
+    logger.error("adminRestoreProduct failed", {
+      error,
+      uid: request.auth?.uid ?? null,
+      data: request.data ?? null,
+    });
+
     throw new HttpsError("internal", "Failed to restore product.");
   }
 });

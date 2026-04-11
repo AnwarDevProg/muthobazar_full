@@ -20,6 +20,7 @@ class MBColors {
 
   // Base surfaces
   static const Color background = Color(0xFFF6F7FB);
+  static const Color softBackground = background;
   static const Color surface = Colors.white;
   static const Color surfaceAlt = Color(0xFFFAFAFC);
   static const Color card = Colors.white;

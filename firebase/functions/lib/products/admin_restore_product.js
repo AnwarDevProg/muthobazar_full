@@ -40,8 +40,47 @@ const logger = __importStar(require("firebase-functions/logger"));
 const audit_log_core_1 = require("../admin/audit-log-core");
 const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
+function normalizeCardLayoutType(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
+    switch (normalized) {
+        case "compact":
+        case "deal":
+        case "featured":
+        case "standard":
+            return normalized;
+        default:
+            return "standard";
+    }
+}
+function normalizeExistingProductData(input) {
+    const output = { ...input };
+    output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+    if ((0, callable_parsers_1.asTrimmedString)(output.productType).length === 0) {
+        output.productType = "simple";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.inventoryMode).length === 0) {
+        output.inventoryMode = "stocked";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.schedulePriceType).length === 0) {
+        output.schedulePriceType = "fixed";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.quantityType).length === 0) {
+        output.quantityType = "pcs";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.toleranceType).length === 0) {
+        output.toleranceType = "g";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.deliveryShift).length === 0) {
+        output.deliveryShift = "any";
+    }
+    return output;
+}
 exports.adminRestoreProduct = (0, https_1.onCall)(async (request) => {
     try {
+        logger.info("adminRestoreProduct invoked", {
+            uid: request.auth?.uid ?? null,
+            productId: request.data?.productId ?? null,
+        });
         const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canRestoreProducts");
         const productId = (0, callable_parsers_1.asTrimmedString)(request.data?.productId);
         const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
@@ -53,7 +92,7 @@ exports.adminRestoreProduct = (0, https_1.onCall)(async (request) => {
             if (!currentSnap.exists) {
                 throw new https_1.HttpsError("not-found", "Product not found.");
             }
-            const currentData = (currentSnap.data() ?? {});
+            const currentData = normalizeExistingProductData((currentSnap.data() ?? {}));
             if (currentData.isDeleted !== true) {
                 throw new https_1.HttpsError("failed-precondition", "Product is not in quarantine.");
             }
@@ -67,7 +106,7 @@ exports.adminRestoreProduct = (0, https_1.onCall)(async (request) => {
                 updatedAt: now,
                 updatedBy: actor.uid,
             };
-            tx.set(productRef, nextData);
+            tx.set(productRef, nextData, { merge: false });
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
@@ -78,10 +117,25 @@ exports.adminRestoreProduct = (0, https_1.onCall)(async (request) => {
                 targetTitle: (0, callable_parsers_1.asTrimmedString)(currentData.titleEn) || productId,
                 status: "success",
                 reason,
-                beforeData: currentData,
-                afterData: nextData,
+                beforeData: {
+                    isDeleted: currentData.isDeleted ?? null,
+                    isEnabled: currentData.isEnabled ?? null,
+                    deletedBy: currentData.deletedBy ?? null,
+                    deleteReason: currentData.deleteReason ?? null,
+                    cardLayoutType: currentData.cardLayoutType ?? "standard",
+                },
+                afterData: {
+                    isDeleted: false,
+                    isEnabled: nextData.isEnabled ?? null,
+                    deletedBy: null,
+                    deleteReason: null,
+                    cardLayoutType: nextData.cardLayoutType ?? "standard",
+                },
                 metadata: {
                     restoredFromQuarantine: true,
+                    productType: currentData.productType ?? null,
+                    categoryId: currentData.categoryId ?? null,
+                    brandId: currentData.brandId ?? null,
                 },
                 eventSource: "server_action",
             }));
@@ -93,9 +147,14 @@ exports.adminRestoreProduct = (0, https_1.onCall)(async (request) => {
         };
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError)
+        if (error instanceof https_1.HttpsError) {
             throw error;
-        logger.error("adminRestoreProduct failed", error);
+        }
+        logger.error("adminRestoreProduct failed", {
+            error,
+            uid: request.auth?.uid ?? null,
+            data: request.data ?? null,
+        });
         throw new https_1.HttpsError("internal", "Failed to restore product.");
     }
 });

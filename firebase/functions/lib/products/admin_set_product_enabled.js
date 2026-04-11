@@ -40,8 +40,50 @@ const logger = __importStar(require("firebase-functions/logger"));
 const audit_log_core_1 = require("../admin/audit-log-core");
 const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
+function normalizeCardLayoutType(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
+    switch (normalized) {
+        case "compact":
+        case "deal":
+        case "featured":
+        case "standard":
+            return normalized;
+        default:
+            return "standard";
+    }
+}
+function normalizeExistingProductData(input) {
+    const output = { ...input };
+    output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+    if ((0, callable_parsers_1.asTrimmedString)(output.productType).length === 0) {
+        output.productType = "simple";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.inventoryMode).length === 0) {
+        output.inventoryMode = "stocked";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.schedulePriceType).length === 0) {
+        output.schedulePriceType = "fixed";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.quantityType).length === 0) {
+        output.quantityType = "pcs";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.toleranceType).length === 0) {
+        output.toleranceType = "g";
+    }
+    if ((0, callable_parsers_1.asTrimmedString)(output.deliveryShift).length === 0) {
+        output.deliveryShift = "any";
+    }
+    return output;
+}
 exports.adminSetProductEnabled = (0, https_1.onCall)(async (request) => {
     try {
+        logger.info("adminSetProductEnabled invoked", {
+            uid: request.auth?.uid ?? null,
+            productId: request.data?.productId ?? null,
+            isEnabled: typeof request.data?.isEnabled === "boolean"
+                ? request.data.isEnabled
+                : null,
+        });
         const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canManageProducts");
         const productId = (0, callable_parsers_1.asTrimmedString)(request.data?.productId);
         const isEnabled = (0, callable_parsers_1.asBoolOrThrow)(request.data?.isEnabled, "isEnabled");
@@ -54,7 +96,7 @@ exports.adminSetProductEnabled = (0, https_1.onCall)(async (request) => {
             if (!currentSnap.exists) {
                 throw new https_1.HttpsError("not-found", "Product not found.");
             }
-            const currentData = (currentSnap.data() ?? {});
+            const currentData = normalizeExistingProductData((currentSnap.data() ?? {}));
             if (currentData.isDeleted === true) {
                 throw new https_1.HttpsError("failed-precondition", "Deleted products cannot be enabled or disabled.");
             }
@@ -65,7 +107,7 @@ exports.adminSetProductEnabled = (0, https_1.onCall)(async (request) => {
                 updatedAt: now,
                 updatedBy: actor.uid,
             };
-            tx.set(productRef, nextData);
+            tx.set(productRef, nextData, { merge: false });
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
@@ -76,10 +118,20 @@ exports.adminSetProductEnabled = (0, https_1.onCall)(async (request) => {
                 targetTitle: (0, callable_parsers_1.asTrimmedString)(currentData.titleEn) || productId,
                 status: "success",
                 reason,
-                beforeData: currentData,
-                afterData: nextData,
-                metadata: {
+                beforeData: {
+                    isEnabled: currentData.isEnabled ?? null,
+                    isDeleted: currentData.isDeleted ?? null,
+                    cardLayoutType: currentData.cardLayoutType ?? "standard",
+                },
+                afterData: {
                     isEnabled,
+                    isDeleted: currentData.isDeleted ?? null,
+                    cardLayoutType: nextData.cardLayoutType ?? "standard",
+                },
+                metadata: {
+                    productType: currentData.productType ?? null,
+                    categoryId: currentData.categoryId ?? null,
+                    brandId: currentData.brandId ?? null,
                 },
                 eventSource: "server_action",
             }));
@@ -92,9 +144,14 @@ exports.adminSetProductEnabled = (0, https_1.onCall)(async (request) => {
         };
     }
     catch (error) {
-        if (error instanceof https_1.HttpsError)
+        if (error instanceof https_1.HttpsError) {
             throw error;
-        logger.error("adminSetProductEnabled failed", error);
+        }
+        logger.error("adminSetProductEnabled failed", {
+            error,
+            uid: request.auth?.uid ?? null,
+            data: request.data ?? null,
+        });
         throw new https_1.HttpsError("internal", "Failed to update product status.");
     }
 });

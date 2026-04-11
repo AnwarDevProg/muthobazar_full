@@ -56,8 +56,20 @@ function asObjectList(value) {
         return [];
     return value.filter((item) => typeof item === "object" && item !== null && !Array.isArray(item));
 }
+function normalizeCardLayoutType(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
+    switch (normalized) {
+        case "compact":
+        case "deal":
+        case "featured":
+        case "standard":
+            return normalized;
+        default:
+            return "standard";
+    }
+}
 function parseExistingProduct(doc) {
-    const data = doc.data() ?? {};
+    const data = (doc.data() ?? {});
     return {
         id: doc.id,
         titleEn: (0, callable_parsers_1.asTrimmedString)(data.titleEn),
@@ -67,8 +79,29 @@ function parseExistingProduct(doc) {
         productCode: (0, callable_parsers_1.asTrimmedString)(data.productCode),
         categoryId: (0, callable_parsers_1.asTrimmedString)(data.categoryId),
         categoryNameEn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameEn),
+        categoryNameBn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameBn),
         brandId: (0, callable_parsers_1.asTrimmedString)(data.brandId),
         brandNameEn: (0, callable_parsers_1.asTrimmedString)(data.brandNameEn),
+        brandNameBn: (0, callable_parsers_1.asTrimmedString)(data.brandNameBn),
+        productType: (0, callable_parsers_1.asTrimmedString)(data.productType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.productType)
+            : "simple",
+        inventoryMode: (0, callable_parsers_1.asTrimmedString)(data.inventoryMode).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.inventoryMode)
+            : "stocked",
+        schedulePriceType: (0, callable_parsers_1.asTrimmedString)(data.schedulePriceType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.schedulePriceType)
+            : "fixed",
+        quantityType: (0, callable_parsers_1.asTrimmedString)(data.quantityType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.quantityType)
+            : "pcs",
+        toleranceType: (0, callable_parsers_1.asTrimmedString)(data.toleranceType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.toleranceType)
+            : "g",
+        deliveryShift: (0, callable_parsers_1.asTrimmedString)(data.deliveryShift).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.deliveryShift)
+            : "any",
+        cardLayoutType: normalizeCardLayoutType(data.cardLayoutType),
         isEnabled: asBool(data.isEnabled, true),
         isDeleted: asBool(data.isDeleted, false),
         mediaItems: asObjectList(data.mediaItems),
@@ -91,8 +124,17 @@ function buildAuditBeforeData(current) {
         productCode: current.productCode,
         categoryId: current.categoryId,
         categoryNameEn: current.categoryNameEn,
+        categoryNameBn: current.categoryNameBn,
         brandId: current.brandId,
         brandNameEn: current.brandNameEn,
+        brandNameBn: current.brandNameBn,
+        productType: current.productType,
+        inventoryMode: current.inventoryMode,
+        schedulePriceType: current.schedulePriceType,
+        quantityType: current.quantityType,
+        toleranceType: current.toleranceType,
+        deliveryShift: current.deliveryShift,
+        cardLayoutType: current.cardLayoutType,
         isEnabled: current.isEnabled,
         isDeleted: current.isDeleted,
         mediaItems: current.mediaItems,
@@ -108,9 +150,9 @@ function buildAuditBeforeData(current) {
 function collectStoragePaths(current) {
     const paths = new Set();
     for (const item of current.mediaItems) {
-        const path = (0, callable_parsers_1.asTrimmedString)(item["storagePath"]);
-        if (path.length > 0) {
-            paths.add(path);
+        const storagePath = (0, callable_parsers_1.asTrimmedString)(item.storagePath);
+        if (storagePath.length > 0) {
+            paths.add(storagePath);
         }
     }
     return Array.from(paths);
@@ -131,6 +173,10 @@ async function deleteStorageObjectIfExists(path) {
 }
 exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
     try {
+        logger.info("adminHardDeleteProduct invoked", {
+            uid: request.auth?.uid ?? null,
+            productId: request.data?.productId ?? null,
+        });
         const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canRestoreProducts");
         const productId = (0, callable_parsers_1.asTrimmedString)(request.data?.productId);
         const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
@@ -150,12 +196,13 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
             tx.delete(productRef);
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
+            const storagePaths = collectStoragePaths(current);
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
                 action: "hard_delete_product",
                 module: "products",
                 targetType: "product",
                 targetId: productId,
-                targetTitle: current.titleEn,
+                targetTitle: current.titleEn || productId,
                 status: "success",
                 reason,
                 beforeData: buildAuditBeforeData(current),
@@ -163,15 +210,18 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
                 metadata: {
                     slug: current.slug,
                     sku: current.sku,
+                    productCode: current.productCode,
                     categoryId: current.categoryId,
                     brandId: current.brandId,
-                    deletedAt: current.deletedAt,
+                    productType: current.productType,
+                    cardLayoutType: current.cardLayoutType,
+                    deletedAt: current.deletedAt ?? null,
                     wasQuarantined: current.isDeleted,
-                    storagePathsCount: collectStoragePaths(current).length,
+                    storagePathsCount: storagePaths.length,
                 },
                 eventSource: "server_action",
             }));
-            storagePathsToDelete = collectStoragePaths(current);
+            storagePathsToDelete = storagePaths;
         });
         for (const path of storagePathsToDelete) {
             await deleteStorageObjectIfExists(path);
@@ -187,7 +237,11 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
         if (error instanceof https_1.HttpsError) {
             throw error;
         }
-        logger.error("adminHardDeleteProduct failed", error);
+        logger.error("adminHardDeleteProduct failed", {
+            error,
+            uid: request.auth?.uid ?? null,
+            data: request.data ?? null,
+        });
         throw new https_1.HttpsError("internal", "Failed to hard delete product.");
     }
 });

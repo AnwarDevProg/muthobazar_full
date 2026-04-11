@@ -7,6 +7,7 @@ import {
   getAuthorizedAdminActor,
   newAdminAuditLogRef,
 } from "../admin/audit-log-core";
+
 import {
   asBoolOrThrow,
   asTrimmedString,
@@ -29,11 +30,68 @@ type SetProductEnabledResponse = {
   auditLogId: string;
 };
 
+type JsonMap = Record<string, unknown>;
+
+function normalizeCardLayoutType(value: unknown): string {
+  const normalized = asTrimmedString(value).toLowerCase();
+
+  switch (normalized) {
+    case "compact":
+    case "deal":
+    case "featured":
+    case "standard":
+      return normalized;
+    default:
+      return "standard";
+  }
+}
+
+function normalizeExistingProductData(input: JsonMap): JsonMap {
+  const output: JsonMap = { ...input };
+
+  output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+
+  if (asTrimmedString(output.productType).length === 0) {
+    output.productType = "simple";
+  }
+
+  if (asTrimmedString(output.inventoryMode).length === 0) {
+    output.inventoryMode = "stocked";
+  }
+
+  if (asTrimmedString(output.schedulePriceType).length === 0) {
+    output.schedulePriceType = "fixed";
+  }
+
+  if (asTrimmedString(output.quantityType).length === 0) {
+    output.quantityType = "pcs";
+  }
+
+  if (asTrimmedString(output.toleranceType).length === 0) {
+    output.toleranceType = "g";
+  }
+
+  if (asTrimmedString(output.deliveryShift).length === 0) {
+    output.deliveryShift = "any";
+  }
+
+  return output;
+}
+
 export const adminSetProductEnabled = onCall<
   SetProductEnabledRequest,
   Promise<SetProductEnabledResponse>
 >(async (request) => {
   try {
+    logger.info("adminSetProductEnabled invoked", {
+      uid: request.auth?.uid ?? null,
+      productId: request.data?.productId ?? null,
+      isEnabled:
+        typeof request.data?.isEnabled === "boolean"
+          ? request.data.isEnabled
+          : null,
+    });
+
     const actor = await getAuthorizedAdminActor(
       request.auth?.uid,
       "canManageProducts",
@@ -50,11 +108,14 @@ export const adminSetProductEnabled = onCall<
 
     await db.runTransaction(async (tx) => {
       const currentSnap = await tx.get(productRef);
+
       if (!currentSnap.exists) {
         throw new HttpsError("not-found", "Product not found.");
       }
 
-      const currentData = (currentSnap.data() ?? {}) as Record<string, unknown>;
+      const currentData = normalizeExistingProductData(
+        (currentSnap.data() ?? {}) as JsonMap,
+      );
 
       if (currentData.isDeleted === true) {
         throw new HttpsError(
@@ -64,14 +125,15 @@ export const adminSetProductEnabled = onCall<
       }
 
       const now = admin.firestore.FieldValue.serverTimestamp();
-      const nextData: Record<string, unknown> = {
+
+      const nextData: JsonMap = {
         ...currentData,
         isEnabled,
         updatedAt: now,
         updatedBy: actor.uid,
       };
 
-      tx.set(productRef, nextData);
+      tx.set(productRef, nextData, { merge: false });
 
       const logRef = newAdminAuditLogRef();
       auditLogId = logRef.id;
@@ -86,10 +148,20 @@ export const adminSetProductEnabled = onCall<
           targetTitle: asTrimmedString(currentData.titleEn) || productId,
           status: "success",
           reason,
-          beforeData: currentData,
-          afterData: nextData,
-          metadata: {
+          beforeData: {
+            isEnabled: currentData.isEnabled ?? null,
+            isDeleted: currentData.isDeleted ?? null,
+            cardLayoutType: currentData.cardLayoutType ?? "standard",
+          },
+          afterData: {
             isEnabled,
+            isDeleted: currentData.isDeleted ?? null,
+            cardLayoutType: nextData.cardLayoutType ?? "standard",
+          },
+          metadata: {
+            productType: currentData.productType ?? null,
+            categoryId: currentData.categoryId ?? null,
+            brandId: currentData.brandId ?? null,
           },
           eventSource: "server_action",
         }),
@@ -103,9 +175,16 @@ export const adminSetProductEnabled = onCall<
       auditLogId,
     };
   } catch (error) {
-    if (error instanceof HttpsError) throw error;
+    if (error instanceof HttpsError) {
+      throw error;
+    }
 
-    logger.error("adminSetProductEnabled failed", error);
+    logger.error("adminSetProductEnabled failed", {
+      error,
+      uid: request.auth?.uid ?? null,
+      data: request.data ?? null,
+    });
+
     throw new HttpsError("internal", "Failed to update product status.");
   }
 });

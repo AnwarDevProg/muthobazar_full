@@ -37,8 +37,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   late final TextEditingController _searchController;
   late final AdminProductLookupSupport _lookupSupport;
 
-  List<AdminProductRelationOption> _categoryOptions = <AdminProductRelationOption>[];
-  List<AdminProductRelationOption> _brandOptions = <AdminProductRelationOption>[];
+  List<AdminProductRelationOption> _categoryOptions = const [];
+  List<AdminProductRelationOption> _brandOptions = const [];
   bool _isLookupLoading = false;
 
   @override
@@ -48,7 +48,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     _ownsController = widget.controller == null;
     _searchController = TextEditingController(text: _controller.searchQuery.value);
     _lookupSupport = AdminProductLookupSupport();
-
     _categoryOptions = [...widget.availableCategories];
     _brandOptions = [...widget.availableBrands];
 
@@ -66,7 +65,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    if (_ownsController) {
+    if (_ownsController && Get.isRegistered<AdminProductController>()) {
       Get.delete<AdminProductController>();
     }
     super.dispose();
@@ -129,7 +128,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Manage products, pricing, attributes, variations, media, and lifecycle states.',
+                  'Manage products, pricing, attributes, variations, media, lifecycle states, and customer card styles.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -192,7 +191,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             onSelected: (value) => _controller.setDeletedOnly(value),
           ),
           OutlinedButton.icon(
-            onPressed: () => _controller.clearFilters(),
+            onPressed: _controller.clearFilters,
             icon: const Icon(Icons.filter_alt_off_outlined),
             label: const Text('Clear Filters'),
           ),
@@ -229,7 +228,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             isExpanded: true,
             value: _normalizeOptionValue(
               _controller.selectedCategoryId.value,
-              _categoryOptions.map((e) => e.id).toList(),
+              _categoryOptions.map((e) => e.id).toList(growable: false),
             ),
             items: [
               const DropdownMenuItem<String?>(
@@ -264,7 +263,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             isExpanded: true,
             value: _normalizeOptionValue(
               _controller.selectedBrandId.value,
-              _brandOptions.map((e) => e.id).toList(),
+              _brandOptions.map((e) => e.id).toList(growable: false),
             ),
             items: [
               const DropdownMenuItem<String?>(
@@ -402,7 +401,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       itemCount: _controller.products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final product = _controller.products[index];
         return _ProductListTile(
@@ -437,7 +436,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     if (!mounted || saved == null) return;
 
     _controller.clearError();
-
     final fetched = await _controller.fetchProductDetails(saved.id);
     if (fetched == null) {
       await _controller.loadProducts(clearMessages: false);
@@ -464,7 +462,6 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     if (!mounted || saved == null) return;
 
     _controller.clearError();
-
     final fetched = await _controller.fetchProductDetails(saved.id);
     if (fetched == null) {
       await _controller.loadProducts(clearMessages: false);
@@ -622,6 +619,7 @@ class _ProductListTile extends StatelessWidget {
                       _InfoChip(text: 'price: ${product.price.toStringAsFixed(2)}'),
                       _InfoChip(text: 'stock: ${product.stockQty}'),
                       _InfoChip(text: 'type: ${product.productType}'),
+                      _InfoChip(text: 'card: ${product.normalizedCardLayoutType}'),
                       _InfoChip(text: 'category: ${product.categoryNameEn ?? '-'}'),
                       _InfoChip(text: 'brand: ${product.brandNameEn ?? '-'}'),
                       _InfoChip(text: 'featured: ${product.isFeatured}'),
@@ -642,9 +640,11 @@ class _ProductListTile extends StatelessWidget {
                 ),
                 OutlinedButton.icon(
                   onPressed: onToggleEnabled,
-                  icon: Icon(product.isEnabled
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined),
+                  icon: Icon(
+                    product.isEnabled
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                  ),
                   label: Text(product.isEnabled ? 'Disable' : 'Enable'),
                 ),
                 if (product.isDeleted)
@@ -695,7 +695,7 @@ class _ProductThumb extends StatelessWidget {
         width: 84,
         height: 84,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (context, error, stackTrace) => Container(
           width: 84,
           height: 84,
           decoration: BoxDecoration(

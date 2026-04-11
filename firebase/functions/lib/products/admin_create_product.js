@@ -86,6 +86,132 @@ function sanitizeProductInput(input) {
 function asBool(value, fallback = false) {
     return typeof value === "boolean" ? value : fallback;
 }
+function asNumber(value, fallback = 0) {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+function asStringArray(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value
+        .map((item) => (0, callable_parsers_1.asTrimmedString)(item))
+        .filter((item) => item.length > 0);
+}
+function normalizeCardLayoutType(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
+    switch (normalized) {
+        case "compact":
+        case "deal":
+        case "featured":
+        case "standard":
+            return normalized;
+        default:
+            return "standard";
+    }
+}
+function normalizeProductPayload(input, actorUid, productId) {
+    const titleEn = (0, callable_parsers_1.asTrimmedString)(input.titleEn);
+    const slug = (0, callable_parsers_1.asTrimmedString)(input.slug).toLowerCase();
+    const normalized = {
+        ...input,
+        id: productId,
+        titleEn,
+        slug,
+        titleBn: (0, callable_parsers_1.asTrimmedString)(input.titleBn),
+        shortDescriptionEn: (0, callable_parsers_1.asTrimmedString)(input.shortDescriptionEn),
+        shortDescriptionBn: (0, callable_parsers_1.asTrimmedString)(input.shortDescriptionBn),
+        descriptionEn: (0, callable_parsers_1.asTrimmedString)(input.descriptionEn),
+        descriptionBn: (0, callable_parsers_1.asTrimmedString)(input.descriptionBn),
+        productCode: (0, callable_parsers_1.asTrimmedString)(input.productCode).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.productCode)
+            : null,
+        sku: (0, callable_parsers_1.asTrimmedString)(input.sku).length > 0 ? (0, callable_parsers_1.asTrimmedString)(input.sku) : null,
+        productType: (0, callable_parsers_1.asTrimmedString)(input.productType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.productType)
+            : "simple",
+        inventoryMode: (0, callable_parsers_1.asTrimmedString)(input.inventoryMode).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.inventoryMode)
+            : "stocked",
+        schedulePriceType: (0, callable_parsers_1.asTrimmedString)(input.schedulePriceType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.schedulePriceType)
+            : "fixed",
+        quantityType: (0, callable_parsers_1.asTrimmedString)(input.quantityType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.quantityType)
+            : "pcs",
+        toleranceType: (0, callable_parsers_1.asTrimmedString)(input.toleranceType).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.toleranceType)
+            : "g",
+        deliveryShift: (0, callable_parsers_1.asTrimmedString)(input.deliveryShift).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.deliveryShift)
+            : "any",
+        cardLayoutType: normalizeCardLayoutType(input.cardLayoutType),
+        tags: asStringArray(input.tags),
+        keywords: asStringArray(input.keywords),
+        price: asNumber(input.price, 0),
+        stockQty: Math.trunc(asNumber(input.stockQty, 0)),
+        regularStockQty: Math.trunc(asNumber(input.regularStockQty, 0)),
+        reservedInstantQty: Math.trunc(asNumber(input.reservedInstantQty, 0)),
+        todayInstantCap: Math.trunc(asNumber(input.todayInstantCap, 999999)),
+        todayInstantSold: Math.trunc(asNumber(input.todayInstantSold, 0)),
+        maxScheduleQtyPerDay: Math.trunc(asNumber(input.maxScheduleQtyPerDay, 999999)),
+        minScheduleNoticeHours: Math.trunc(asNumber(input.minScheduleNoticeHours, 0)),
+        reorderLevel: Math.trunc(asNumber(input.reorderLevel, 0)),
+        sortOrder: Math.trunc(asNumber(input.sortOrder, 0)),
+        views: Math.trunc(asNumber(input.views, 0)),
+        totalSold: Math.trunc(asNumber(input.totalSold, 0)),
+        addToCartCount: Math.trunc(asNumber(input.addToCartCount, 0)),
+        quantityValue: asNumber(input.quantityValue, 0),
+        tolerance: asNumber(input.tolerance, 0),
+        trackInventory: asBool(input.trackInventory, true),
+        supportsInstantOrder: asBool(input.supportsInstantOrder, true),
+        supportsScheduledOrder: asBool(input.supportsScheduledOrder, false),
+        allowBackorder: asBool(input.allowBackorder, false),
+        isFeatured: asBool(input.isFeatured, false),
+        isFlashSale: asBool(input.isFlashSale, false),
+        isEnabled: asBool(input.isEnabled, true),
+        isNewArrival: asBool(input.isNewArrival, false),
+        isBestSeller: asBool(input.isBestSeller, false),
+        isToleranceActive: asBool(input.isToleranceActive, false),
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+        deleteReason: null,
+        createdBy: (0, callable_parsers_1.asTrimmedString)(input.createdBy).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.createdBy)
+            : actorUid,
+        updatedBy: actorUid,
+    };
+    const nullableIdKeys = [
+        "categoryId",
+        "brandId",
+        "categoryNameEn",
+        "categoryNameBn",
+        "categorySlug",
+        "brandNameEn",
+        "brandNameBn",
+        "brandSlug",
+        "instantCutoffTime",
+        "unitLabelEn",
+        "unitLabelBn",
+    ];
+    for (const key of nullableIdKeys) {
+        const value = (0, callable_parsers_1.asTrimmedString)(input[key]);
+        normalized[key] = value.length > 0 ? value : null;
+    }
+    const nullableNumberKeys = [
+        "salePrice",
+        "costPrice",
+        "estimatedSchedulePrice",
+        "minOrderQty",
+        "maxOrderQty",
+        "stepQty",
+    ];
+    for (const key of nullableNumberKeys) {
+        const raw = input[key];
+        normalized[key] =
+            typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+    }
+    return normalized;
+}
 exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
     try {
         logger.info("adminCreateProduct invoked", {
@@ -123,20 +249,11 @@ exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
                 throw new https_1.HttpsError("already-exists", "A product with this id already exists.");
             }
             const now = admin.firestore.FieldValue.serverTimestamp();
+            const normalizedData = normalizeProductPayload(sanitizedInput, actor.uid, productId);
             const docData = {
-                ...sanitizedInput,
-                id: productId,
-                titleEn,
-                slug,
-                isDeleted: false,
-                deletedAt: null,
-                deletedBy: null,
-                deleteReason: null,
+                ...normalizedData,
                 createdAt: sanitizedInput.createdAt ?? now,
                 updatedAt: now,
-                createdBy: (0, callable_parsers_1.asTrimmedString)(sanitizedInput.createdBy) || actor.uid,
-                updatedBy: actor.uid,
-                isEnabled: asBool(sanitizedInput.isEnabled, true),
             };
             tx.set(productRef, docData);
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
@@ -154,13 +271,15 @@ exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
                     id: productId,
                     titleEn,
                     slug,
-                    isEnabled: docData.isEnabled,
+                    isEnabled: docData.isEnabled ?? true,
                     categoryId: docData.categoryId ?? null,
                     brandId: docData.brandId ?? null,
+                    cardLayoutType: docData.cardLayoutType ?? "standard",
                 },
                 metadata: {
                     sku: docData.sku ?? null,
                     productCode: docData.productCode ?? null,
+                    productType: docData.productType ?? null,
                 },
                 eventSource: "server_action",
             }));

@@ -4,14 +4,10 @@ import 'package:shared_ui/shared_ui.dart';
 
 // MB Home Product Grid Section
 // ----------------------------
-// Styled to match old approved product section layout using MBProductCard.
+// Uses MBProductCardRenderer so each product can choose its card layout,
+// while still enforcing grid-safe fallback behavior.
 
 class MBHomeProductGridSection extends StatelessWidget {
-  final MBHomeSection section;
-  final List<MBProduct> products;
-  final void Function(MBProduct product)? onProductTap;
-  final VoidCallback? onViewAllTap;
-
   const MBHomeProductGridSection({
     super.key,
     required this.section,
@@ -19,6 +15,11 @@ class MBHomeProductGridSection extends StatelessWidget {
     this.onProductTap,
     this.onViewAllTap,
   });
+
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final void Function(MBProduct product)? onProductTap;
+  final VoidCallback? onViewAllTap;
 
   @override
   Widget build(BuildContext context) {
@@ -40,19 +41,15 @@ class MBHomeProductGridSection extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: products.length,
           gridDelegate: MBLayoutGrid.delegate(config: productGrid),
-          itemBuilder: (_, index) {
+          itemBuilder: (context, index) {
             final product = products[index];
 
-            return GestureDetector(
+            return MBProductCardRenderer(
+              product: product,
+              contextType: MBProductCardRenderContext.grid,
               onTap: () => onProductTap?.call(product),
-              child: MBProductCard(
-                title: product.titleEn,
-                priceText: '৳${product.effectivePrice.toStringAsFixed(0)}',
-                oldPriceText: product.hasDiscount
-                    ? '৳${product.price.toStringAsFixed(0)}'
-                    : null,
-                imageUrl: product.thumbnailUrl,
-              ),
+              showAddToCart: true,
+              showFavorite: true,
             );
           },
         ),
