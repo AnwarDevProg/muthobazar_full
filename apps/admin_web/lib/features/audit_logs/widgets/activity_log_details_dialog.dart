@@ -774,10 +774,17 @@ class ActivityLogDetailsDialog extends StatelessWidget {
       return;
     }
 
+    final messenger = ScaffoldMessenger.of(context);
+
     const encoder = JsonEncoder.withIndent('  ');
     final text = encoder.convert(data);
     await Clipboard.setData(ClipboardData(text: text));
-    _showSnack(context, successMessage);
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
   }
 
   Future<void> _copyRawJsonText({

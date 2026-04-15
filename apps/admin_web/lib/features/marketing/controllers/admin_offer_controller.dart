@@ -3,15 +3,11 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'package:shared_services/shared_services.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-import '../../admin_access/controllers/admin_access_controller.dart';
 
 class AdminOfferController extends GetxController {
   final AdminOfferRepository _repository = AdminOfferRepository.instance;
-  final AdminAccessController _accessController =
-  Get.find<AdminAccessController>();
 
   final RxList<MBOffer> offers = <MBOffer>[].obs;
   final RxList<MBOffer> filteredOffers = <MBOffer>[].obs;
@@ -162,7 +158,7 @@ class AdminOfferController extends GetxController {
     try {
       isSaving.value = true;
 
-      final before = offers.firstWhereOrNull((e) => e.id == offer.id);
+
 
       await _repository.updateOffer(offer);
 
@@ -189,7 +185,6 @@ class AdminOfferController extends GetxController {
     try {
       isDeleting.value = true;
 
-      final before = offers.firstWhereOrNull((e) => e.id == offerId);
 
       await _repository.deleteOffer(offerId);
 

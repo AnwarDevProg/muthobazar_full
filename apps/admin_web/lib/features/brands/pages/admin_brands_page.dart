@@ -210,7 +210,7 @@ class _BrandsHeader extends StatelessWidget {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: controller.statusFilter.value,
+                            initialValue: controller.statusFilter.value,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               border: OutlineInputBorder(),
@@ -236,7 +236,7 @@ class _BrandsHeader extends StatelessWidget {
                         MBSpacing.w(MBSpacing.md),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: controller.featuredFilter.value,
+                            initialValue: controller.featuredFilter.value,
                             decoration: const InputDecoration(
                               labelText: 'Featured',
                               border: OutlineInputBorder(),
@@ -266,7 +266,7 @@ class _BrandsHeader extends StatelessWidget {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: controller.homeFilter.value,
+                            initialValue: controller.homeFilter.value,
                             decoration: const InputDecoration(
                               labelText: 'Home Visibility',
                               border: OutlineInputBorder(),
@@ -319,7 +319,7 @@ class _BrandsHeader extends StatelessWidget {
                   MBSpacing.w(MBSpacing.md),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: controller.statusFilter.value,
+                      initialValue: controller.statusFilter.value,
                       decoration: const InputDecoration(
                         labelText: 'Status',
                         border: OutlineInputBorder(),
@@ -342,7 +342,7 @@ class _BrandsHeader extends StatelessWidget {
                   MBSpacing.w(MBSpacing.md),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: controller.featuredFilter.value,
+                      initialValue: controller.featuredFilter.value,
                       decoration: const InputDecoration(
                         labelText: 'Featured',
                         border: OutlineInputBorder(),
@@ -365,7 +365,7 @@ class _BrandsHeader extends StatelessWidget {
                   MBSpacing.w(MBSpacing.md),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: controller.homeFilter.value,
+                      initialValue: controller.homeFilter.value,
                       decoration: const InputDecoration(
                         labelText: 'Home Visibility',
                         border: OutlineInputBorder(),

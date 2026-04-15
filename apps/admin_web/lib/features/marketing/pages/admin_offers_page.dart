@@ -107,7 +107,7 @@ class _OffersHeader extends StatelessWidget {
               MBSpacing.w(MBSpacing.md),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: controller.statusFilter.value,
+                  initialValue: controller.statusFilter.value,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -130,7 +130,7 @@ class _OffersHeader extends StatelessWidget {
               MBSpacing.w(MBSpacing.md),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: controller.typeFilter.value,
+                  initialValue: controller.typeFilter.value,
                   decoration: const InputDecoration(
                     labelText: 'Offer Type',
                     border: OutlineInputBorder(),
@@ -153,7 +153,7 @@ class _OffersHeader extends StatelessWidget {
               MBSpacing.w(MBSpacing.md),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: controller.presentationFilter.value,
+                  initialValue: controller.presentationFilter.value,
                   decoration: const InputDecoration(
                     labelText: 'Presentation',
                     border: OutlineInputBorder(),

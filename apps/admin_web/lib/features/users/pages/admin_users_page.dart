@@ -352,7 +352,7 @@ class _UserListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<AdminUserController>();
+
 
     return MBCard(
       child: LayoutBuilder(

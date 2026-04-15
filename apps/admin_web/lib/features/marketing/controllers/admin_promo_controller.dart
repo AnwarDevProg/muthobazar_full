@@ -3,15 +3,12 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'package:shared_services/shared_services.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-import '../../admin_access/controllers/admin_access_controller.dart';
 
 class AdminPromoController extends GetxController {
   final AdminPromoRepository _repository = AdminPromoRepository.instance;
-  final AdminAccessController _accessController =
-  Get.find<AdminAccessController>();
+
 
   final RxList<MBPromoCode> promos = <MBPromoCode>[].obs;
   final RxList<MBPromoCode> filteredPromos = <MBPromoCode>[].obs;
@@ -146,7 +143,6 @@ class AdminPromoController extends GetxController {
     try {
       isSaving.value = true;
 
-      final before = promos.firstWhereOrNull((e) => e.id == promo.id);
 
       await _repository.updatePromo(promo);
 
@@ -173,7 +169,6 @@ class AdminPromoController extends GetxController {
     try {
       isDeleting.value = true;
 
-      final before = promos.firstWhereOrNull((e) => e.id == promoId);
 
       await _repository.deletePromo(promoId);
 

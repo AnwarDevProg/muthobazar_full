@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
-import 'package:shared_services/shared_services.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import '../../admin_access/controllers/admin_access_controller.dart';

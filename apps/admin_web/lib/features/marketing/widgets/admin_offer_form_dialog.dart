@@ -262,7 +262,7 @@ class _AdminOfferFormDialogState extends State<AdminOfferFormDialog> {
                             children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _offerType,
+                                  initialValue: _offerType,
                                   decoration: const InputDecoration(
                                     labelText: 'Offer Type',
                                     border: OutlineInputBorder(),
@@ -352,7 +352,7 @@ class _AdminOfferFormDialogState extends State<AdminOfferFormDialog> {
                             children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _targetType,
+                                  initialValue: _targetType,
                                   decoration: const InputDecoration(
                                     labelText: 'Target Type',
                                     border: OutlineInputBorder(),
@@ -397,7 +397,7 @@ class _AdminOfferFormDialogState extends State<AdminOfferFormDialog> {
                               MBSpacing.w(MBSpacing.md),
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _presentationType,
+                                  initialValue: _presentationType,
                                   decoration: const InputDecoration(
                                     labelText: 'Presentation Type',
                                     border: OutlineInputBorder(),

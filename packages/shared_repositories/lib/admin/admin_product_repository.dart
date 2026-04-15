@@ -791,10 +791,13 @@ class AdminProductRepository {
       if (data.containsKey('id') && data.containsKey('titleEn')) {
         return Map<String, dynamic>.from(data);
       }
+
+      return null;
     }
 
     if (data is Map) {
-      return _extractProductMap(Map<String, dynamic>.from(data));
+      final mapped = Map<String, dynamic>.from(data);
+      return _extractProductMap(mapped);
     }
 
     return null;
@@ -808,21 +811,26 @@ class AdminProductRepository {
       }
 
       final nested = data['data'];
-      if (nested is Map) {
+      if (nested is Map<String, dynamic>) {
         final nestedId = nested['productId'] ?? nested['id'];
         if (nestedId != null && nestedId.toString().trim().isNotEmpty) {
           return nestedId.toString().trim();
         }
       }
+
+      return null;
     }
 
     if (data is Map) {
-      return _extractProductId(Map<String, dynamic>.from(data));
+      final mapped = Map<String, dynamic>.from(data);
+      return _extractProductId(mapped);
     }
 
     return null;
   }
-}class AdminProductRepositoryException implements Exception {
+}
+
+class AdminProductRepositoryException implements Exception {
   const AdminProductRepositoryException({
     required this.message,
     this.cause,

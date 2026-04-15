@@ -148,7 +148,7 @@ class _AdminPromoFormDialogState extends State<AdminPromoFormDialog> {
                               MBSpacing.w(MBSpacing.md),
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _discountType,
+                                  initialValue: _discountType,
                                   decoration: const InputDecoration(
                                     labelText: 'Discount Type',
                                     border: OutlineInputBorder(),
