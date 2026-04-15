@@ -72,18 +72,19 @@ class _GlobalKeyboardWrapperState extends State<_GlobalKeyboardWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: _focusNode,
-      onKey: _handleKeyEvent,
+      onKeyEvent: _handleKeyEvent,
       child: widget.child,
     );
   }
 
-  void _handleKeyEvent(RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return;
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return;
 
     final bool isCtrlPressed =
-        event.isControlPressed || event.isMetaPressed;
+        HardwareKeyboard.instance.isControlPressed ||
+            HardwareKeyboard.instance.isMetaPressed;
 
     // 🔥 CTRL + K → Command Palette
     if (isCtrlPressed && event.logicalKey == LogicalKeyboardKey.keyK) {
