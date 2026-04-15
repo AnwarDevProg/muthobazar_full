@@ -177,7 +177,11 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
             uid: request.auth?.uid ?? null,
             productId: request.data?.productId ?? null,
         });
-        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canRestoreProducts");
+        const actor = await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canDeleteProducts");
+        // Hard delete is only allowed from quarantine context.
+        // Require restore permission too so direct callable access
+        // cannot bypass the quarantine access policy.
+        await (0, audit_log_core_1.getAuthorizedAdminActor)(request.auth?.uid, "canRestoreProducts");
         const productId = (0, callable_parsers_1.asTrimmedString)(request.data?.productId);
         const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
         (0, callable_parsers_1.requireNonEmpty)(productId, "productId");
