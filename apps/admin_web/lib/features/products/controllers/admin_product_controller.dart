@@ -779,67 +779,584 @@ class AdminProductController extends GetxController {
   }
 
   void _validateProduct(MBProduct product) {
+    _validateBasicProductFields(product);
+    _validateProductWindows(product);
+    _validateProductOperationalRules(product);
+    _validateAttributes(product.attributes);
+    _validateVariations(product);
+    _validatePurchaseOptions(product);
+  }
+
+  void _validateBasicProductFields(MBProduct product) {
     if (product.titleEn.trim().isEmpty) {
-      throw const AdminProductControllerException(
-        message: 'English product title is required.',
-      );
+      _throwValidation('English product title is required.');
     }
 
     if (product.titleBn.trim().isEmpty) {
-      throw const AdminProductControllerException(
-        message: 'Bangla product title is required.',
-      );
+      _throwValidation('Bangla product title is required.');
+    }
+
+    if (product.slug.trim().isEmpty) {
+      _throwValidation('Product slug is required.');
     }
 
     if (product.price < 0) {
-      throw const AdminProductControllerException(
-        message: 'Price cannot be negative.',
-      );
+      _throwValidation('Price cannot be negative.');
     }
 
     if (product.salePrice != null && product.salePrice! < 0) {
-      throw const AdminProductControllerException(
-        message: 'Sale price cannot be negative.',
-      );
+      _throwValidation('Sale price cannot be negative.');
     }
 
     if (product.costPrice != null && product.costPrice! < 0) {
-      throw const AdminProductControllerException(
-        message: 'Cost price cannot be negative.',
-      );
+      _throwValidation('Cost price cannot be negative.');
+    }
+
+    if (product.estimatedSchedulePrice != null &&
+        product.estimatedSchedulePrice! < 0) {
+      _throwValidation('Estimated schedule price cannot be negative.');
+    }
+
+    if (product.stockQty < 0) {
+      _throwValidation('Stock quantity cannot be negative.');
+    }
+
+    if (product.regularStockQty < 0) {
+      _throwValidation('Regular stock quantity cannot be negative.');
+    }
+
+    if (product.reservedInstantQty < 0) {
+      _throwValidation('Reserved instant quantity cannot be negative.');
+    }
+
+    if (product.todayInstantCap < 0) {
+      _throwValidation('Today instant cap cannot be negative.');
+    }
+
+    if (product.todayInstantSold < 0) {
+      _throwValidation('Today instant sold cannot be negative.');
+    }
+
+    if (product.maxScheduleQtyPerDay < 0) {
+      _throwValidation('Maximum schedule quantity per day cannot be negative.');
+    }
+
+    if (product.minScheduleNoticeHours < 0) {
+      _throwValidation('Minimum schedule notice hours cannot be negative.');
+    }
+
+    if (product.reorderLevel < 0) {
+      _throwValidation('Reorder level cannot be negative.');
+    }
+
+    if (product.sortOrder < 0) {
+      _throwValidation('Sort order cannot be negative.');
+    }
+
+    if (product.quantityValue < 0) {
+      _throwValidation('Quantity value cannot be negative.');
+    }
+
+    if (product.tolerance < 0) {
+      _throwValidation('Tolerance cannot be negative.');
     }
 
     if (product.minOrderQty != null && product.minOrderQty! < 0) {
-      throw const AdminProductControllerException(
-        message: 'Minimum order quantity cannot be negative.',
-      );
+      _throwValidation('Minimum order quantity cannot be negative.');
     }
 
     if (product.maxOrderQty != null && product.maxOrderQty! < 0) {
-      throw const AdminProductControllerException(
-        message: 'Maximum order quantity cannot be negative.',
-      );
+      _throwValidation('Maximum order quantity cannot be negative.');
     }
 
     if (product.stepQty != null && product.stepQty! < 0) {
-      throw const AdminProductControllerException(
-        message: 'Step quantity cannot be negative.',
-      );
+      _throwValidation('Step quantity cannot be negative.');
     }
 
     if (product.salePrice != null && product.salePrice! >= product.price) {
-      throw const AdminProductControllerException(
-        message: 'Sale price must be smaller than regular price.',
-      );
+      _throwValidation('Sale price must be smaller than regular price.');
     }
 
     if (product.maxOrderQty != null &&
         product.minOrderQty != null &&
         product.maxOrderQty! < product.minOrderQty!) {
-      throw const AdminProductControllerException(
-        message: 'Maximum order quantity cannot be smaller than minimum order quantity.',
+      _throwValidation(
+        'Maximum order quantity cannot be smaller than minimum order quantity.',
       );
     }
+
+    if (product.minOrderQty != null && product.minOrderQty! == 0) {
+      _throwValidation('Minimum order quantity must be greater than zero.');
+    }
+
+    if (product.maxOrderQty != null && product.maxOrderQty! == 0) {
+      _throwValidation('Maximum order quantity must be greater than zero.');
+    }
+
+    if (product.stepQty != null && product.stepQty! == 0) {
+      _throwValidation('Step quantity must be greater than zero.');
+    }
+  }
+
+  void _validateProductWindows(MBProduct product) {
+    final saleStartsAt = product.saleStartsAt;
+    final saleEndsAt = product.saleEndsAt;
+
+    if (saleStartsAt != null &&
+        saleEndsAt != null &&
+        saleStartsAt.isAfter(saleEndsAt)) {
+      _throwValidation('Sale start date must be before sale end date.');
+    }
+
+    final publishAt = product.publishAt;
+    final unpublishAt = product.unpublishAt;
+
+    if (publishAt != null &&
+        unpublishAt != null &&
+        publishAt.isAfter(unpublishAt)) {
+      _throwValidation('Publish date must be before unpublish date.');
+    }
+  }
+
+  void _validateProductOperationalRules(MBProduct product) {
+    final cutoffTime = (product.instantCutoffTime ?? '').trim();
+    if (cutoffTime.isNotEmpty && !_isValidTime24h(cutoffTime)) {
+      _throwValidation('Instant cutoff time must use HH:mm format.');
+    }
+
+    if (product.trackInventory &&
+        product.regularStockQty < product.reservedInstantQty) {
+      _throwValidation(
+        'Reserved instant quantity cannot exceed regular stock quantity.',
+      );
+    }
+
+    if (product.todayInstantSold > product.todayInstantCap) {
+      _throwValidation(
+        'Today instant sold cannot be greater than today instant cap.',
+      );
+    }
+
+    if (product.productType.trim().toLowerCase() == 'variable' &&
+        product.variations.isEmpty) {
+      _throwValidation(
+        'Variable products must have at least one variation.',
+      );
+    }
+  }
+
+  void _validateAttributes(List<MBProductAttribute> attributes) {
+    final seenAttributeIds = <String>{};
+    final seenAttributeCodes = <String>{};
+
+    for (var index = 0; index < attributes.length; index++) {
+      final attribute = attributes[index];
+      final label = _attributeLabel(attribute, index);
+
+      final attributeId = attribute.id.trim();
+      if (attributeId.isEmpty) {
+        _throwValidation('$label must have an id.');
+      }
+
+      if (!seenAttributeIds.add(_normalizedKey(attributeId))) {
+        _throwValidation('Duplicate attribute id found: $attributeId.');
+      }
+
+      if (attribute.nameEn.trim().isEmpty) {
+        _throwValidation('$label must have an English name.');
+      }
+
+      if (attribute.nameBn.trim().isEmpty) {
+        _throwValidation('$label must have a Bangla name.');
+      }
+
+      final code = attribute.code.trim();
+      if (code.isNotEmpty && !seenAttributeCodes.add(_normalizedKey(code))) {
+        _throwValidation('Duplicate attribute code found: $code.');
+      }
+
+      if (attribute.useForVariation && attribute.values.isEmpty) {
+        _throwValidation(
+          '$label is marked for variation but has no attribute values.',
+        );
+      }
+
+      final seenValueIds = <String>{};
+      final seenValueKeys = <String>{};
+      var hasEnabledValue = false;
+
+      for (var valueIndex = 0;
+      valueIndex < attribute.values.length;
+      valueIndex++) {
+        final value = attribute.values[valueIndex];
+        final valueLabel = '$label → value ${valueIndex + 1}';
+
+        final valueId = value.id.trim();
+        if (valueId.isEmpty) {
+          _throwValidation('$valueLabel must have an id.');
+        }
+
+        if (!seenValueIds.add(_normalizedKey(valueId))) {
+          _throwValidation(
+            '$label contains duplicate attribute value id: $valueId.',
+          );
+        }
+
+        final rawValue = value.value.trim();
+        if (rawValue.isEmpty) {
+          _throwValidation('$valueLabel must have a value.');
+        }
+
+        final valueKey = _normalizedKey(rawValue);
+        if (!seenValueKeys.add(valueKey)) {
+          _throwValidation(
+            '$label contains duplicate attribute value: $rawValue.',
+          );
+        }
+
+        if (value.isEnabled) {
+          hasEnabledValue = true;
+        }
+
+        if (attribute.displayType.trim().toLowerCase() == 'color' &&
+            value.isEnabled &&
+            (value.colorHex ?? '').trim().isEmpty) {
+          _throwValidation(
+            '$valueLabel must have a color hex for color display type.',
+          );
+        }
+
+        if (attribute.displayType.trim().toLowerCase() == 'image' &&
+            value.isEnabled &&
+            (value.imageUrl ?? '').trim().isEmpty) {
+          _throwValidation(
+            '$valueLabel must have an image URL for image display type.',
+          );
+        }
+      }
+
+      if (attribute.useForVariation && !hasEnabledValue) {
+        _throwValidation(
+          '$label must have at least one enabled value for variation use.',
+        );
+      }
+    }
+  }
+
+  void _validateVariations(MBProduct product) {
+    final variations = product.variations;
+    if (variations.isEmpty) return;
+
+    final seenVariationIds = <String>{};
+    final seenVariationSkus = <String>{};
+    final seenVariationBarcodes = <String>{};
+    final seenVariationSignatures = <String>{};
+    var defaultVariationCount = 0;
+
+    final variationAttributes =
+    product.attributes.where((attribute) => attribute.useForVariation).toList();
+
+    for (var index = 0; index < variations.length; index++) {
+      final variation = variations[index];
+      final label = _variationLabel(variation, index);
+
+      final variationId = variation.id.trim();
+      if (variationId.isEmpty) {
+        _throwValidation('$label must have an id.');
+      }
+
+      if (!seenVariationIds.add(_normalizedKey(variationId))) {
+        _throwValidation('Duplicate variation id found: $variationId.');
+      }
+
+      if (variation.price < 0) {
+        _throwValidation('$label price cannot be negative.');
+      }
+
+      if (variation.salePrice != null && variation.salePrice! < 0) {
+        _throwValidation('$label sale price cannot be negative.');
+      }
+
+      if (variation.costPrice != null && variation.costPrice! < 0) {
+        _throwValidation('$label cost price cannot be negative.');
+      }
+
+      if (variation.salePrice != null &&
+          variation.salePrice! >= variation.price) {
+        _throwValidation(
+          '$label sale price must be smaller than regular variation price.',
+        );
+      }
+
+      if (variation.stockQty < 0) {
+        _throwValidation('$label stock quantity cannot be negative.');
+      }
+
+      if (variation.reservedQty < 0) {
+        _throwValidation('$label reserved quantity cannot be negative.');
+      }
+
+      if (variation.trackInventory &&
+          !variation.allowBackorder &&
+          variation.reservedQty > variation.stockQty) {
+        _throwValidation(
+          '$label reserved quantity cannot exceed variation stock quantity.',
+        );
+      }
+
+      final sku = variation.sku.trim();
+      if (sku.isNotEmpty && !seenVariationSkus.add(_normalizedKey(sku))) {
+        _throwValidation('Duplicate variation SKU found: $sku.');
+      }
+
+      final barcode = (variation.barcode ?? '').trim();
+      if (barcode.isNotEmpty &&
+          !seenVariationBarcodes.add(_normalizedKey(barcode))) {
+        _throwValidation('Duplicate variation barcode found: $barcode.');
+      }
+
+      if (variation.isDefault) {
+        defaultVariationCount++;
+        if (!variation.isEnabled) {
+          _throwValidation('Default variation must be enabled.');
+        }
+      }
+
+      if (variationAttributes.isNotEmpty) {
+        if (variation.attributeValues.isEmpty) {
+          _throwValidation(
+            '$label must include attribute values for variation attributes.',
+          );
+        }
+
+        final signatureParts = <String>[];
+
+        for (final attribute in variationAttributes) {
+          final value = _resolveVariationAttributeValue(
+            variation: variation,
+            attribute: attribute,
+          );
+
+          if (value.trim().isEmpty) {
+            _throwValidation(
+              '$label is missing a value for variation attribute "${attribute.nameEn}".',
+            );
+          }
+
+          signatureParts.add(
+            '${_normalizedKey(attribute.id)}=${_normalizedKey(value)}',
+          );
+        }
+
+        final signature = signatureParts.join('|');
+        if (signature.isNotEmpty && !seenVariationSignatures.add(signature)) {
+          _throwValidation(
+            'Duplicate variation combination found for the same attribute values.',
+          );
+        }
+      }
+    }
+
+    if (defaultVariationCount > 1) {
+      _throwValidation('Only one variation can be marked as default.');
+    }
+  }
+
+  void _validatePurchaseOptions(MBProduct product) {
+    final purchaseOptions = product.purchaseOptions;
+    if (purchaseOptions.isEmpty) return;
+
+    final seenOptionIds = <String>{};
+    final seenDefaultKeys = <String>{};
+    var defaultOptionCount = 0;
+
+    for (var index = 0; index < purchaseOptions.length; index++) {
+      final option = purchaseOptions[index];
+      final label = _purchaseOptionLabel(option, index);
+
+      final optionId = option.id.trim();
+      if (optionId.isEmpty) {
+        _throwValidation('$label must have an id.');
+      }
+
+      if (!seenOptionIds.add(_normalizedKey(optionId))) {
+        _throwValidation('Duplicate purchase option id found: $optionId.');
+      }
+
+      if (option.mode.trim().isEmpty) {
+        _throwValidation('$label must have a mode.');
+      }
+
+      if (option.labelEn.trim().isEmpty) {
+        _throwValidation('$label must have an English label.');
+      }
+
+      if (option.price < 0) {
+        _throwValidation('$label price cannot be negative.');
+      }
+
+      if (option.salePrice != null && option.salePrice! < 0) {
+        _throwValidation('$label sale price cannot be negative.');
+      }
+
+      if (option.salePrice != null && option.salePrice! >= option.price) {
+        _throwValidation('$label sale price must be smaller than regular price.');
+      }
+
+      if (option.minScheduleDays < 0) {
+        _throwValidation('$label minimum schedule days cannot be negative.');
+      }
+
+      if (option.maxScheduleDays < 0) {
+        _throwValidation('$label maximum schedule days cannot be negative.');
+      }
+
+      if (option.maxScheduleDays < option.minScheduleDays) {
+        _throwValidation(
+          '$label maximum schedule days cannot be smaller than minimum schedule days.',
+        );
+      }
+
+      if (option.maxQtyPerOrder != null && option.maxQtyPerOrder! <= 0) {
+        _throwValidation('$label max quantity per order must be greater than zero.');
+      }
+
+      final cutoffTime = (option.cutoffTime ?? '').trim();
+      if (cutoffTime.isNotEmpty && !_isValidTime24h(cutoffTime)) {
+        _throwValidation('$label cutoff time must use HH:mm format.');
+      }
+
+      final seenShifts = <String>{};
+      for (final shift in option.availableShifts) {
+        final normalizedShift = _normalizedKey(shift);
+        if (normalizedShift.isEmpty) {
+          _throwValidation('$label contains an empty available shift.');
+        }
+        if (!seenShifts.add(normalizedShift)) {
+          _throwValidation('$label contains duplicate available shifts.');
+        }
+      }
+
+      final normalizedMode = _normalizedKey(option.mode);
+
+      if (option.supportsDateSelection) {
+        if (!product.supportsScheduledOrder) {
+          _throwValidation(
+            '$label supports date selection but the product does not support scheduled order.',
+          );
+        }
+
+        if (option.availableShifts.isEmpty) {
+          _throwValidation(
+            '$label must define available shifts when date selection is enabled.',
+          );
+        }
+      }
+
+      if (normalizedMode == 'scheduled' && !product.supportsScheduledOrder) {
+        _throwValidation(
+          '$label is scheduled-only, but the product does not support scheduled order.',
+        );
+      }
+
+      if (normalizedMode == 'instant' && !product.supportsInstantOrder) {
+        _throwValidation(
+          '$label is instant-only, but the product does not support instant order.',
+        );
+      }
+
+      if (option.isDefault) {
+        defaultOptionCount++;
+        if (!option.isEnabled) {
+          _throwValidation('Default purchase option must be enabled.');
+        }
+
+        final defaultKey = normalizedMode.isEmpty
+            ? _normalizedKey(optionId)
+            : normalizedMode;
+        if (!seenDefaultKeys.add(defaultKey)) {
+          _throwValidation(
+            'Only one default purchase option is allowed per purchase mode.',
+          );
+        }
+      }
+    }
+
+    if (defaultOptionCount > 1) {
+      _throwValidation('Only one purchase option can be marked as default.');
+    }
+  }
+
+  String _resolveVariationAttributeValue({
+    required MBProductVariation variation,
+    required MBProductAttribute attribute,
+  }) {
+    final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+    if (byId.isNotEmpty) return byId;
+
+    final code = attribute.code.trim();
+    if (code.isEmpty) return '';
+
+    return variation.attributeValues[code]?.trim() ?? '';
+  }
+
+  String _attributeLabel(MBProductAttribute attribute, int index) {
+    final english = attribute.nameEn.trim();
+    if (english.isNotEmpty) {
+      return 'Attribute "${attribute.nameEn}"';
+    }
+
+    final id = attribute.id.trim();
+    if (id.isNotEmpty) {
+      return 'Attribute "$id"';
+    }
+
+    return 'Attribute ${index + 1}';
+  }
+
+  String _variationLabel(MBProductVariation variation, int index) {
+    final english = variation.titleEn.trim();
+    if (english.isNotEmpty) {
+      return 'Variation "${variation.titleEn}"';
+    }
+
+    final sku = variation.sku.trim();
+    if (sku.isNotEmpty) {
+      return 'Variation "$sku"';
+    }
+
+    final id = variation.id.trim();
+    if (id.isNotEmpty) {
+      return 'Variation "$id"';
+    }
+
+    return 'Variation ${index + 1}';
+  }
+
+  String _purchaseOptionLabel(MBProductPurchaseOption option, int index) {
+    final english = option.labelEn.trim();
+    if (english.isNotEmpty) {
+      return 'Purchase option "${option.labelEn}"';
+    }
+
+    final id = option.id.trim();
+    if (id.isNotEmpty) {
+      return 'Purchase option "$id"';
+    }
+
+    return 'Purchase option ${index + 1}';
+  }
+
+  bool _isValidTime24h(String value) {
+    final normalized = value.trim();
+    final match = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(normalized);
+    return match != null;
+  }
+
+  String _normalizedKey(String value) => value.trim().toLowerCase();
+
+  Never _throwValidation(String message) {
+    throw AdminProductControllerException(message: message);
   }
 
   MBProduct _normalizeProduct(MBProduct product) {
