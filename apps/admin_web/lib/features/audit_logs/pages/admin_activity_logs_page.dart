@@ -1,5 +1,7 @@
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -917,18 +919,25 @@ class AdminActivityLogsPage extends GetView<AdminActivityLogController> {
       ].join(','));
     }
 
-    final bytes = buffer.toString().codeUnits;
-    final blob = html.Blob([bytes], 'text/csv;charset=utf-8;');
-    final url = html.Url.createObjectUrlFromBlob(blob);
+    final bytes = Uint8List.fromList(utf8.encode(buffer.toString()));
+    final jsBytes = bytes.toJS;
 
-    final downloadAnchor = html.AnchorElement(href: url)
+    final blob = web.Blob(
+      [jsBytes].toJS,
+      web.BlobPropertyBag(type: 'text/csv;charset=utf-8;'),
+    );
+
+    final url = web.URL.createObjectURL(blob);
+
+    final downloadAnchor = web.HTMLAnchorElement()
+      ..href = url
       ..setAttribute(
         'download',
         'activity_logs_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv',
       )
       ..click();
 
-    html.Url.revokeObjectUrl(url);
+    web.URL.revokeObjectURL(url);
     downloadAnchor.remove();
 
     Get.snackbar(
