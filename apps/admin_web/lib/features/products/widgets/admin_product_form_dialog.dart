@@ -188,6 +188,23 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   String? _selectedCategoryId;
   String? _selectedBrandId;
+  bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
+
+  bool get _showProductLevelMedia => !_isVariableProduct;
+
+  bool get _showProductLevelPricing => !_isVariableProduct;
+
+  bool get _showAttributesSection => _isVariableProduct;
+
+  bool get _showVariationsSection => _isVariableProduct;
+
+  String get _productTypeHelpText {
+    if (_isVariableProduct) {
+      return 'Variable product: pricing and media should be managed inside variations.';
+    }
+
+    return 'Non-variable product: pricing and media are managed at product level.';
+  }
 
   @override
   void initState() {
@@ -483,18 +500,32 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         const SizedBox(height: 16),
                         _buildRelationSection(context),
                         const SizedBox(height: 16),
-                        _buildMediaSection(context),
-                        const SizedBox(height: 16),
-                        _buildPricingSection(context),
-                        const SizedBox(height: 16),
+
+                        if (_showProductLevelMedia) ...[
+                          _buildMediaSection(context),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (_showProductLevelPricing) ...[
+                          _buildPricingSection(context),
+                          const SizedBox(height: 16),
+                        ],
+
                         _buildInventorySection(context),
                         const SizedBox(height: 16),
                         _buildQuantitySection(context),
                         const SizedBox(height: 16),
-                        _buildAttributesSection(context),
-                        const SizedBox(height: 16),
-                        _buildVariationsSection(context),
-                        const SizedBox(height: 16),
+
+                        if (_showAttributesSection) ...[
+                          _buildAttributesSection(context),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (_showVariationsSection) ...[
+                          _buildVariationsSection(context),
+                          const SizedBox(height: 16),
+                        ],
+
                         _buildPurchaseOptionsSection(context),
                       ],
                     ),
@@ -551,8 +582,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 const SizedBox(height: 4),
                 Text(
                   isCreate
-                      ? 'Create a product with media, attributes, variations, purchase options, inventory rules, and customer card style.'
-                      : 'Update product information, advanced selling rules, and customer card presentation.',
+                      ? 'Create a product with type-aware editing. Variable products use attributes and variations, while other products use product-level media and pricing.'
+                      : 'Update product information with type-aware editing for media, pricing, attributes, variations, and purchase options.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -680,6 +711,39 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               if (value == null) return;
               setState(() => _productType = value);
             },
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _isVariableProduct
+                      ? Icons.account_tree_outlined
+                      : Icons.inventory_2_outlined,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _productTypeHelpText,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Row(
