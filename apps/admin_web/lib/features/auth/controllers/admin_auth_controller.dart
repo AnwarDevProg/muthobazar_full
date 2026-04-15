@@ -43,6 +43,11 @@ class AdminAuthController extends BasePhoneAuthController {
     fullNameErrorText = null;
     notifyListeners();
   }
+  void clearPhoneInputErrors() {
+    phoneErrorText = null;
+    clearGeneralError();
+    notifyListeners();
+  }
 
   void validatePhoneNumber() {
     final bool isValid =

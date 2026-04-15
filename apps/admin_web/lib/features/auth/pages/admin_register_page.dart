@@ -116,9 +116,7 @@ class _AdminRegisterPageState extends State<AdminRegisterPage> {
                     FilteringTextInputFormatter.digitsOnly,
                   ],
                   onChanged: (_) {
-                    _controller.phoneErrorText = null;
-                    _controller.clearGeneralError();
-                    _controller.notifyListeners();
+                    _controller.clearPhoneInputErrors();
                   },
                   onEditingComplete: _controller.validatePhoneNumber,
                   decoration: InputDecoration(
