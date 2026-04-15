@@ -1,5 +1,5 @@
-import 'dart:html' as html;
-
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
