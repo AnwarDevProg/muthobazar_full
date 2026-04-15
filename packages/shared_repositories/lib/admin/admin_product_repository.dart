@@ -848,6 +848,9 @@ class AdminProductRepositoryException implements Exception {
   }
 }
 
+
+
+
 String _normalizeSlug(String input) {
   var value = input.trim().toLowerCase();
   value = value.replaceAll(RegExp(r'[^a-z0-9]+'), '-');
