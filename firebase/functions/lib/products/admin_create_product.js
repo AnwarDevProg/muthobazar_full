@@ -156,9 +156,10 @@ function normalizeProductPayload(input, actorUid, productId) {
         minScheduleNoticeHours: Math.trunc(asNumber(input.minScheduleNoticeHours, 0)),
         reorderLevel: Math.trunc(asNumber(input.reorderLevel, 0)),
         sortOrder: Math.trunc(asNumber(input.sortOrder, 0)),
-        views: Math.trunc(asNumber(input.views, 0)),
-        totalSold: Math.trunc(asNumber(input.totalSold, 0)),
-        addToCartCount: Math.trunc(asNumber(input.addToCartCount, 0)),
+        // Server-managed counters.
+        views: 0,
+        totalSold: 0,
+        addToCartCount: 0,
         quantityValue: asNumber(input.quantityValue, 0),
         tolerance: asNumber(input.tolerance, 0),
         trackInventory: asBool(input.trackInventory, true),

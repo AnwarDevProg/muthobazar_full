@@ -185,9 +185,10 @@ function normalizeMergedProductPayload(currentData, patchInput, actorUid, produc
         minScheduleNoticeHours: Math.trunc(asNumber(mergedBase.minScheduleNoticeHours, 0)),
         reorderLevel: Math.trunc(asNumber(mergedBase.reorderLevel, 0)),
         sortOrder: Math.trunc(asNumber(mergedBase.sortOrder, 0)),
-        views: Math.trunc(asNumber(mergedBase.views, 0)),
-        totalSold: Math.trunc(asNumber(mergedBase.totalSold, 0)),
-        addToCartCount: Math.trunc(asNumber(mergedBase.addToCartCount, 0)),
+        // Server-managed counters. Ignore any client patch values.
+        views: Math.trunc(asNumber(currentData.views, 0)),
+        totalSold: Math.trunc(asNumber(currentData.totalSold, 0)),
+        addToCartCount: Math.trunc(asNumber(currentData.addToCartCount, 0)),
         quantityValue: asNumber(mergedBase.quantityValue, 0),
         tolerance: asNumber(mergedBase.tolerance, 0),
         trackInventory: asBool(mergedBase.trackInventory, true),
