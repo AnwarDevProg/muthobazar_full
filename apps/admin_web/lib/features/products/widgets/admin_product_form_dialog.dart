@@ -284,6 +284,136 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     return 'Non-variable product: pricing and media are managed at product level.';
   }
 
+  String _normalizedDialogKey(String value) => value.trim().toLowerCase();
+
+  List<MBProductAttribute> get _variationAttributesSnapshot {
+    final items = _attributes
+        .where(
+          (attribute) =>
+      attribute.useForVariation &&
+          attribute.values.any(
+                (value) => value.isEnabled && value.value.trim().isNotEmpty,
+          ),
+    )
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return items;
+  }
+
+  Future<void> _showDialogPrompt(String title, String message) async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _findDuplicateAttributeMessage(
+      MBProductAttribute candidate, {
+        String? excludeId,
+      }) {
+    final candidateId = _normalizedDialogKey(candidate.id);
+    final candidateCode = _normalizedDialogKey(candidate.code);
+    final candidateNameEn = _normalizedDialogKey(candidate.nameEn);
+
+    for (final item in _attributes) {
+      if (excludeId != null && item.id == excludeId) {
+        continue;
+      }
+
+      if (candidateId.isNotEmpty &&
+          _normalizedDialogKey(item.id) == candidateId) {
+        return 'An attribute with the same id already exists.';
+      }
+
+      if (candidateCode.isNotEmpty &&
+          _normalizedDialogKey(item.code) == candidateCode) {
+        return 'An attribute with the same code already exists.';
+      }
+
+      if (candidateNameEn.isNotEmpty &&
+          _normalizedDialogKey(item.nameEn) == candidateNameEn) {
+        return 'An attribute with the same English name already exists.';
+      }
+    }
+
+    return null;
+  }
+
+  String _variationSignatureOnPage(MBProductVariation variation) {
+    final parts = <String>[];
+
+    for (final attribute in _variationAttributesSnapshot) {
+      final code = attribute.code.trim();
+      final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+      final byCode = code.isEmpty
+          ? ''
+          : (variation.attributeValues[code]?.trim() ?? '');
+      final selected = byId.isNotEmpty ? byId : byCode;
+
+      if (selected.isNotEmpty) {
+        parts.add(
+          '${_normalizedDialogKey(attribute.id)}=${_normalizedDialogKey(selected)}',
+        );
+      }
+    }
+
+    parts.sort();
+    return parts.join('|');
+  }
+
+  String? _findDuplicateVariationMessage(
+      MBProductVariation candidate, {
+        String? excludeId,
+      }) {
+    final candidateId = _normalizedDialogKey(candidate.id);
+    final candidateSku = _normalizedDialogKey(candidate.sku);
+    final candidateBarcode =
+    _normalizedDialogKey((candidate.barcode ?? '').trim());
+    final candidateSignature = _variationSignatureOnPage(candidate);
+
+    for (final item in _variations) {
+      if (excludeId != null && item.id == excludeId) {
+        continue;
+      }
+
+      if (candidateId.isNotEmpty &&
+          _normalizedDialogKey(item.id) == candidateId) {
+        return 'A variation with the same id already exists.';
+      }
+
+      if (candidateSku.isNotEmpty &&
+          _normalizedDialogKey(item.sku) == candidateSku) {
+        return 'A variation with the same SKU already exists.';
+      }
+
+      if (candidateBarcode.isNotEmpty &&
+          _normalizedDialogKey((item.barcode ?? '').trim()) == candidateBarcode) {
+        return 'A variation with the same barcode already exists.';
+      }
+
+      final existingSignature = _variationSignatureOnPage(item);
+      if (candidateSignature.isNotEmpty &&
+          existingSignature.isNotEmpty &&
+          candidateSignature == existingSignature) {
+        return 'A variation with the same attribute combination already exists.';
+      }
+    }
+
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2080,6 +2210,13 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
 
     if (result == null) return;
+
+    final duplicateMessage = _findDuplicateAttributeMessage(result);
+    if (duplicateMessage != null) {
+      await _showDialogPrompt('Duplicate Attribute', duplicateMessage);
+      return;
+    }
+
     setState(() {
       _attributes.add(result);
       _attributes.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -2093,6 +2230,16 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
 
     if (result == null) return;
+
+    final duplicateMessage = _findDuplicateAttributeMessage(
+      result,
+      excludeId: item.id,
+    );
+    if (duplicateMessage != null) {
+      await _showDialogPrompt('Duplicate Attribute', duplicateMessage);
+      return;
+    }
+
     setState(() {
       final index = _attributes.indexWhere((element) => element.id == item.id);
       if (index != -1) {
@@ -2103,6 +2250,16 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _addVariation() async {
+    final variationAttributes = _variationAttributesSnapshot;
+
+    if (variationAttributes.isEmpty) {
+      await _showDialogPrompt(
+        'Variation Attribute Required',
+        'Before adding a variation, create at least one attribute, turn on "Use For Variation", and add at least one enabled attribute value.',
+      );
+      return;
+    }
+
     final result = await showDialog<MBProductVariation>(
       context: context,
       builder: (_) => VariationDialog(
@@ -2110,10 +2267,18 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           id: makeEditorId('variation'),
           sortOrder: _variations.length,
         ),
+        variationAttributes: variationAttributes,
       ),
     );
 
     if (result == null) return;
+
+    final duplicateMessage = _findDuplicateVariationMessage(result);
+    if (duplicateMessage != null) {
+      await _showDialogPrompt('Duplicate Variation', duplicateMessage);
+      return;
+    }
+
     setState(() {
       _variations.add(result);
       _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -2121,12 +2286,35 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _editVariation(MBProductVariation item) async {
+    final variationAttributes = _variationAttributesSnapshot;
+
+    if (variationAttributes.isEmpty) {
+      await _showDialogPrompt(
+        'Variation Attribute Required',
+        'This product currently has no usable variation attributes. Add at least one attribute with enabled values first.',
+      );
+      return;
+    }
+
     final result = await showDialog<MBProductVariation>(
       context: context,
-      builder: (_) => VariationDialog(initialValue: item),
+      builder: (_) => VariationDialog(
+        initialValue: item,
+        variationAttributes: variationAttributes,
+      ),
     );
 
     if (result == null) return;
+
+    final duplicateMessage = _findDuplicateVariationMessage(
+      result,
+      excludeId: item.id,
+    );
+    if (duplicateMessage != null) {
+      await _showDialogPrompt('Duplicate Variation', duplicateMessage);
+      return;
+    }
+
     setState(() {
       final index = _variations.indexWhere((element) => element.id == item.id);
       if (index != -1) {

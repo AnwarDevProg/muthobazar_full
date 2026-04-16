@@ -1016,6 +1016,51 @@ class _AttributeDialogState extends State<AttributeDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.20),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Example / Sample',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Example 1\n'
+                            'Name (English): Size\n'
+                            'Name (Bangla): সাইজ\n'
+                            'Code: size\n'
+                            'Use For Variation: ON\n'
+                            'Display Type: text\n'
+                            'Values: 500g, 1kg',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Example 2\n'
+                            'Name (English): Color\n'
+                            'Code: color\n'
+                            'Use For Variation: ON\n'
+                            'Display Type: color\n'
+                            'Values: Red (#FF0000), Green (#00AA00)',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 Text(
                   'Attribute Identity',
@@ -1228,9 +1273,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
 }
 
 class VariationDialog extends StatefulWidget {
-  const VariationDialog({super.key, required this.initialValue});
+  const VariationDialog({
+    super.key,
+    required this.initialValue,
+    this.variationAttributes = const <MBProductAttribute>[],
+  });
 
   final MBProductVariation initialValue;
+  final List<MBProductAttribute> variationAttributes;
 
   @override
   State<VariationDialog> createState() => _VariationDialogState();
@@ -1253,17 +1303,66 @@ class _VariationDialogState extends State<VariationDialog> {
   late final TextEditingController _stockQtyController;
   late final TextEditingController _reservedQtyController;
   late final TextEditingController _sortOrderController;
-  late final TextEditingController _attributePairsController;
 
   late bool _trackInventory;
   late bool _allowBackorder;
   late bool _isDefault;
   late bool _isEnabled;
 
+  late Map<String, String?> _selectedAttributeValues;
+
+  List<MBProductAttributeValue> _enabledValuesFor(MBProductAttribute attribute) {
+    final values = attribute.values
+        .where((value) => value.isEnabled && value.value.trim().isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return values;
+  }
+
+  String? _initialSelectedValueFor(
+      MBProductAttribute attribute,
+      MBProductVariation variation,
+      ) {
+    final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+    if (byId.isNotEmpty) {
+      return byId;
+    }
+
+    final code = attribute.code.trim();
+    if (code.isNotEmpty) {
+      final byCode = variation.attributeValues[code]?.trim() ?? '';
+      if (byCode.isNotEmpty) {
+        return byCode;
+      }
+    }
+
+    final enabledValues = _enabledValuesFor(attribute);
+    if (enabledValues.length == 1) {
+      return enabledValues.first.value.trim();
+    }
+
+    return null;
+  }
+
+  Map<String, String> _buildSelectedAttributeMap() {
+    final result = <String, String>{};
+
+    for (final attribute in widget.variationAttributes) {
+      final selected = (_selectedAttributeValues[attribute.id] ?? '').trim();
+      if (selected.isNotEmpty) {
+        result[attribute.id] = selected;
+      }
+    }
+
+    return result;
+  }
+
   @override
   void initState() {
     super.initState();
     final value = widget.initialValue;
+
     _idController = TextEditingController(text: value.id);
     _skuController = TextEditingController(text: value.sku);
     _barcodeController = TextEditingController(text: value.barcode ?? '');
@@ -1273,16 +1372,26 @@ class _VariationDialogState extends State<VariationDialog> {
     _descriptionEnController = TextEditingController(text: value.descriptionEn);
     _descriptionBnController = TextEditingController(text: value.descriptionBn);
     _priceController = TextEditingController(text: asTextDouble(value.price));
-    _salePriceController = TextEditingController(text: asTextNullableDouble(value.salePrice));
-    _costPriceController = TextEditingController(text: asTextNullableDouble(value.costPrice));
+    _salePriceController =
+        TextEditingController(text: asTextNullableDouble(value.salePrice));
+    _costPriceController =
+        TextEditingController(text: asTextNullableDouble(value.costPrice));
     _stockQtyController = TextEditingController(text: value.stockQty.toString());
-    _reservedQtyController = TextEditingController(text: value.reservedQty.toString());
-    _sortOrderController = TextEditingController(text: value.sortOrder.toString());
-    _attributePairsController = TextEditingController(text: attributeMapToText(value.attributeValues));
+    _reservedQtyController =
+        TextEditingController(text: value.reservedQty.toString());
+    _sortOrderController =
+        TextEditingController(text: value.sortOrder.toString());
+
     _trackInventory = value.trackInventory;
     _allowBackorder = value.allowBackorder;
     _isDefault = value.isDefault;
     _isEnabled = value.isEnabled;
+
+    _selectedAttributeValues = <String, String?>{};
+    for (final attribute in widget.variationAttributes) {
+      _selectedAttributeValues[attribute.id] =
+          _initialSelectedValueFor(attribute, value);
+    }
   }
 
   @override
@@ -1301,8 +1410,68 @@ class _VariationDialogState extends State<VariationDialog> {
     _stockQtyController.dispose();
     _reservedQtyController.dispose();
     _sortOrderController.dispose();
-    _attributePairsController.dispose();
     super.dispose();
+  }
+
+  Widget _buildAttributeSelectors(BuildContext context) {
+    if (widget.variationAttributes.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'No variation attributes available. Add an attribute with "Use For Variation" and at least one enabled value first.',
+        ),
+      );
+    }
+
+    return Column(
+      children: widget.variationAttributes.map((attribute) {
+        final values = _enabledValuesFor(attribute);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: (_selectedAttributeValues[attribute.id] ?? '').trim().isEmpty
+                ? null
+                : _selectedAttributeValues[attribute.id],
+            decoration: InputDecoration(
+              labelText: attribute.nameEn.isEmpty
+                  ? attribute.id
+                  : '${attribute.nameEn} (${attribute.id})',
+              border: const OutlineInputBorder(),
+            ),
+            items: values
+                .map(
+                  (item) => DropdownMenuItem<String>(
+                value: item.value.trim(),
+                child: Text(
+                  item.labelEn.trim().isEmpty
+                      ? item.value
+                      : '${item.labelEn} (${item.value})',
+                ),
+              ),
+            )
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedAttributeValues[attribute.id] = value;
+              });
+            },
+            validator: (value) {
+              if (!attribute.useForVariation) return null;
+              if ((value ?? '').trim().isEmpty) {
+                return 'Select a value for ${attribute.nameEn.isEmpty ? attribute.id : attribute.nameEn}';
+              }
+              return null;
+            },
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -1332,7 +1501,7 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ),
                   child: Text(
-                    'Variable product mode: this variation currently owns pricing and image. Later phase will move from single image URL to richer variation media.',
+                    'Variation owns pricing and image. Attribute values below are now selected directly from the current attribute definitions.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -1343,33 +1512,16 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-
-                dialogTextField(
-                  _idController,
-                  'Id',
-                  validator: requiredValidator,
-                ),
+                dialogTextField(_idController, 'Id', validator: requiredValidator),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
-                    Expanded(
-                      child: dialogTextField(
-                        _skuController,
-                        'SKU',
-                      ),
-                    ),
+                    Expanded(child: dialogTextField(_skuController, 'SKU')),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: dialogTextField(
-                        _barcodeController,
-                        'Barcode',
-                      ),
-                    ),
+                    Expanded(child: dialogTextField(_barcodeController, 'Barcode')),
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     Expanded(
@@ -1395,11 +1547,7 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-
-                dialogTextField(
-                  _imageUrlController,
-                  'Variation Image URL',
-                ),
+                dialogTextField(_imageUrlController, 'Variation Image URL'),
 
                 const SizedBox(height: 20),
                 Text(
@@ -1407,7 +1555,6 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     Expanded(
@@ -1434,7 +1581,6 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     Expanded(
@@ -1467,33 +1613,18 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
-                    Expanded(
-                      child: dialogTextField(
-                        _stockQtyController,
-                        'Stock Qty',
-                      ),
-                    ),
+                    Expanded(child: dialogTextField(_stockQtyController, 'Stock Qty')),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: dialogTextField(
-                        _reservedQtyController,
-                        'Reserved Qty',
-                      ),
+                      child: dialogTextField(_reservedQtyController, 'Reserved Qty'),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: dialogTextField(
-                        _sortOrderController,
-                        'Sort Order',
-                      ),
-                    ),
+                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -1532,16 +1663,11 @@ class _VariationDialogState extends State<VariationDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'One per line in this format: attributeId=value or attributeCode=value',
+                  'Select one value for each variation attribute.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 12),
-
-                dialogTextField(
-                  _attributePairsController,
-                  'Attribute Values',
-                  maxLines: 6,
-                ),
+                _buildAttributeSelectors(context),
               ],
             ),
           ),
@@ -1575,9 +1701,7 @@ class _VariationDialogState extends State<VariationDialog> {
                 reservedQty: parseInt(_reservedQtyController.text),
                 trackInventory: _trackInventory,
                 allowBackorder: _allowBackorder,
-                attributeValues: attributeTextToMap(
-                  _attributePairsController.text,
-                ),
+                attributeValues: _buildSelectedAttributeMap(),
                 sortOrder: parseInt(_sortOrderController.text),
                 isDefault: _isDefault,
                 isEnabled: _isEnabled,
