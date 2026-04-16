@@ -1775,7 +1775,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       actorRole: widget.actorRole,
     );
 
-    saved ??= await _waitForRecoveredSavedProduct(product);
+    //saved ??= await _waitForRecoveredSavedProduct(product);
 
     if (!mounted || saved == null) return;
 
