@@ -135,9 +135,9 @@ String makeEditorId(String prefix) {
 
 Map<String, String> attributeTextToMap(String raw) {
   final lines = raw.split('');
-      final result = <String, String>{};
+  final result = <String, String>{};
 
-      for (final line in lines) {
+  for (final line in lines) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) continue;
     final parts = trimmed.split('=');
@@ -154,7 +154,7 @@ Map<String, String> attributeTextToMap(String raw) {
 String attributeMapToText(Map<String, String> value) {
   if (value.isEmpty) return '';
   return value.entries.map((entry) => '${entry.key}=${entry.value}').join('');
-  }
+}
 
 Widget buildTextField({
   required TextEditingController controller,
@@ -913,6 +913,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
   late String _displayType;
   late List<MBProductAttributeValue> _values;
 
+  String get _attributeModeHelpText {
+    if (_useForVariation) {
+      return 'This attribute participates in variation combinations. Make sure values are clean and unique.';
+    }
+
+    return 'This attribute is display-only for now and does not generate variation combinations.';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -981,15 +989,47 @@ class _AttributeDialogState extends State<AttributeDialog> {
     return AlertDialog(
       title: const Text('Attribute'),
       content: SizedBox(
-        width: 760,
+        width: 860,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                dialogTextField(_idController, 'Id', validator: requiredValidator),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Text(
+                    _attributeModeHelpText,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Attribute Identity',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 12),
+
+                dialogTextField(
+                  _idController,
+                  'Id',
+                  validator: requiredValidator,
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
@@ -1004,74 +1044,145 @@ class _AttributeDialogState extends State<AttributeDialog> {
                       child: dialogTextField(
                         _nameBnController,
                         'Name (Bangla)',
-                        validator: requiredValidator,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
+
                 Row(
                   children: [
-                    Expanded(child: dialogTextField(_codeController, 'Code')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
+                    Expanded(
+                      child: dialogTextField(
+                        _codeController,
+                        'Code',
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: dialogDropdown(
-                        label: 'Display Type',
-                        value: _displayType,
-                        items: const ['text', 'color', 'image', 'button'],
-                        onChanged: (value) => setState(() => _displayType = value),
+                      child: dialogTextField(
+                        _sortOrderController,
+                        'Sort Order',
                       ),
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Behavior',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
+
+                Row(
                   children: [
-                    buildFilterChip(
-                      label: 'Visible',
-                      selected: _isVisible,
-                      onSelected: (value) => setState(() => _isVisible = value),
+                    Expanded(
+                      child: SwitchListTile(
+                        value: _isVisible,
+                        onChanged: (value) =>
+                            setState(() => _isVisible = value),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Visible'),
+                      ),
                     ),
-                    buildFilterChip(
-                      label: 'Use For Variation',
-                      selected: _useForVariation,
-                      onSelected: (value) => setState(() => _useForVariation = value),
-                    ),
-                    buildFilterChip(
-                      label: 'Required',
-                      selected: _isRequired,
-                      onSelected: (value) => setState(() => _isRequired = value),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SwitchListTile(
+                        value: _useForVariation,
+                        onChanged: (value) =>
+                            setState(() => _useForVariation = value),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Use For Variation'),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.icon(
-                    onPressed: _addValue,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Value'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SwitchListTile(
+                        value: _isRequired,
+                        onChanged: (value) =>
+                            setState(() => _isRequired = value),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Required'),
+                      ),
+                    ),
+                    const Expanded(child: SizedBox()),
+                  ],
                 ),
                 const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  initialValue: _displayType,
+                  decoration: const InputDecoration(
+                    labelText: 'Display Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'text', child: Text('text')),
+                    DropdownMenuItem(value: 'color', child: Text('color')),
+                    DropdownMenuItem(value: 'image', child: Text('image')),
+                    DropdownMenuItem(value: 'chip', child: Text('chip')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _displayType = value);
+                  },
+                ),
+
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Attribute Values',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: _addValue,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Value'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'These values will later connect to variation combinations for variable products.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+
                 if (_values.isEmpty)
-                  const EmptyBlock(message: 'No attribute values added yet.')
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('No attribute values added yet.'),
+                  )
                 else
                   Column(
                     children: _values
                         .map(
                           (item) => EditableTile(
-                        title: item.labelEn,
+                        title: item.labelEn.trim().isEmpty
+                            ? item.value
+                            : item.labelEn,
                         subtitle:
-                        'value: ${item.value} • color: ${item.colorHex ?? '-'} • order: ${item.sortOrder}',
+                        'value: ${item.value} • order: ${item.sortOrder} • enabled: ${item.isEnabled}',
                         onEdit: () => _editValue(item),
                         onDelete: () {
                           setState(() {
-                            _values.removeWhere((element) => element.id == item.id);
+                            _values.removeWhere(
+                                  (element) => element.id == item.id,
+                            );
                           });
                         },
                       ),
@@ -1091,18 +1202,21 @@ class _AttributeDialogState extends State<AttributeDialog> {
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
+
             Navigator.of(context).pop(
               MBProductAttribute(
                 id: _idController.text.trim(),
                 nameEn: _nameEnController.text.trim(),
                 nameBn: _nameBnController.text.trim(),
                 code: _codeController.text.trim(),
-                values: [..._values]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
                 sortOrder: parseInt(_sortOrderController.text),
                 isVisible: _isVisible,
                 useForVariation: _useForVariation,
                 isRequired: _isRequired,
                 displayType: _displayType,
+                values: [..._values]..sort(
+                      (a, b) => a.sortOrder.compareTo(b.sortOrder),
+                ),
               ),
             );
           },
@@ -1196,67 +1310,190 @@ class _VariationDialogState extends State<VariationDialog> {
     return AlertDialog(
       title: const Text('Variation'),
       content: SizedBox(
-        width: 760,
+        width: 860,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                dialogTextField(_idController, 'Id', validator: requiredValidator),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_skuController, 'SKU')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_barcodeController, 'Barcode')),
-                  ],
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Text(
+                    'Variable product mode: this variation currently owns pricing and image. Later phase will move from single image URL to richer variation media.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Identity',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_titleEnController, 'Title (English)')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_titleBnController, 'Title (Bangla)')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                dialogTextField(_imageUrlController, 'Image URL'),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_descriptionEnController, 'Description (English)', maxLines: 3)),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_descriptionBnController, 'Description (Bangla)', maxLines: 3)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_priceController, 'Price', validator: requiredValidator)),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_salePriceController, 'Sale Price')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_costPriceController, 'Cost Price')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_stockQtyController, 'Stock Qty')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_reservedQtyController, 'Reserved Qty')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
-                  ],
-                ),
-                const SizedBox(height: 12),
+
                 dialogTextField(
-                  _attributePairsController,
-                  'Attribute Values (one per line: key=value)',
-                  maxLines: 5,
+                  _idController,
+                  'Id',
+                  validator: requiredValidator,
                 ),
                 const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _skuController,
+                        'SKU',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _barcodeController,
+                        'Barcode',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _titleEnController,
+                        'Title (English)',
+                        validator: requiredValidator,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _titleBnController,
+                        'Title (Bangla)',
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Variation Media',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+
+                dialogTextField(
+                  _imageUrlController,
+                  'Variation Image URL',
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Variation Descriptions',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _descriptionEnController,
+                        'Description (English)',
+                        maxLines: 3,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _descriptionBnController,
+                        'Description (Bangla)',
+                        maxLines: 3,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Variation Pricing',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _priceController,
+                        'Price',
+                        validator: requiredValidator,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _salePriceController,
+                        'Sale Price',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _costPriceController,
+                        'Cost Price',
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Variation Inventory',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _stockQtyController,
+                        'Stock Qty',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _reservedQtyController,
+                        'Reserved Qty',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _sortOrderController,
+                        'Sort Order',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -1264,24 +1501,46 @@ class _VariationDialogState extends State<VariationDialog> {
                     buildFilterChip(
                       label: 'Track Inventory',
                       selected: _trackInventory,
-                      onSelected: (value) => setState(() => _trackInventory = value),
+                      onSelected: (value) =>
+                          setState(() => _trackInventory = value),
                     ),
                     buildFilterChip(
                       label: 'Allow Backorder',
                       selected: _allowBackorder,
-                      onSelected: (value) => setState(() => _allowBackorder = value),
+                      onSelected: (value) =>
+                          setState(() => _allowBackorder = value),
                     ),
                     buildFilterChip(
                       label: 'Default',
                       selected: _isDefault,
-                      onSelected: (value) => setState(() => _isDefault = value),
+                      onSelected: (value) =>
+                          setState(() => _isDefault = value),
                     ),
                     buildFilterChip(
                       label: 'Enabled',
                       selected: _isEnabled,
-                      onSelected: (value) => setState(() => _isEnabled = value),
+                      onSelected: (value) =>
+                          setState(() => _isEnabled = value),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Attribute Values',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'One per line in this format: attributeId=value or attributeCode=value',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+
+                dialogTextField(
+                  _attributePairsController,
+                  'Attribute Values',
+                  maxLines: 6,
                 ),
               ],
             ),
@@ -1296,6 +1555,7 @@ class _VariationDialogState extends State<VariationDialog> {
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
+
             Navigator.of(context).pop(
               MBProductVariation(
                 id: _idController.text.trim(),
@@ -1315,7 +1575,9 @@ class _VariationDialogState extends State<VariationDialog> {
                 reservedQty: parseInt(_reservedQtyController.text),
                 trackInventory: _trackInventory,
                 allowBackorder: _allowBackorder,
-                attributeValues: attributeTextToMap(_attributePairsController.text),
+                attributeValues: attributeTextToMap(
+                  _attributePairsController.text,
+                ),
                 sortOrder: parseInt(_sortOrderController.text),
                 isDefault: _isDefault,
                 isEnabled: _isEnabled,
@@ -1360,6 +1622,19 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
   late bool _isEnabled;
   late bool _supportsDateSelection;
   late bool _isDefault;
+  bool get _isScheduledMode =>
+      _mode.trim().toLowerCase() == 'scheduled' ||
+          _mode.trim().toLowerCase() == 'preorder';
+
+  bool get _showScheduleFields => _isScheduledMode || _supportsDateSelection;
+
+  String get _purchaseOptionHelpText {
+    if (_showScheduleFields) {
+      return 'This purchase option uses scheduling-related fields such as schedule window, shifts, and cutoff.';
+    }
+
+    return 'This purchase option is mainly instant/today style. Keep schedule-only fields minimal unless needed.';
+  }
 
   @override
   void initState() {
@@ -1408,15 +1683,47 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
     return AlertDialog(
       title: const Text('Purchase Option'),
       content: SizedBox(
-        width: 760,
+        width: 860,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                dialogTextField(_idController, 'Id', validator: requiredValidator),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Text(
+                    _purchaseOptionHelpText,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Identity',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 12),
+
+                dialogTextField(
+                  _idController,
+                  'Id',
+                  validator: requiredValidator,
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
@@ -1433,12 +1740,14 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
                         label: 'Fulfillment Type',
                         value: _fulfillmentType,
                         items: const ['standard', 'instant', 'scheduled', 'fresh'],
-                        onChanged: (value) => setState(() => _fulfillmentType = value),
+                        onChanged: (value) =>
+                            setState(() => _fulfillmentType = value),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
@@ -1453,44 +1762,51 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
                       child: dialogTextField(
                         _labelBnController,
                         'Label (Bangla)',
-                        validator: requiredValidator,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_priceController, 'Price', validator: requiredValidator)),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_salePriceController, 'Sale Price')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_maxQtyPerOrderController, 'Max Qty Per Order')),
-                  ],
+
+                const SizedBox(height: 20),
+                Text(
+                  'Pricing',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
+
                 Row(
                   children: [
-                    Expanded(child: dialogTextField(_minScheduleDaysController, 'Min Schedule Days')),
+                    Expanded(
+                      child: dialogTextField(
+                        _priceController,
+                        'Price',
+                        validator: requiredValidator,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_maxScheduleDaysController, 'Max Schedule Days')),
+                    Expanded(
+                      child: dialogTextField(
+                        _salePriceController,
+                        'Sale Price',
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
+                    Expanded(
+                      child: dialogTextField(
+                        _maxQtyPerOrderController,
+                        'Max Qty Per Order',
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                dialogTextField(_availableShiftsController, 'Available Shifts (comma separated)'),
-                const SizedBox(height: 12),
-                dialogTextField(_cutoffTimeController, 'Cutoff Time'),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_helperTextEnController, 'Helper Text (English)', maxLines: 3)),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_helperTextBnController, 'Helper Text (Bangla)', maxLines: 3)),
-                  ],
+
+                const SizedBox(height: 20),
+                Text(
+                  'Scheduling',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
+
                 Wrap(
                   spacing: 12,
                   runSpacing: 8,
@@ -1498,17 +1814,91 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
                     buildFilterChip(
                       label: 'Enabled',
                       selected: _isEnabled,
-                      onSelected: (value) => setState(() => _isEnabled = value),
+                      onSelected: (value) =>
+                          setState(() => _isEnabled = value),
                     ),
                     buildFilterChip(
                       label: 'Date Selection',
                       selected: _supportsDateSelection,
-                      onSelected: (value) => setState(() => _supportsDateSelection = value),
+                      onSelected: (value) =>
+                          setState(() => _supportsDateSelection = value),
                     ),
                     buildFilterChip(
                       label: 'Default',
                       selected: _isDefault,
-                      onSelected: (value) => setState(() => _isDefault = value),
+                      onSelected: (value) =>
+                          setState(() => _isDefault = value),
+                    ),
+                  ],
+                ),
+
+                if (_showScheduleFields) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: dialogTextField(
+                          _minScheduleDaysController,
+                          'Min Schedule Days',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: dialogTextField(
+                          _maxScheduleDaysController,
+                          'Max Schedule Days',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: dialogTextField(
+                          _sortOrderController,
+                          'Sort Order',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  dialogTextField(
+                    _availableShiftsController,
+                    'Available Shifts (comma separated)',
+                  ),
+                  const SizedBox(height: 12),
+                  dialogTextField(
+                    _cutoffTimeController,
+                    'Cutoff Time',
+                  ),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  dialogTextField(
+                    _sortOrderController,
+                    'Sort Order',
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+                Text(
+                  'Helper Text',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _helperTextEnController,
+                        'Helper Text (English)',
+                        maxLines: 3,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _helperTextBnController,
+                        'Helper Text (Bangla)',
+                        maxLines: 3,
+                      ),
                     ),
                   ],
                 ),

@@ -190,6 +190,84 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   String? _selectedBrandId;
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
+  MBProductVariation? get _primaryVariationForOwnership {
+    for (final item in _variations) {
+      if (item.isEnabled && item.isDefault) {
+        return item;
+      }
+    }
+
+    for (final item in _variations) {
+      if (item.isEnabled) {
+        return item;
+      }
+    }
+
+    if (_variations.isNotEmpty) {
+      return _variations.first;
+    }
+
+    return null;
+  }
+
+  List<MBProductMedia> get _effectiveProductMediaItems {
+    if (_isVariableProduct) {
+      return const <MBProductMedia>[];
+    }
+
+    final media = [..._mediaItems]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return media;
+  }
+
+  String? get _effectiveThumbnailUrl {
+    if (_isVariableProduct) {
+      final url = _primaryVariationForOwnership?.imageUrl.trim() ?? '';
+      return url.isEmpty ? null : url;
+    }
+
+    return deriveThumbnailUrl(_effectiveProductMediaItems);
+  }
+
+  List<String> get _effectiveImageUrls {
+    if (_isVariableProduct) {
+      final url = _primaryVariationForOwnership?.imageUrl.trim() ?? '';
+      if (url.isEmpty) return <String>[];
+      return <String>[url];
+    }
+
+    return _effectiveProductMediaItems
+        .where((item) => item.isEnabled && item.type == 'image')
+        .map((item) => item.url.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+
+  double get _effectiveRootPrice {
+    if (_isVariableProduct) {
+      return _primaryVariationForOwnership?.price ?? 0;
+    }
+
+    return parseDouble(_priceController.text);
+  }
+
+  double? get _effectiveRootSalePrice {
+    if (_isVariableProduct) {
+      return _primaryVariationForOwnership?.salePrice;
+    }
+
+    return parseNullableDouble(_salePriceController.text);
+  }
+
+  double? get _effectiveRootCostPrice {
+    if (_isVariableProduct) {
+      return _primaryVariationForOwnership?.costPrice;
+    }
+
+    return parseNullableDouble(_costPriceController.text);
+  }
+
   bool get _showProductLevelMedia => !_isVariableProduct;
 
   bool get _showProductLevelPricing => !_isVariableProduct;
@@ -1617,6 +1695,27 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isVariableProduct) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor,
+                ),
+              ),
+              child: Text(
+                'Variable product preview uses the primary variation for image and price compatibility. Product-level media is not the owner anymore.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
           if (preview.resolvedThumbnailUrl.trim().isNotEmpty)
             PreviewLargeImage(url: preview.resolvedThumbnailUrl)
           else
@@ -1640,7 +1739,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               buildInfoChip('price: ${preview.price.toStringAsFixed(2)}'),
               buildInfoChip('enabled: ${preview.isEnabled}'),
               buildInfoChip('deleted: ${preview.isDeleted}'),
-              buildInfoChip('media: ${preview.mediaItems.length}'),
+              buildInfoChip('product media: ${preview.mediaItems.length}'),
+              buildInfoChip(
+                'variation image: ${_primaryVariationForOwnership?.imageUrl.trim().isNotEmpty == true}',
+              ),
               buildInfoChip('attributes: ${preview.attributes.length}'),
               buildInfoChip('variations: ${preview.variations.length}'),
               buildInfoChip('options: ${preview.purchaseOptions.length}'),
@@ -1751,16 +1853,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   MBProduct _buildProductFromForm() {
     final now = DateTime.now();
-    final media = [..._mediaItems]
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-    final derivedThumbnail = deriveThumbnailUrl(media);
-    final derivedImageUrls = media
-        .where((item) => item.isEnabled && item.type == 'image')
-        .map((item) => item.url.trim())
-        .where((item) => item.isNotEmpty)
-        .toSet()
-        .toList();
+    final media = _effectiveProductMediaItems;
+    final derivedThumbnail = _effectiveThumbnailUrl;
+    final derivedImageUrls = _effectiveImageUrls;
 
     return (_source.id.trim().isEmpty ? MBProduct.empty() : _source).copyWith(
       id: _source.id,
@@ -1780,11 +1875,11 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       thumbnailUrl: derivedThumbnail,
       imageUrls: derivedImageUrls,
       mediaItems: media,
-      price: parseDouble(_priceController.text),
-      salePrice: parseNullableDouble(_salePriceController.text),
-      clearSalePrice: parseNullableDouble(_salePriceController.text) == null,
-      costPrice: parseNullableDouble(_costPriceController.text),
-      clearCostPrice: parseNullableDouble(_costPriceController.text) == null,
+      price: _effectiveRootPrice,
+      salePrice: _effectiveRootSalePrice,
+      clearSalePrice: _effectiveRootSalePrice == null,
+      costPrice: _effectiveRootCostPrice,
+      clearCostPrice: _effectiveRootCostPrice == null,
       saleStartsAt: _saleStartsAt,
       clearSaleStartsAt: _saleStartsAt == null,
       saleEndsAt: _saleEndsAt,

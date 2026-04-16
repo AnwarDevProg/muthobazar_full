@@ -851,6 +851,7 @@ class AdminProductController extends GetxController {
     _validateBasicProductFields(product, blocking, warnings);
     _validateProductWindows(product, blocking, warnings);
     _validateProductOperationalRules(product, blocking, warnings);
+    _validateProductTypeOwnership(product, blocking, warnings);
 
     final normalizedProductType = product.productType.trim().toLowerCase();
     final isVariableProduct = normalizedProductType == 'variable';
@@ -1497,6 +1498,101 @@ class AdminProductController extends GetxController {
     if (raw.length > 300) return fallback;
 
     return raw;
+  }
+
+
+  bool _isVariableProductType(MBProduct product) {
+    return product.productType.trim().toLowerCase() == 'variable';
+  }
+
+  MBProductVariation? _primaryVariationForValidation(MBProduct product) {
+    for (final item in product.variations) {
+      if (item.isEnabled && item.isDefault) {
+        return item;
+      }
+    }
+
+    for (final item in product.variations) {
+      if (item.isEnabled) {
+        return item;
+      }
+    }
+
+    if (product.variations.isNotEmpty) {
+      return product.variations.first;
+    }
+
+    return null;
+  }
+
+  void _validateProductTypeOwnership(
+      MBProduct product,
+      List<String> blocking,
+      List<String> warnings,
+      ) {
+    final isVariable = _isVariableProductType(product);
+
+    if (isVariable) {
+      if (product.variations.isEmpty) {
+        blocking.add('Variable products must have at least one variation.');
+      }
+
+      if (product.mediaItems.isNotEmpty) {
+        warnings.add(
+          'Variable product still has product-level media. Media ownership should be variation-level.',
+        );
+      }
+
+      if (product.attributes.isEmpty) {
+        warnings.add(
+          'Variable product has no attributes yet. Variation mapping may become unclear.',
+        );
+      }
+
+      final primaryVariation = _primaryVariationForValidation(product);
+
+      final hasVariationImage = product.variations.any(
+            (item) => item.imageUrl.trim().isNotEmpty,
+      );
+      if (!hasVariationImage) {
+        warnings.add(
+          'Variable product has no variation image. Preview/root thumbnail compatibility may be weak.',
+        );
+      }
+
+      final hasVariationPrice = product.variations.any(
+            (item) => item.price > 0,
+      );
+      if (!hasVariationPrice) {
+        warnings.add(
+          'Variable product has no variation price greater than zero.',
+        );
+      }
+
+      if (primaryVariation == null) {
+        warnings.add(
+          'Variable product has no primary/default variation selected yet.',
+        );
+      }
+    } else {
+      if (product.attributes.isNotEmpty) {
+        warnings.add(
+          'Non-variable product still has attributes. These are currently hidden in the shell.',
+        );
+      }
+
+      if (product.variations.isNotEmpty) {
+        warnings.add(
+          'Non-variable product still has variations. These are currently hidden in the shell.',
+        );
+      }
+
+      if (product.mediaItems.isEmpty) {
+        warnings.add(
+          'Non-variable product has no product-level media.',
+        );
+      }
+    }
   }
 
   String _readableError(
