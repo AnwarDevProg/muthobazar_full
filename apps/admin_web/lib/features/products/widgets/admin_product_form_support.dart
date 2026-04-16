@@ -1587,6 +1587,19 @@ class _VariationDialogState extends State<VariationDialog> {
 
   late Map<String, String?> _selectedAttributeValues;
 
+  bool _isImageProcessing = false;
+  String? _imageErrorText;
+  MBPreparedImageSet? _preparedImage;
+  MBUploadedImageSet? _uploadedImage;
+
+  static const int _variationFullMaxWidth = 1080;
+  static const int _variationFullMaxHeight = 1350;
+  static const int _variationFullJpegQuality = 90;
+  static const int _variationThumbWidth = 400;
+  static const int _variationThumbHeight = 500;
+  static const int _variationThumbSize = 400;
+  static const int _variationThumbJpegQuality = 85;
+
   List<MBProductAttributeValue> _enabledValuesFor(MBProductAttribute attribute) {
     final values = attribute.values
         .where((value) => value.isEnabled && value.value.trim().isNotEmpty)
@@ -1634,59 +1647,110 @@ class _VariationDialogState extends State<VariationDialog> {
     return result;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    final value = widget.initialValue;
+  Future<void> _pickResizeAndUploadVariationImage() async {
+    setState(() {
+      _isImageProcessing = true;
+      _imageErrorText = null;
+    });
 
-    _idController = TextEditingController(text: value.id);
-    _skuController = TextEditingController(text: value.sku);
-    _barcodeController = TextEditingController(text: value.barcode ?? '');
-    _titleEnController = TextEditingController(text: value.titleEn);
-    _titleBnController = TextEditingController(text: value.titleBn);
-    _imageUrlController = TextEditingController(text: value.imageUrl);
-    _descriptionEnController = TextEditingController(text: value.descriptionEn);
-    _descriptionBnController = TextEditingController(text: value.descriptionBn);
-    _priceController = TextEditingController(text: asTextDouble(value.price));
-    _salePriceController =
-        TextEditingController(text: asTextNullableDouble(value.salePrice));
-    _costPriceController =
-        TextEditingController(text: asTextNullableDouble(value.costPrice));
-    _stockQtyController = TextEditingController(text: value.stockQty.toString());
-    _reservedQtyController =
-        TextEditingController(text: value.reservedQty.toString());
-    _sortOrderController =
-        TextEditingController(text: value.sortOrder.toString());
+    try {
+      final MBPreparedImageSet? prepared =
+      await MBImagePipelineService.instance.pickCropAndPrepareImage(
+        fullMaxWidth: _variationFullMaxWidth,
+        fullMaxHeight: _variationFullMaxHeight,
+        fullJpegQuality: _variationFullJpegQuality,
+        thumbSize: _variationThumbSize,
+        thumbJpegQuality: _variationThumbJpegQuality,
+        requestSquareCrop: false,
+        requestAspectCrop: true,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        thumbWidth: _variationThumbWidth,
+        thumbHeight: _variationThumbHeight,
+      );
 
-    _trackInventory = value.trackInventory;
-    _allowBackorder = value.allowBackorder;
-    _isDefault = value.isDefault;
-    _isEnabled = value.isEnabled;
+      if (prepared == null) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        return;
+      }
 
-    _selectedAttributeValues = <String, String?>{};
-    for (final attribute in widget.variationAttributes) {
-      _selectedAttributeValues[attribute.id] =
-          _initialSelectedValueFor(attribute, value);
+      final String variationId =
+      _idController.text.trim().isEmpty ? makeEditorId('variation') : _idController.text.trim();
+
+      final MBUploadedImageSet uploaded =
+      await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/variations',
+        entityId: variationId,
+        fileStem: _titleEnController.text.trim().isEmpty
+            ? prepared.baseName
+            : _titleEnController.text.trim(),
+        customMetadata: <String, String>{
+          'variationId': variationId,
+          'mediaOwner': 'variation',
+          'type': 'image',
+        },
+      );
+
+      setState(() {
+        _preparedImage = prepared;
+        _uploadedImage = uploaded;
+        _imageUrlController.text = uploaded.fullUrl;
+        _isImageProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isImageProcessing = false;
+        _imageErrorText = error.toString();
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _idController.dispose();
-    _skuController.dispose();
-    _barcodeController.dispose();
-    _titleEnController.dispose();
-    _titleBnController.dispose();
-    _imageUrlController.dispose();
-    _descriptionEnController.dispose();
-    _descriptionBnController.dispose();
-    _priceController.dispose();
-    _salePriceController.dispose();
-    _costPriceController.dispose();
-    _stockQtyController.dispose();
-    _reservedQtyController.dispose();
-    _sortOrderController.dispose();
-    super.dispose();
+  Widget _buildVariationImagePreview(BuildContext context) {
+    if (_preparedImage != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.memory(
+          _preparedImage!.previewBytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 260,
+        ),
+      );
+    }
+
+    if (_imageUrlController.text.trim().isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          _imageUrlController.text.trim(),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 260,
+          errorBuilder: (_, __, ___) => Container(
+            height: 260,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: const Icon(Icons.broken_image_outlined, size: 42),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 260,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: const Icon(Icons.image_outlined, size: 42),
+    );
   }
 
   Widget _buildAttributeSelectors(BuildContext context) {
@@ -1751,6 +1815,63 @@ class _VariationDialogState extends State<VariationDialog> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final value = widget.initialValue;
+
+    _idController = TextEditingController(
+      text: value.id.trim().isEmpty ? makeEditorId('variation') : value.id,
+    );
+    _skuController = TextEditingController(text: value.sku);
+    _barcodeController = TextEditingController(text: value.barcode ?? '');
+    _titleEnController = TextEditingController(text: value.titleEn);
+    _titleBnController = TextEditingController(text: value.titleBn);
+    _imageUrlController = TextEditingController(text: value.imageUrl);
+    _descriptionEnController = TextEditingController(text: value.descriptionEn);
+    _descriptionBnController = TextEditingController(text: value.descriptionBn);
+    _priceController = TextEditingController(text: asTextDouble(value.price));
+    _salePriceController =
+        TextEditingController(text: asTextNullableDouble(value.salePrice));
+    _costPriceController =
+        TextEditingController(text: asTextNullableDouble(value.costPrice));
+    _stockQtyController = TextEditingController(text: value.stockQty.toString());
+    _reservedQtyController =
+        TextEditingController(text: value.reservedQty.toString());
+    _sortOrderController =
+        TextEditingController(text: value.sortOrder.toString());
+
+    _trackInventory = value.trackInventory;
+    _allowBackorder = value.allowBackorder;
+    _isDefault = value.isDefault;
+    _isEnabled = value.isEnabled;
+
+    _selectedAttributeValues = <String, String?>{};
+    for (final attribute in widget.variationAttributes) {
+      _selectedAttributeValues[attribute.id] =
+          _initialSelectedValueFor(attribute, value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _idController.dispose();
+    _skuController.dispose();
+    _barcodeController.dispose();
+    _titleEnController.dispose();
+    _titleBnController.dispose();
+    _imageUrlController.dispose();
+    _descriptionEnController.dispose();
+    _descriptionBnController.dispose();
+    _priceController.dispose();
+    _salePriceController.dispose();
+    _costPriceController.dispose();
+    _stockQtyController.dispose();
+    _reservedQtyController.dispose();
+    _sortOrderController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Variation'),
@@ -1777,7 +1898,7 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ),
                   child: Text(
-                    'Variation owns pricing and image. Attribute values below are now selected directly from the current attribute definitions.',
+                    'Each variation owns one image in this phase. The same shared product portrait resize pipeline is used here.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -1788,13 +1909,27 @@ class _VariationDialogState extends State<VariationDialog> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-                dialogTextField(_idController, 'Id', validator: requiredValidator),
+                dialogTextField(
+                  _idController,
+                  'Id',
+                  validator: requiredValidator,
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: dialogTextField(_skuController, 'SKU')),
+                    Expanded(
+                      child: dialogTextField(
+                        _skuController,
+                        'SKU',
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_barcodeController, 'Barcode')),
+                    Expanded(
+                      child: dialogTextField(
+                        _barcodeController,
+                        'Barcode',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -1819,11 +1954,51 @@ class _VariationDialogState extends State<VariationDialog> {
 
                 const SizedBox(height: 20),
                 Text(
-                  'Variation Media',
+                  'Variation Image',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),
-                dialogTextField(_imageUrlController, 'Variation Image URL'),
+                _buildVariationImagePreview(context),
+                const SizedBox(height: 12),
+                if (_imageErrorText != null && _imageErrorText!.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      _imageErrorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _isImageProcessing
+                            ? null
+                            : _pickResizeAndUploadVariationImage,
+                        icon: _isImageProcessing
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                            : const Icon(Icons.add_photo_alternate_outlined),
+                        label: Text(
+                          _imageUrlController.text.trim().isEmpty
+                              ? 'Pick, Resize & Upload'
+                              : 'Replace Variation Image',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                dialogTextField(
+                  _imageUrlController,
+                  'Variation Image URL',
+                ),
 
                 const SizedBox(height: 20),
                 Text(
@@ -1891,13 +2066,26 @@ class _VariationDialogState extends State<VariationDialog> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: dialogTextField(_stockQtyController, 'Stock Qty')),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: dialogTextField(_reservedQtyController, 'Reserved Qty'),
+                      child: dialogTextField(
+                        _stockQtyController,
+                        'Stock Qty',
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
+                    Expanded(
+                      child: dialogTextField(
+                        _reservedQtyController,
+                        'Reserved Qty',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _sortOrderController,
+                        'Sort Order',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -1951,12 +2139,23 @@ class _VariationDialogState extends State<VariationDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isImageProcessing
+              ? null
+              : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
+          onPressed: _isImageProcessing
+              ? null
+              : () {
             if (!_formKey.currentState!.validate()) return;
+
+            if (_imageUrlController.text.trim().isEmpty) {
+              setState(() {
+                _imageErrorText = 'Please pick and upload one variation image first.';
+              });
+              return;
+            }
 
             Navigator.of(context).pop(
               MBProductVariation(
