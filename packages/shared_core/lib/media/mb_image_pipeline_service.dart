@@ -42,6 +42,9 @@ class MBPreparedImageSet {
     required this.sourceWidth,
     required this.sourceHeight,
     required this.requestSquareCrop,
+    required this.requestAspectCrop,
+    required this.cropAspectRatioX,
+    required this.cropAspectRatioY,
   });
 
   final Uint8List fullBytes;
@@ -63,6 +66,9 @@ class MBPreparedImageSet {
   final int sourceHeight;
 
   final bool requestSquareCrop;
+  final bool requestAspectCrop;
+  final int cropAspectRatioX;
+  final int cropAspectRatioY;
 
   Uint8List get previewBytes => fullBytes;
 }
@@ -142,13 +148,23 @@ class MBImagePipelineService {
     required int thumbSize,
     required int thumbJpegQuality,
     bool requestSquareCrop = false,
+    bool requestAspectCrop = false,
+    int cropAspectRatioX = 1,
+    int cropAspectRatioY = 1,
+    int? thumbWidth,
+    int? thumbHeight,
   }) async {
     _validateResizeInputs(
       fullMaxWidth: fullMaxWidth,
       fullMaxHeight: fullMaxHeight,
       fullJpegQuality: fullJpegQuality,
       thumbSize: thumbSize,
+      thumbWidth: thumbWidth,
+      thumbHeight: thumbHeight,
       thumbJpegQuality: thumbJpegQuality,
+      requestAspectCrop: requestAspectCrop,
+      cropAspectRatioX: cropAspectRatioX,
+      cropAspectRatioY: cropAspectRatioY,
     );
 
     final img.Image? decoded = img.decodeImage(original.originalBytes);
@@ -156,8 +172,17 @@ class MBImagePipelineService {
       throw Exception('Failed to decode original image for resize.');
     }
 
+    final int resolvedThumbWidth = thumbWidth ?? thumbSize;
+    final int resolvedThumbHeight = thumbHeight ?? thumbSize;
+
     final img.Image preparedBase = requestSquareCrop
         ? _buildCenteredSquare(decoded)
+        : requestAspectCrop
+        ? _buildCenteredAspectCrop(
+      decoded,
+      aspectRatioX: cropAspectRatioX,
+      aspectRatioY: cropAspectRatioY,
+    )
         : img.Image.from(decoded);
 
     final img.Image fullImage = _resizeContain(
@@ -166,15 +191,16 @@ class MBImagePipelineService {
       maxHeight: fullMaxHeight,
     );
 
-    final img.Image thumbImage = requestSquareCrop
-        ? _buildSquareThumb(
+    final img.Image thumbImage = (requestSquareCrop || requestAspectCrop)
+        ? _resizeExact(
       preparedBase,
-      thumbSize: thumbSize,
+      targetWidth: resolvedThumbWidth,
+      targetHeight: resolvedThumbHeight,
     )
         : _resizeContain(
       preparedBase,
-      maxWidth: thumbSize,
-      maxHeight: thumbSize,
+      maxWidth: resolvedThumbWidth,
+      maxHeight: resolvedThumbHeight,
     );
 
     final Uint8List fullBytes = Uint8List.fromList(
@@ -206,6 +232,9 @@ class MBImagePipelineService {
       sourceWidth: original.width,
       sourceHeight: original.height,
       requestSquareCrop: requestSquareCrop,
+      requestAspectCrop: requestAspectCrop,
+      cropAspectRatioX: cropAspectRatioX,
+      cropAspectRatioY: cropAspectRatioY,
     );
   }
 
@@ -216,6 +245,11 @@ class MBImagePipelineService {
     int thumbSize = 320,
     int thumbJpegQuality = 82,
     bool requestSquareCrop = false,
+    bool requestAspectCrop = false,
+    int cropAspectRatioX = 1,
+    int cropAspectRatioY = 1,
+    int? thumbWidth,
+    int? thumbHeight,
   }) async {
     final MBOriginalPickedImage? original = await pickOriginalImage();
     if (original == null) {
@@ -230,6 +264,11 @@ class MBImagePipelineService {
       thumbSize: thumbSize,
       thumbJpegQuality: thumbJpegQuality,
       requestSquareCrop: requestSquareCrop,
+      requestAspectCrop: requestAspectCrop,
+      cropAspectRatioX: cropAspectRatioX,
+      cropAspectRatioY: cropAspectRatioY,
+      thumbWidth: thumbWidth,
+      thumbHeight: thumbHeight,
     );
   }
 
@@ -270,6 +309,9 @@ class MBImagePipelineService {
         'sourceWidth': prepared.sourceWidth.toString(),
         'sourceHeight': prepared.sourceHeight.toString(),
         'squareCrop': prepared.requestSquareCrop.toString(),
+        'aspectCrop': prepared.requestAspectCrop.toString(),
+        'cropAspectRatioX': prepared.cropAspectRatioX.toString(),
+        'cropAspectRatioY': prepared.cropAspectRatioY.toString(),
         ...?customMetadata,
       },
     );
@@ -286,6 +328,9 @@ class MBImagePipelineService {
         'sourceWidth': prepared.sourceWidth.toString(),
         'sourceHeight': prepared.sourceHeight.toString(),
         'squareCrop': prepared.requestSquareCrop.toString(),
+        'aspectCrop': prepared.requestAspectCrop.toString(),
+        'cropAspectRatioX': prepared.cropAspectRatioX.toString(),
+        'cropAspectRatioY': prepared.cropAspectRatioY.toString(),
         ...?customMetadata,
       },
     );
@@ -313,7 +358,12 @@ class MBImagePipelineService {
     required int fullMaxHeight,
     required int fullJpegQuality,
     required int thumbSize,
+    required int? thumbWidth,
+    required int? thumbHeight,
     required int thumbJpegQuality,
+    required bool requestAspectCrop,
+    required int cropAspectRatioX,
+    required int cropAspectRatioY,
   }) {
     if (fullMaxWidth <= 0 || fullMaxHeight <= 0) {
       throw Exception('Full image target size must be greater than zero.');
@@ -323,12 +373,26 @@ class MBImagePipelineService {
       throw Exception('Thumb size must be greater than zero.');
     }
 
+    if (thumbWidth != null && thumbWidth <= 0) {
+      throw Exception('Thumb width must be greater than zero.');
+    }
+
+    if (thumbHeight != null && thumbHeight <= 0) {
+      throw Exception('Thumb height must be greater than zero.');
+    }
+
     if (fullJpegQuality < 1 || fullJpegQuality > 100) {
       throw Exception('Full image JPEG quality must be between 1 and 100.');
     }
 
     if (thumbJpegQuality < 1 || thumbJpegQuality > 100) {
       throw Exception('Thumb image JPEG quality must be between 1 and 100.');
+    }
+
+    if (requestAspectCrop) {
+      if (cropAspectRatioX <= 0 || cropAspectRatioY <= 0) {
+        throw Exception('Crop aspect ratio values must be greater than zero.');
+      }
     }
   }
 
@@ -356,6 +420,19 @@ class MBImagePipelineService {
     );
   }
 
+  img.Image _resizeExact(
+      img.Image source, {
+        required int targetWidth,
+        required int targetHeight,
+      }) {
+    return img.copyResize(
+      source,
+      width: targetWidth,
+      height: targetHeight,
+      interpolation: img.Interpolation.average,
+    );
+  }
+
   img.Image _buildCenteredSquare(img.Image source) {
     final int squareSide = math.min(source.width, source.height);
     final int offsetX = ((source.width - squareSide) / 2).round();
@@ -370,19 +447,34 @@ class MBImagePipelineService {
     );
   }
 
-  img.Image _buildSquareThumb(
+  img.Image _buildCenteredAspectCrop(
       img.Image source, {
-        required int thumbSize,
+        required int aspectRatioX,
+        required int aspectRatioY,
       }) {
-    final img.Image cropped = source.width == source.height
-        ? img.Image.from(source)
-        : _buildCenteredSquare(source);
+    final double targetRatio = aspectRatioX / aspectRatioY;
+    final double sourceRatio = source.width / source.height;
 
-    return img.copyResize(
-      cropped,
-      width: thumbSize,
-      height: thumbSize,
-      interpolation: img.Interpolation.average,
+    int cropWidth = source.width;
+    int cropHeight = source.height;
+
+    if (sourceRatio > targetRatio) {
+      cropWidth = math.max(1, (source.height * targetRatio).round());
+      cropHeight = source.height;
+    } else if (sourceRatio < targetRatio) {
+      cropWidth = source.width;
+      cropHeight = math.max(1, (source.width / targetRatio).round());
+    }
+
+    final int offsetX = ((source.width - cropWidth) / 2).round();
+    final int offsetY = ((source.height - cropHeight) / 2).round();
+
+    return img.copyCrop(
+      source,
+      x: offsetX,
+      y: offsetY,
+      width: cropWidth,
+      height: cropHeight,
     );
   }
 

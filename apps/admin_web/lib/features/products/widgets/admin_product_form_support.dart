@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
+import 'dart:typed_data';
+import 'package:shared_core/shared_core.dart';
 
 // File: admin_product_form_support.dart
 
@@ -553,9 +555,20 @@ class EmptyPreviewImage extends StatelessWidget {
 }
 
 class MediaItemDialog extends StatefulWidget {
-  const MediaItemDialog({super.key, required this.initialValue});
+  const MediaItemDialog({
+    super.key,
+    required this.initialValue,
+    this.maxItems = 10,
+    this.currentItemCount = 0,
+    this.useProductPortraitPreset = false,
+    this.forceImageOnly = false,
+  });
 
   final MBProductMedia initialValue;
+  final int maxItems;
+  final int currentItemCount;
+  final bool useProductPortraitPreset;
+  final bool forceImageOnly;
 
   @override
   State<MediaItemDialog> createState() => _MediaItemDialogState();
@@ -565,94 +578,355 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _idController;
-  late final TextEditingController _urlController;
-  late final TextEditingController _storagePathController;
   late final TextEditingController _labelEnController;
   late final TextEditingController _labelBnController;
   late final TextEditingController _altEnController;
   late final TextEditingController _altBnController;
   late final TextEditingController _sortOrderController;
-  late final TextEditingController _widthController;
-  late final TextEditingController _heightController;
-  late final TextEditingController _sizeBytesController;
+  late final TextEditingController _urlController;
+  late final TextEditingController _storagePathController;
 
-  late String _type;
-  late String _role;
   late bool _isPrimary;
   late bool _isEnabled;
+  late String _type;
+  late String _role;
+
+  bool _isProcessing = false;
+  String? _errorText;
+
+  MBPreparedImageSet? _preparedImage;
+  MBUploadedImageSet? _uploadedImage;
+
+  static const int _productFullMaxWidth = 1080;
+  static const int _productFullMaxHeight = 1350;
+  static const int _productFullJpegQuality = 90;
+  static const int _productThumbWidth = 400;
+  static const int _productThumbHeight = 500;
+  static const int _productThumbSize = 400;
+  static const int _productThumbJpegQuality = 85;
 
   @override
   void initState() {
     super.initState();
-    final value = widget.initialValue;
-    _idController = TextEditingController(text: value.id);
-    _urlController = TextEditingController(text: value.url);
-    _storagePathController = TextEditingController(text: value.storagePath);
-    _labelEnController = TextEditingController(text: value.labelEn);
-    _labelBnController = TextEditingController(text: value.labelBn);
-    _altEnController = TextEditingController(text: value.altEn);
-    _altBnController = TextEditingController(text: value.altBn);
-    _sortOrderController = TextEditingController(text: value.sortOrder.toString());
-    _widthController = TextEditingController(text: value.width?.toString() ?? '');
-    _heightController = TextEditingController(text: value.height?.toString() ?? '');
-    _sizeBytesController = TextEditingController(text: value.sizeBytes?.toString() ?? '');
-    _type = value.type;
-    _role = value.role;
-    _isPrimary = value.isPrimary;
-    _isEnabled = value.isEnabled;
+
+    final item = widget.initialValue;
+
+    _idController = TextEditingController(
+      text: item.id.trim().isEmpty ? makeEditorId('media') : item.id,
+    );
+    _labelEnController = TextEditingController(text: item.labelEn);
+    _labelBnController = TextEditingController(text: item.labelBn);
+    _altEnController = TextEditingController(text: item.altEn);
+    _altBnController = TextEditingController(text: item.altBn);
+    _sortOrderController = TextEditingController(
+      text: item.sortOrder.toString(),
+    );
+    _urlController = TextEditingController(text: item.url);
+    _storagePathController = TextEditingController(text: item.storagePath);
+
+    _isPrimary = item.isPrimary;
+    _isEnabled = item.isEnabled;
+    _type = widget.forceImageOnly ? 'image' : item.type;
+    _role = item.role.trim().isEmpty
+        ? (item.isPrimary ? 'thumbnail' : 'gallery')
+        : item.role;
   }
 
   @override
   void dispose() {
     _idController.dispose();
-    _urlController.dispose();
-    _storagePathController.dispose();
     _labelEnController.dispose();
     _labelBnController.dispose();
     _altEnController.dispose();
     _altBnController.dispose();
     _sortOrderController.dispose();
-    _widthController.dispose();
-    _heightController.dispose();
-    _sizeBytesController.dispose();
+    _urlController.dispose();
+    _storagePathController.dispose();
     super.dispose();
+  }
+
+  String get _effectiveRole => _isPrimary ? 'thumbnail' : 'gallery';
+
+  int get _parsedSortOrder => int.tryParse(_sortOrderController.text.trim()) ?? 0;
+
+  Future<void> _pickResizeAndUploadImage() async {
+    setState(() {
+      _isProcessing = true;
+      _errorText = null;
+    });
+
+    try {
+      final MBPreparedImageSet? prepared =
+      await MBImagePipelineService.instance.pickCropAndPrepareImage(
+        fullMaxWidth: _productFullMaxWidth,
+        fullMaxHeight: _productFullMaxHeight,
+        fullJpegQuality: _productFullJpegQuality,
+        thumbSize: _productThumbSize,
+        thumbJpegQuality: _productThumbJpegQuality,
+        requestSquareCrop: false,
+        requestAspectCrop: widget.useProductPortraitPreset,
+        cropAspectRatioX: widget.useProductPortraitPreset ? 4 : 1,
+        cropAspectRatioY: widget.useProductPortraitPreset ? 5 : 1,
+        thumbWidth: widget.useProductPortraitPreset ? _productThumbWidth : null,
+        thumbHeight: widget.useProductPortraitPreset ? _productThumbHeight : null,
+      );
+
+      if (prepared == null) {
+        setState(() {
+          _isProcessing = false;
+        });
+        return;
+      }
+
+      final String mediaId =
+      _idController.text.trim().isEmpty ? makeEditorId('media') : _idController.text.trim();
+
+      final MBUploadedImageSet uploaded =
+      await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/media',
+        entityId: mediaId,
+        fileStem: _labelEnController.text.trim().isEmpty
+            ? prepared.baseName
+            : _labelEnController.text.trim(),
+        customMetadata: <String, String>{
+          'mediaId': mediaId,
+          'role': _effectiveRole,
+          'type': 'image',
+        },
+      );
+
+      if (_labelEnController.text.trim().isEmpty) {
+        _labelEnController.text = prepared.baseName.replaceAll('_', ' ');
+      }
+
+      setState(() {
+        _preparedImage = prepared;
+        _uploadedImage = uploaded;
+        _type = 'image';
+        _role = _effectiveRole;
+        _urlController.text = uploaded.fullUrl;
+        _storagePathController.text = uploaded.fullPath;
+        _isProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isProcessing = false;
+        _errorText = error.toString();
+      });
+    }
+  }
+
+  Widget _buildPreviewBox(BuildContext context) {
+    final Widget content;
+
+    if (_preparedImage != null) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.memory(
+          _preparedImage!.previewBytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 280,
+        ),
+      );
+    } else if (_urlController.text.trim().isNotEmpty) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          _urlController.text.trim(),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 280,
+          errorBuilder: (_, __, ___) => Container(
+            height: 280,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: const Icon(Icons.broken_image_outlined, size: 42),
+          ),
+        ),
+      );
+    } else {
+      content = Container(
+        height: 280,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: const Icon(Icons.image_outlined, size: 42),
+      );
+    }
+
+    return content;
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: Text(value.isEmpty ? '-' : value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  MBProductMedia _buildResult() {
+    final existing = widget.initialValue;
+
+    return existing.copyWith(
+      id: _idController.text.trim(),
+      url: _urlController.text.trim(),
+      storagePath: _storagePathController.text.trim(),
+      type: _type,
+      role: _effectiveRole,
+      labelEn: _labelEnController.text.trim(),
+      labelBn: _labelBnController.text.trim(),
+      altEn: _altEnController.text.trim(),
+      altBn: _altBnController.text.trim(),
+      sortOrder: _parsedSortOrder,
+      isPrimary: _isPrimary,
+      isEnabled: _isEnabled,
+      width: _uploadedImage?.fullWidth ?? existing.width,
+      clearWidth: _uploadedImage == null && existing.width == null,
+      height: _uploadedImage?.fullHeight ?? existing.height,
+      clearHeight: _uploadedImage == null && existing.height == null,
+      sizeBytes: _preparedImage?.fullByteLength ?? existing.sizeBytes,
+      clearSizeBytes: _preparedImage == null && existing.sizeBytes == null,
+      createdAt: existing.createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isAtLimit =
+        widget.currentItemCount >= widget.maxItems && widget.initialValue.url.trim().isEmpty;
+
     return AlertDialog(
       title: const Text('Media Item'),
       content: SizedBox(
-        width: 720,
+        width: 900,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                dialogTextField(_idController, 'Id', validator: requiredValidator),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Text(
+                    'Image-only phase. Product image uses portrait-friendly crop and resize. The first image becomes the product thumbnail automatically.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildPreviewBox(context),
                 const SizedBox(height: 12),
-                dialogTextField(_urlController, 'URL', validator: requiredValidator),
-                const SizedBox(height: 12),
-                dialogTextField(_storagePathController, 'Storage Path'),
-                const SizedBox(height: 12),
+                if (_errorText != null && _errorText!.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      _errorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 Row(
                   children: [
                     Expanded(
-                      child: dialogDropdown(
-                        label: 'Type',
-                        value: _type,
-                        items: const ['image', 'video'],
-                        onChanged: (value) => setState(() => _type = value),
+                      child: FilledButton.icon(
+                        onPressed: (_isProcessing || isAtLimit)
+                            ? null
+                            : _pickResizeAndUploadImage,
+                        icon: _isProcessing
+                            ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                            : const Icon(Icons.add_photo_alternate_outlined),
+                        label: Text(
+                          _urlController.text.trim().isEmpty
+                              ? 'Pick, Resize & Upload'
+                              : 'Replace Image',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isAtLimit) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Media limit reached (${widget.maxItems}). Edit or delete an existing image to continue.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _buildInfoRow('Uploaded URL', _urlController.text.trim()),
+                _buildInfoRow('Storage Path', _storagePathController.text.trim()),
+                _buildInfoRow(
+                  'Generated Thumb URL',
+                  _uploadedImage?.thumbUrl ?? '',
+                ),
+                _buildInfoRow(
+                  'Full Size',
+                  _uploadedImage == null
+                      ? ''
+                      : '${_uploadedImage!.fullWidth} × ${_uploadedImage!.fullHeight}',
+                ),
+                _buildInfoRow(
+                  'Thumb Size',
+                  _uploadedImage == null
+                      ? ''
+                      : '${_uploadedImage!.thumbWidth} × ${_uploadedImage!.thumbHeight}',
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _idController,
+                        'Id',
+                        validator: requiredValidator,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: dialogDropdown(
-                        label: 'Role',
-                        value: _role,
-                        items: const ['thumbnail', 'gallery', 'variation', 'detail'],
-                        onChanged: (value) => setState(() => _role = value),
+                      child: dialogTextField(
+                        _sortOrderController,
+                        'Sort Order',
                       ),
                     ),
                   ],
@@ -660,50 +934,62 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: dialogTextField(_labelEnController, 'Label (English)')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_labelBnController, 'Label (Bangla)')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_altEnController, 'Alt (English)')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_altBnController, 'Alt (Bangla)')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_widthController, 'Width')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_heightController, 'Height')),
-                    const SizedBox(width: 12),
-                    Expanded(child: dialogTextField(_sizeBytesController, 'Size Bytes')),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
                     Expanded(
-                      child: SwitchListTile(
-                        value: _isPrimary,
-                        onChanged: (value) => setState(() => _isPrimary = value),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Primary'),
+                      child: dialogTextField(
+                        _labelEnController,
+                        'Label (English)',
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: SwitchListTile(
-                        value: _isEnabled,
-                        onChanged: (value) => setState(() => _isEnabled = value),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Enabled'),
+                      child: dialogTextField(
+                        _labelBnController,
+                        'Label (Bangla)',
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _altEnController,
+                        'Alt Text (English)',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _altBnController,
+                        'Alt Text (Bangla)',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    buildFilterChip(
+                      label: 'Primary Thumbnail',
+                      selected: _isPrimary,
+                      onSelected: (value) {
+                        setState(() {
+                          _isPrimary = value;
+                          _role = value ? 'thumbnail' : 'gallery';
+                        });
+                      },
+                    ),
+                    buildFilterChip(
+                      label: 'Enabled',
+                      selected: _isEnabled,
+                      onSelected: (value) {
+                        setState(() {
+                          _isEnabled = value;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -714,33 +1000,23 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isProcessing ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
+          onPressed: _isProcessing
+              ? null
+              : () {
             if (!_formKey.currentState!.validate()) return;
-            Navigator.of(context).pop(
-              MBProductMedia(
-                id: _idController.text.trim(),
-                url: _urlController.text.trim(),
-                storagePath: _storagePathController.text.trim(),
-                type: _type,
-                role: _role,
-                labelEn: _labelEnController.text.trim(),
-                labelBn: _labelBnController.text.trim(),
-                altEn: _altEnController.text.trim(),
-                altBn: _altBnController.text.trim(),
-                sortOrder: parseInt(_sortOrderController.text),
-                isPrimary: _isPrimary,
-                isEnabled: _isEnabled,
-                width: parseNullableInt(_widthController.text),
-                height: parseNullableInt(_heightController.text),
-                sizeBytes: parseNullableInt(_sizeBytesController.text),
-                createdAt: widget.initialValue.createdAt,
-                updatedAt: DateTime.now(),
-              ),
-            );
+
+            if (_urlController.text.trim().isEmpty) {
+              setState(() {
+                _errorText = 'Please pick and upload an image first.';
+              });
+              return;
+            }
+
+            Navigator.of(context).pop(_buildResult());
           },
           child: const Text('Save'),
         ),

@@ -1163,21 +1163,25 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   Widget _buildMediaSection(BuildContext context) {
     return SectionCard(
       title: 'Media',
-      subtitle: 'Rich media items with role, alt text, and ordering.',
+      subtitle:
+      'Single-product media only. Up to 10 images. The first image becomes the thumbnail automatically.',
       action: FilledButton.icon(
         onPressed: _addMediaItem,
         icon: const Icon(Icons.add_photo_alternate_outlined),
         label: const Text('Add Media'),
       ),
       child: _mediaItems.isEmpty
-          ? const EmptyBlock(message: 'No media items added yet.')
+          ? const EmptyBlock(
+        message:
+        'No media items added yet. Add up to 10 product images. The first image becomes the product thumbnail automatically.',
+      )
           : Column(
         children: _mediaItems
             .map(
               (item) => EditableTile(
             title: item.labelEn.trim().isEmpty ? item.url : item.labelEn,
             subtitle:
-            'role: ${item.role} • type: ${item.type} • order: ${item.sortOrder}',
+            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
             leading: item.url.trim().isEmpty
                 ? const Icon(Icons.image_not_supported_outlined)
                 : PreviewImage(url: item.url),
@@ -1185,6 +1189,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
             onDelete: () {
               setState(() {
                 _mediaItems.removeWhere((element) => element.id == item.id);
+                _normalizeProductMediaPrimary();
               });
             },
           ),
@@ -2159,7 +2164,74 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     _brandSlugController.text = option?.slug ?? '';
   }
 
+  static const int _maxProductMediaItems = 10;
+
+  Future<void> _showProductMediaPrompt(String title, String message) async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _normalizeProductMediaPrimary() {
+    if (_mediaItems.isEmpty) return;
+
+    _mediaItems.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    bool primaryAssigned = false;
+    for (var i = 0; i < _mediaItems.length; i++) {
+      final item = _mediaItems[i];
+      final shouldBePrimary = !primaryAssigned && (item.isPrimary || i == 0);
+
+      _mediaItems[i] = item.copyWith(
+        isPrimary: shouldBePrimary,
+        role: shouldBePrimary ? 'thumbnail' : (item.role.trim().isEmpty ? 'gallery' : item.role),
+        sortOrder: i,
+      );
+
+      if (shouldBePrimary) {
+        primaryAssigned = true;
+      }
+    }
+
+    if (!primaryAssigned && _mediaItems.isNotEmpty) {
+      final first = _mediaItems.first;
+      _mediaItems[0] = first.copyWith(
+        isPrimary: true,
+        role: 'thumbnail',
+        sortOrder: 0,
+      );
+    }
+  }
+
   Future<void> _addMediaItem() async {
+    if (_isVariableProduct) {
+      await _showProductMediaPrompt(
+        'Variation-owned Media',
+        'For variable products, media should be managed inside each variation. Product-level media is only for non-variable products.',
+      );
+      return;
+    }
+
+    if (_mediaItems.length >= _maxProductMediaItems) {
+      await _showProductMediaPrompt(
+        'Media Limit Reached',
+        'A single product can have up to $_maxProductMediaItems images.',
+      );
+      return;
+    }
+
     final result = await showDialog<MBProductMedia>(
       context: context,
       builder: (_) => MediaItemDialog(
@@ -2169,29 +2241,43 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           sortOrder: _mediaItems.length,
           isPrimary: _mediaItems.isEmpty,
           role: _mediaItems.isEmpty ? 'thumbnail' : 'gallery',
+          type: 'image',
+          isEnabled: true,
         ),
+        maxItems: _maxProductMediaItems,
+        currentItemCount: _mediaItems.length,
+        useProductPortraitPreset: true,
+        forceImageOnly: true,
       ),
     );
 
     if (result == null) return;
+
     setState(() {
       _mediaItems.add(result);
-      _mediaItems.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      _normalizeProductMediaPrimary();
     });
   }
 
   Future<void> _editMediaItem(MBProductMedia item) async {
     final result = await showDialog<MBProductMedia>(
       context: context,
-      builder: (_) => MediaItemDialog(initialValue: item),
+      builder: (_) => MediaItemDialog(
+        initialValue: item,
+        maxItems: _maxProductMediaItems,
+        currentItemCount: _mediaItems.length,
+        useProductPortraitPreset: true,
+        forceImageOnly: true,
+      ),
     );
 
     if (result == null) return;
+
     setState(() {
       final index = _mediaItems.indexWhere((element) => element.id == item.id);
       if (index != -1) {
         _mediaItems[index] = result;
-        _mediaItems.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _normalizeProductMediaPrimary();
       }
     });
   }
