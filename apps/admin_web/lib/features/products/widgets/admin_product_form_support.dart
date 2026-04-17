@@ -110,13 +110,13 @@ String deriveThumbnailUrl(List<MBProductMedia> mediaItems) {
   for (final item in mediaItems) {
     if (!item.isEnabled) continue;
     if (item.role == 'thumbnail' || item.isPrimary) {
-      final value = item.url.trim();
+      final value = item.effectiveThumbUrl.trim();
       if (value.isNotEmpty) return value;
     }
   }
   for (final item in mediaItems) {
     if (!item.isEnabled) continue;
-    final value = item.url.trim();
+    final value = item.effectiveFullUrl.trim();
     if (value.isNotEmpty) return value;
   }
   return '';
@@ -137,7 +137,7 @@ String makeEditorId(String prefix) {
 }
 
 Map<String, String> attributeTextToMap(String raw) {
-  final lines = raw.split('');
+  final lines = raw.split('\n');
   final result = <String, String>{};
 
   for (final line in lines) {
@@ -832,8 +832,9 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     _sortOrderController = TextEditingController(
       text: item.sortOrder.toString(),
     );
-    _urlController = TextEditingController(text: item.url);
-    _storagePathController = TextEditingController(text: item.storagePath);
+    _urlController = TextEditingController(text: item.effectiveFullUrl);
+    _storagePathController =
+        TextEditingController(text: item.effectiveFullStoragePath);
 
     _isPrimary = item.isPrimary;
     _isEnabled = item.isEnabled;
@@ -856,145 +857,6 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     super.dispose();
   }
 
-  String get _effectiveRole => _isPrimary ? 'thumbnail' : 'gallery';
-
-  int get _parsedSortOrder => int.tryParse(_sortOrderController.text.trim()) ?? 0;
-
-  Future<void> _pickResizeAndUploadImage() async {
-    setState(() {
-      _isProcessing = true;
-      _errorText = null;
-    });
-
-    try {
-      final MBOriginalPickedImage? original =
-      await MBImagePipelineService.instance.pickOriginalImage();
-
-      if (original == null) {
-        setState(() {
-          _isProcessing = false;
-        });
-        return;
-      }
-
-      final MBCroppedImageResult? cropped = await MBImageCropDialog.show(
-        context,
-        original: original,
-        cropAspectRatioX: 4,
-        cropAspectRatioY: 5,
-        title: 'Crop Product Image',
-      );
-
-      if (cropped == null) {
-        setState(() {
-          _isProcessing = false;
-        });
-        return;
-      }
-
-      final MBPreparedImageSet prepared =
-      await MBImagePipelineService.instance.prepareImageSetFromCropped(
-        cropped: cropped,
-        fullMaxWidth: _productFullMaxWidth,
-        fullMaxHeight: _productFullMaxHeight,
-        fullJpegQuality: _productFullJpegQuality,
-        thumbSize: _productThumbSize,
-        thumbJpegQuality: _productThumbJpegQuality,
-        requestSquareCrop: false,
-        requestAspectCrop: true,
-        cropAspectRatioX: 4,
-        cropAspectRatioY: 5,
-        thumbWidth: _productThumbWidth,
-        thumbHeight: _productThumbHeight,
-      );
-
-      final String mediaId = _idController.text.trim().isEmpty
-          ? makeEditorId('media')
-          : _idController.text.trim();
-
-      final MBUploadedImageSet uploaded =
-      await MBImagePipelineService.instance.uploadPreparedImageSet(
-        prepared: prepared,
-        storageFolder: 'products/media',
-        entityId: mediaId,
-        fileStem: _labelEnController.text.trim().isEmpty
-            ? prepared.baseName
-            : _labelEnController.text.trim(),
-        customMetadata: <String, String>{
-          'mediaId': mediaId,
-          'role': _effectiveRole,
-          'type': 'image',
-        },
-      );
-
-      if (_labelEnController.text.trim().isEmpty) {
-        _labelEnController.text = prepared.baseName.replaceAll('_', ' ');
-      }
-
-      setState(() {
-        _preparedImage = prepared;
-        _uploadedImage = uploaded;
-        _type = 'image';
-        _role = _effectiveRole;
-        _urlController.text = uploaded.fullUrl;
-        _storagePathController.text = uploaded.fullPath;
-        _isProcessing = false;
-      });
-    } catch (error) {
-      setState(() {
-        _isProcessing = false;
-        _errorText = error.toString();
-      });
-    }
-  }
-
-
-  Widget _buildPreviewBox(BuildContext context) {
-    final Widget content;
-
-    if (_preparedImage != null) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.memory(
-          _preparedImage!.previewBytes,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 280,
-        ),
-      );
-    } else if (_urlController.text.trim().isNotEmpty) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          _urlController.text.trim(),
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 280,
-          errorBuilder: (_, __, ___) => Container(
-            height: 280,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).dividerColor),
-            ),
-            child: const Icon(Icons.broken_image_outlined, size: 42),
-          ),
-        ),
-      );
-    } else {
-      content = Container(
-        height: 280,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        child: const Icon(Icons.image_outlined, size: 42),
-      );
-    }
-
-    return content;
-  }
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
@@ -1090,23 +952,8 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: (_isProcessing || isAtLimit)
-                      ? null
-                      : _pickResizeAndUploadImage,
-                  icon: _isProcessing
-                      ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                      : const Icon(Icons.add_photo_alternate_outlined),
-                  label: Text(
-                    _currentFullPreviewUrl.isEmpty
-                        ? 'Pick, Resize & Upload'
-                        : 'Replace Image',
-                  ),
-                ),
+                _buildPreviewBox(context),
+                const SizedBox(height: 12),
                 if (_errorText != null && _errorText!.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
