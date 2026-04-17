@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
-import 'dart:typed_data';
 import 'package:shared_core/shared_core.dart';
 
 // File: admin_product_form_support.dart
@@ -593,6 +592,19 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
 
   bool _isProcessing = false;
   String? _errorText;
+  String _ratioText(int width, int height) {
+    if (height == 0) return '-';
+    return (width / height).toStringAsFixed(3);
+  }
+
+  String _bytesText(int value) {
+    if (value < 1024) return '$value B';
+    if (value < 1024 * 1024) {
+      return '${(value / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(value / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
 
   MBPreparedImageSet? _preparedImage;
   MBUploadedImageSet? _uploadedImage;
@@ -604,6 +616,8 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
   static const int _productThumbHeight = 500;
   static const int _productThumbSize = 400;
   static const int _productThumbJpegQuality = 85;
+
+
 
   @override
   void initState() {
@@ -656,30 +670,50 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     });
 
     try {
-      final MBPreparedImageSet? prepared =
-      await MBImagePipelineService.instance.pickCropAndPrepareImage(
-        fullMaxWidth: _productFullMaxWidth,
-        fullMaxHeight: _productFullMaxHeight,
-        fullJpegQuality: _productFullJpegQuality,
-        thumbSize: _productThumbSize,
-        thumbJpegQuality: _productThumbJpegQuality,
-        requestSquareCrop: false,
-        requestAspectCrop: widget.useProductPortraitPreset,
-        cropAspectRatioX: widget.useProductPortraitPreset ? 4 : 1,
-        cropAspectRatioY: widget.useProductPortraitPreset ? 5 : 1,
-        thumbWidth: widget.useProductPortraitPreset ? _productThumbWidth : null,
-        thumbHeight: widget.useProductPortraitPreset ? _productThumbHeight : null,
-      );
+      final MBOriginalPickedImage? original =
+      await MBImagePipelineService.instance.pickOriginalImage();
 
-      if (prepared == null) {
+      if (original == null) {
         setState(() {
           _isProcessing = false;
         });
         return;
       }
 
-      final String mediaId =
-      _idController.text.trim().isEmpty ? makeEditorId('media') : _idController.text.trim();
+      final MBCroppedImageResult? cropped = await MBImageCropDialog.show(
+        context,
+        original: original,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        title: 'Crop Product Image',
+      );
+
+      if (cropped == null) {
+        setState(() {
+          _isProcessing = false;
+        });
+        return;
+      }
+
+      final MBPreparedImageSet prepared =
+      await MBImagePipelineService.instance.prepareImageSetFromCropped(
+        cropped: cropped,
+        fullMaxWidth: _productFullMaxWidth,
+        fullMaxHeight: _productFullMaxHeight,
+        fullJpegQuality: _productFullJpegQuality,
+        thumbSize: _productThumbSize,
+        thumbJpegQuality: _productThumbJpegQuality,
+        requestSquareCrop: false,
+        requestAspectCrop: true,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        thumbWidth: _productThumbWidth,
+        thumbHeight: _productThumbHeight,
+      );
+
+      final String mediaId = _idController.text.trim().isEmpty
+          ? makeEditorId('media')
+          : _idController.text.trim();
 
       final MBUploadedImageSet uploaded =
       await MBImagePipelineService.instance.uploadPreparedImageSet(
@@ -716,6 +750,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
       });
     }
   }
+
 
   Widget _buildPreviewBox(BuildContext context) {
     final Widget content;
@@ -842,7 +877,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                     ),
                   ),
                   child: Text(
-                    'Image-only phase. Product image uses portrait-friendly crop and resize. The first image becomes the product thumbnail automatically.',
+                    'Image-only phase. Pick an image, crop it manually in portrait ratio, then upload resized full and thumb outputs. The first image becomes the product thumbnail automatically.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -896,22 +931,62 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                 const SizedBox(height: 16),
                 _buildInfoRow('Uploaded URL', _urlController.text.trim()),
                 _buildInfoRow('Storage Path', _storagePathController.text.trim()),
-                _buildInfoRow(
-                  'Generated Thumb URL',
-                  _uploadedImage?.thumbUrl ?? '',
-                ),
-                _buildInfoRow(
-                  'Full Size',
-                  _uploadedImage == null
-                      ? ''
-                      : '${_uploadedImage!.fullWidth} × ${_uploadedImage!.fullHeight}',
-                ),
-                _buildInfoRow(
-                  'Thumb Size',
-                  _uploadedImage == null
-                      ? ''
-                      : '${_uploadedImage!.thumbWidth} × ${_uploadedImage!.thumbHeight}',
-                ),
+                _buildInfoRow('Generated Thumb URL', _uploadedImage?.thumbUrl ?? ''),
+                const SizedBox(height: 8),
+                if (_preparedImage != null) ...[
+                  _buildInfoRow(
+                    'Original Pixels',
+                    '${_preparedImage!.sourceWidth} × ${_preparedImage!.sourceHeight}',
+                  ),
+                  _buildInfoRow(
+                    'Original Ratio',
+                    _ratioText(_preparedImage!.sourceWidth, _preparedImage!.sourceHeight),
+                  ),
+                  _buildInfoRow(
+                    'Cropped Pixels',
+                    '${_preparedImage!.croppedWidth} × ${_preparedImage!.croppedHeight}',
+                  ),
+                  _buildInfoRow(
+                    'Crop Ratio',
+                    '${_preparedImage!.cropAspectRatioX}:${_preparedImage!.cropAspectRatioY}',
+                  ),
+                  _buildInfoRow(
+                    'Crop Zoom',
+                    _preparedImage!.zoomScale.toStringAsFixed(2),
+                  ),
+                  _buildInfoRow(
+                    'Cropped Size',
+                    _bytesText(_preparedImage!.croppedByteLength),
+                  ),
+                  _buildInfoRow(
+                    'Full Pixels',
+                    '${_preparedImage!.fullWidth} × ${_preparedImage!.fullHeight}',
+                  ),
+                  _buildInfoRow(
+                    'Full Size',
+                    _bytesText(_preparedImage!.fullByteLength),
+                  ),
+                  _buildInfoRow(
+                    'Thumb Pixels',
+                    '${_preparedImage!.thumbWidth} × ${_preparedImage!.thumbHeight}',
+                  ),
+                  _buildInfoRow(
+                    'Thumb Size',
+                    _bytesText(_preparedImage!.thumbByteLength),
+                  ),
+                ] else ...[
+                  _buildInfoRow('Original Pixels', '-'),
+                  _buildInfoRow('Original Ratio', '-'),
+                  _buildInfoRow('Cropped Pixels', '-'),
+                  _buildInfoRow('Crop Ratio', '-'),
+                  _buildInfoRow('Crop Zoom', '-'),
+                  _buildInfoRow('Cropped Size', '-'),
+                  _buildInfoRow('Full Pixels', '-'),
+                  _buildInfoRow('Full Size', '-'),
+                  _buildInfoRow('Thumb Pixels', '-'),
+                  _buildInfoRow('Thumb Size', '-'),
+                ],
+
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -1634,6 +1709,57 @@ class _VariationDialogState extends State<VariationDialog> {
     return null;
   }
 
+  String _ratioText(int width, int height) {
+    if (height == 0) return '-';
+    return (width / height).toStringAsFixed(3);
+  }
+
+  String _bytesText(int value) {
+    if (value < 1024) return '$value B';
+    if (value < 1024 * 1024) {
+      return '${(value / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(value / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
+  Widget _buildVariationImageInfo() {
+    if (_preparedImage == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Original Pixels: -'),
+          Text('Original Ratio: -'),
+          Text('Cropped Pixels: -'),
+          Text('Crop Ratio: -'),
+          Text('Crop Zoom: -'),
+          Text('Cropped Size: -'),
+          Text('Full Pixels: -'),
+          Text('Full Size: -'),
+          Text('Thumb Pixels: -'),
+          Text('Thumb Size: -'),
+        ],
+      );
+    }
+
+    final p = _preparedImage!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Original Pixels: ${p.sourceWidth} × ${p.sourceHeight}'),
+        Text('Original Ratio: ${_ratioText(p.sourceWidth, p.sourceHeight)}'),
+        Text('Cropped Pixels: ${p.croppedWidth} × ${p.croppedHeight}'),
+        Text('Crop Ratio: ${p.cropAspectRatioX}:${p.cropAspectRatioY}'),
+        Text('Crop Zoom: ${p.zoomScale.toStringAsFixed(2)}'),
+        Text('Cropped Size: ${_bytesText(p.croppedByteLength)}'),
+        Text('Full Pixels: ${p.fullWidth} × ${p.fullHeight}'),
+        Text('Full Size: ${_bytesText(p.fullByteLength)}'),
+        Text('Thumb Pixels: ${p.thumbWidth} × ${p.thumbHeight}'),
+        Text('Thumb Size: ${_bytesText(p.thumbByteLength)}'),
+      ],
+    );
+  }
+
+
   Map<String, String> _buildSelectedAttributeMap() {
     final result = <String, String>{};
 
@@ -1654,8 +1780,34 @@ class _VariationDialogState extends State<VariationDialog> {
     });
 
     try {
-      final MBPreparedImageSet? prepared =
-      await MBImagePipelineService.instance.pickCropAndPrepareImage(
+      final MBOriginalPickedImage? original =
+      await MBImagePipelineService.instance.pickOriginalImage();
+
+      if (original == null) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        return;
+      }
+
+      final MBCroppedImageResult? cropped = await MBImageCropDialog.show(
+        context,
+        original: original,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        title: 'Crop Variation Image',
+      );
+
+      if (cropped == null) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        return;
+      }
+
+      final MBPreparedImageSet prepared =
+      await MBImagePipelineService.instance.prepareImageSetFromCropped(
+        cropped: cropped,
         fullMaxWidth: _variationFullMaxWidth,
         fullMaxHeight: _variationFullMaxHeight,
         fullJpegQuality: _variationFullJpegQuality,
@@ -1669,15 +1821,9 @@ class _VariationDialogState extends State<VariationDialog> {
         thumbHeight: _variationThumbHeight,
       );
 
-      if (prepared == null) {
-        setState(() {
-          _isImageProcessing = false;
-        });
-        return;
-      }
-
-      final String variationId =
-      _idController.text.trim().isEmpty ? makeEditorId('variation') : _idController.text.trim();
+      final String variationId = _idController.text.trim().isEmpty
+          ? makeEditorId('variation')
+          : _idController.text.trim();
 
       final MBUploadedImageSet uploaded =
       await MBImagePipelineService.instance.uploadPreparedImageSet(
@@ -1707,6 +1853,7 @@ class _VariationDialogState extends State<VariationDialog> {
       });
     }
   }
+
 
   Widget _buildVariationImagePreview(BuildContext context) {
     if (_preparedImage != null) {
@@ -1999,6 +2146,9 @@ class _VariationDialogState extends State<VariationDialog> {
                   _imageUrlController,
                   'Variation Image URL',
                 ),
+                const SizedBox(height: 12),
+                _buildVariationImageInfo(),
+
 
                 const SizedBox(height: 20),
                 Text(

@@ -1,5 +1,4 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
@@ -18,24 +17,24 @@ service firebase.storage {
       return firestore.get(adminPermissionDoc()).data;
     }
 
-    function isSuperAdmin() {
-      return hasAdminPermissionDoc() && adminPermission().role == 'super_admin';
-    }
-
     function canManageCategories() {
-      return hasAdminPermissionDoc() && adminPermission().canManageCategories == true;
+      return hasAdminPermissionDoc() &&
+          adminPermission().canManageCategories == true;
     }
 
     function canManageBrands() {
-      return hasAdminPermissionDoc() && adminPermission().canManageBrands == true;
+      return hasAdminPermissionDoc() &&
+          adminPermission().canManageBrands == true;
     }
 
     function canManageBanners() {
-      return hasAdminPermissionDoc() && adminPermission().canManageBanners == true;
+      return hasAdminPermissionDoc() &&
+          adminPermission().canManageBanners == true;
     }
 
     function canManageProducts() {
-      return hasAdminPermissionDoc() && adminPermission().canManageProducts == true;
+      return hasAdminPermissionDoc() &&
+          adminPermission().canManageProducts == true;
     }
 
     match /profile_pictures/{userId}/{fileName} {
@@ -45,22 +44,32 @@ service firebase.storage {
 
     match /product_images/{productId}/{fileName} {
       allow read: if true;
-      allow write: if canManageProducts() || isSuperAdmin();
+      allow write: if signedIn();
+    }
+
+    match /products/media/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if canManageProducts();
+    }
+
+    match /products/variations/{variationId}/{fileName} {
+      allow read: if true;
+      allow write: if canManageProducts();
     }
 
     match /category_images/{categoryId}/{fileName} {
       allow read: if true;
-      allow write: if canManageCategories() || isSuperAdmin();
+      allow write: if signedIn() && canManageCategories();
     }
 
     match /banner_images/{bannerId}/{fileName} {
       allow read: if true;
-      allow write: if canManageBanners() || isSuperAdmin();
+      allow write: if signedIn() && canManageBanners();
     }
 
     match /brand_images/{brandId}/{fileName} {
       allow read: if true;
-      allow write: if canManageBrands() || isSuperAdmin();
+      allow write: if signedIn() && canManageBrands();
     }
 
     match /profile_images/{profileId}/{fileName} {

@@ -21,6 +21,7 @@ export 'auth/controllers/base_phone_auth_controller.dart';
 
 
 export 'media/mb_image_pipeline_service.dart';
+export 'media/mb_image_crop_dialog.dart';
 
 
 
