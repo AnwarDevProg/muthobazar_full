@@ -1617,6 +1617,205 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
   }
 
+  int _variationCardsPerRow(double maxWidth) {
+    if (maxWidth >= 1200) return 4;
+    if (maxWidth >= 860) return 3;
+    return 2;
+  }
+
+  List<String> _variationAttributeLines(MBProductVariation variation) {
+    final lines = <String>[];
+
+    for (final attribute in _variationAttributesSnapshot) {
+      final code = attribute.code.trim();
+      final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+      final byCode =
+      code.isEmpty ? '' : (variation.attributeValues[code]?.trim() ?? '');
+      final selected = byId.isNotEmpty ? byId : byCode;
+
+      if (selected.isEmpty) continue;
+
+      final matchedValue = attribute.values.cast<MBProductAttributeValue?>().firstWhere(
+            (item) => item != null && item.value.trim() == selected,
+        orElse: () => null,
+      );
+
+      final attributeLabel = attribute.nameEn.trim().isEmpty
+          ? (attribute.code.trim().isEmpty ? attribute.id : attribute.code)
+          : attribute.nameEn.trim();
+
+      final valueLabel = matchedValue == null
+          ? selected
+          : (matchedValue.labelEn.trim().isEmpty
+          ? matchedValue.value
+          : matchedValue.labelEn.trim());
+
+      lines.add('$attributeLabel: $valueLabel');
+    }
+
+    if (lines.isNotEmpty) return lines;
+
+    variation.attributeValues.forEach((key, value) {
+      final normalizedValue = value.trim();
+      if (normalizedValue.isEmpty) return;
+      lines.add('$key: $normalizedValue');
+    });
+
+    return lines;
+  }
+
+  Widget _buildVariationCardImage(BuildContext context, MBProductVariation item) {
+    final imageUrl = item.effectiveFullImageUrl.trim();
+
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: 170,
+        width: double.infinity,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: const Icon(Icons.image_outlined, size: 44),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      child: Image.network(
+        imageUrl,
+        height: 170,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 170,
+          width: double.infinity,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ),
+          child: const Icon(Icons.broken_image_outlined, size: 44),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVariationGridCard(
+      BuildContext context,
+      MBProductVariation item,
+      double cardWidth,
+      ) {
+    final attributeLines = _variationAttributeLines(item);
+    final hasSale = item.salePrice != null && item.salePrice! > 0;
+
+    return SizedBox(
+      width: cardWidth,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.surface,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildVariationCardImage(context, item),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.titleEn.trim().isEmpty ? 'Untitled Variation' : item.titleEn,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  if (item.titleBn.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.titleBn,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Text(
+                    'Price: ${item.price.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  Text(
+                    hasSale
+                        ? 'Sale: ${item.salePrice!.toStringAsFixed(2)}'
+                        : 'Sale: -',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 10),
+                  if (attributeLines.isEmpty)
+                    Text(
+                      'No attribute values',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    )
+                  else
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: attributeLines
+                          .map(
+                            (line) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            line,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      )
+                          .toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'default: ${item.isDefault}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Edit variation',
+                        onPressed: () => _editVariation(item),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete variation',
+                        onPressed: () {
+                          setState(() {
+                            _variations.removeWhere((element) => element.id == item.id);
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildVariationsSection(BuildContext context) {
     return SectionCard(
       title: 'Variations',
@@ -1628,22 +1827,30 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ),
       child: _variations.isEmpty
           ? const EmptyBlock(message: 'No variations added yet.')
-          : Column(
-        children: _variations
-            .map(
-              (item) => EditableTile(
-            title: item.titleEn.trim().isEmpty ? item.id : item.titleEn,
-            subtitle:
-            'price: ${item.price} • stock: ${item.stockQty} • default: ${item.isDefault}',
-            onEdit: () => _editVariation(item),
-            onDelete: () {
-              setState(() {
-                _variations.removeWhere((element) => element.id == item.id);
-              });
-            },
-          ),
-        )
-            .toList(),
+          : LayoutBuilder(
+        builder: (context, constraints) {
+          final items = [..._variations]
+            ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+          final columns = _variationCardsPerRow(constraints.maxWidth);
+          const spacing = 12.0;
+          final totalSpacing = spacing * (columns - 1);
+          final cardWidth = (constraints.maxWidth - totalSpacing) / columns;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: items
+                .map(
+                  (item) => _buildVariationGridCard(
+                context,
+                item,
+                cardWidth,
+              ),
+            )
+                .toList(),
+          );
+        },
       ),
     );
   }
@@ -2290,7 +2497,12 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           id: makeEditorId('attribute'),
           nameEn: '',
           nameBn: '',
+          code: '',
           sortOrder: _attributes.length,
+          isVisible: true,
+          useForVariation: true,
+          isRequired: false,
+          displayType: 'text',
         ),
       ),
     );

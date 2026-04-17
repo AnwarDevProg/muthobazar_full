@@ -1171,9 +1171,14 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
 }
 
 class AttributeValueDialog extends StatefulWidget {
-  const AttributeValueDialog({super.key, required this.initialValue});
+  const AttributeValueDialog({
+    super.key,
+    required this.initialValue,
+    this.suggestedValues = const <String>[],
+  });
 
   final MBProductAttributeValue initialValue;
+  final List<String> suggestedValues;
 
   @override
   State<AttributeValueDialog> createState() => _AttributeValueDialogState();
@@ -1253,14 +1258,52 @@ class _AttributeValueDialogState extends State<AttributeValueDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: dialogTextField(
-                      _valueController,
-                      'Value',
-                      validator: requiredValidator,
+                    child: Autocomplete<String>(
+                      initialValue: TextEditingValue(text: _valueController.text),
+                      optionsBuilder: (textEditingValue) {
+                        final query = textEditingValue.text.trim().toLowerCase();
+                        if (widget.suggestedValues.isEmpty) {
+                          return const Iterable<String>.empty();
+                        }
+                        if (query.isEmpty) {
+                          return widget.suggestedValues;
+                        }
+                        return widget.suggestedValues.where(
+                              (item) => item.toLowerCase().contains(query),
+                        );
+                      },
+                      onSelected: (value) {
+                        _valueController.text = value;
+                        if (_labelEnController.text.trim().isEmpty) {
+                          _labelEnController.text = value;
+                        }
+                      },
+                      fieldViewBuilder:
+                          (context, textController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          validator: requiredValidator,
+                          decoration: const InputDecoration(
+                            labelText: 'Value',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            _valueController.value = TextEditingValue(
+                              text: value,
+                              selection: TextSelection.collapsed(
+                                offset: value.length,
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: dialogTextField(_sortOrderController, 'Sort Order')),
+                  Expanded(
+                    child: dialogTextField(_sortOrderController, 'Sort Order'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1334,12 +1377,28 @@ class _AttributeDialogState extends State<AttributeDialog> {
   late String _displayType;
   late List<MBProductAttributeValue> _values;
 
-  String get _attributeModeHelpText {
-    if (_useForVariation) {
-      return 'This attribute participates in variation combinations. Make sure values are clean and unique.';
+  String get _attributeModeHelpText =>
+      'This attribute will be used for product variations. Pick a known preset if possible so value suggestions become faster and cleaner.';
+
+  MBAttributePreset? get _matchedPreset {
+    return findAttributePreset(
+      nameEn: _nameEnController.text,
+      code: _codeController.text,
+    );
+  }
+
+  void _applyAttributePreset(MBAttributePreset preset) {
+    _nameEnController.text = preset.nameEn;
+
+    if (_nameBnController.text.trim().isEmpty && preset.nameBn.trim().isNotEmpty) {
+      _nameBnController.text = preset.nameBn;
     }
 
-    return 'This attribute is display-only for now and does not generate variation combinations.';
+    _codeController.text = preset.code;
+
+    setState(() {
+      _displayType = preset.displayType;
+    });
   }
 
   @override
@@ -1351,10 +1410,10 @@ class _AttributeDialogState extends State<AttributeDialog> {
     _nameBnController = TextEditingController(text: value.nameBn);
     _codeController = TextEditingController(text: value.code);
     _sortOrderController = TextEditingController(text: value.sortOrder.toString());
-    _isVisible = value.isVisible;
-    _useForVariation = value.useForVariation;
-    _isRequired = value.isRequired;
-    _displayType = value.displayType;
+    _isVisible = true;
+    _useForVariation = true;
+    _isRequired = false;
+    _displayType = value.displayType.trim().isEmpty ? 'text' : value.displayType;
     _values = [...value.values]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
@@ -1369,6 +1428,8 @@ class _AttributeDialogState extends State<AttributeDialog> {
   }
 
   Future<void> _addValue() async {
+    final preset = _matchedPreset;
+
     final result = await showDialog<MBProductAttributeValue>(
       context: context,
       builder: (_) => AttributeValueDialog(
@@ -1379,6 +1440,7 @@ class _AttributeDialogState extends State<AttributeDialog> {
           value: '',
           sortOrder: _values.length,
         ),
+        suggestedValues: preset?.suggestedValues ?? const <String>[],
       ),
     );
 
@@ -1390,9 +1452,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
   }
 
   Future<void> _editValue(MBProductAttributeValue value) async {
+    final preset = _matchedPreset;
+
     final result = await showDialog<MBProductAttributeValue>(
       context: context,
-      builder: (_) => AttributeValueDialog(initialValue: value),
+      builder: (_) => AttributeValueDialog(
+        initialValue: value,
+        suggestedValues: preset?.suggestedValues ?? const <String>[],
+      ),
     );
 
     if (result == null) return;
@@ -1437,6 +1504,7 @@ class _AttributeDialogState extends State<AttributeDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -1463,7 +1531,6 @@ class _AttributeDialogState extends State<AttributeDialog> {
                             'Name (English): Size\n'
                             'Name (Bangla): সাইজ\n'
                             'Code: size\n'
-                            'Use For Variation: ON\n'
                             'Display Type: text\n'
                             'Values: 500g, 1kg',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -1473,7 +1540,6 @@ class _AttributeDialogState extends State<AttributeDialog> {
                         'Example 2\n'
                             'Name (English): Color\n'
                             'Code: color\n'
-                            'Use For Variation: ON\n'
                             'Display Type: color\n'
                             'Values: Red (#FF0000), Green (#00AA00)',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -1499,10 +1565,39 @@ class _AttributeDialogState extends State<AttributeDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: dialogTextField(
-                        _nameEnController,
-                        'Name (English)',
-                        validator: requiredValidator,
+                      child: Autocomplete<MBAttributePreset>(
+                        initialValue: TextEditingValue(text: _nameEnController.text),
+                        displayStringForOption: (option) => option.nameEn,
+                        optionsBuilder: (textEditingValue) {
+                          final query = textEditingValue.text.trim().toLowerCase();
+                          if (query.isEmpty) return kMbAttributePresets;
+                          return kMbAttributePresets.where(
+                                (item) =>
+                            item.nameEn.toLowerCase().contains(query) ||
+                                item.code.toLowerCase().contains(query),
+                          );
+                        },
+                        onSelected: _applyAttributePreset,
+                        fieldViewBuilder:
+                            (context, textController, focusNode, onFieldSubmitted) {
+                          return TextFormField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            validator: requiredValidator,
+                            decoration: const InputDecoration(
+                              labelText: 'Name (English)',
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              _nameEnController.value = TextEditingValue(
+                                text: value,
+                                selection: TextSelection.collapsed(
+                                  offset: value.length,
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1519,9 +1614,38 @@ class _AttributeDialogState extends State<AttributeDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: dialogTextField(
-                        _codeController,
-                        'Code',
+                      child: Autocomplete<MBAttributePreset>(
+                        initialValue: TextEditingValue(text: _codeController.text),
+                        displayStringForOption: (option) => option.code,
+                        optionsBuilder: (textEditingValue) {
+                          final query = textEditingValue.text.trim().toLowerCase();
+                          if (query.isEmpty) return kMbAttributePresets;
+                          return kMbAttributePresets.where(
+                                (item) =>
+                            item.code.toLowerCase().contains(query) ||
+                                item.nameEn.toLowerCase().contains(query),
+                          );
+                        },
+                        onSelected: _applyAttributePreset,
+                        fieldViewBuilder:
+                            (context, textController, focusNode, onFieldSubmitted) {
+                          return TextFormField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Code',
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              _codeController.value = TextEditingValue(
+                                text: value,
+                                selection: TextSelection.collapsed(
+                                  offset: value.length,
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1536,47 +1660,8 @@ class _AttributeDialogState extends State<AttributeDialog> {
 
                 const SizedBox(height: 20),
                 Text(
-                  'Behavior',
+                  'Display',
                   style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        value: _isVisible,
-                        onChanged: (value) =>
-                            setState(() => _isVisible = value),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Visible'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SwitchListTile(
-                        value: _useForVariation,
-                        onChanged: (value) =>
-                            setState(() => _useForVariation = value),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Use For Variation'),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SwitchListTile(
-                        value: _isRequired,
-                        onChanged: (value) =>
-                            setState(() => _isRequired = value),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Required'),
-                      ),
-                    ),
-                    const Expanded(child: SizedBox()),
-                  ],
                 ),
                 const SizedBox(height: 12),
 
@@ -1676,9 +1761,9 @@ class _AttributeDialogState extends State<AttributeDialog> {
                 nameBn: _nameBnController.text.trim(),
                 code: _codeController.text.trim(),
                 sortOrder: parseInt(_sortOrderController.text),
-                isVisible: _isVisible,
-                useForVariation: _useForVariation,
-                isRequired: _isRequired,
+                isVisible: true,
+                useForVariation: true,
+                isRequired: false,
                 displayType: _displayType,
                 values: [..._values]..sort(
                       (a, b) => a.sortOrder.compareTo(b.sortOrder),

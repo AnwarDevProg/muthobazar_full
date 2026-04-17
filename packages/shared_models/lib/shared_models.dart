@@ -17,6 +17,7 @@ export 'catalog/mb_product_card_layout.dart';
 export 'catalog/mb_product_media.dart';
 export 'catalog/mb_product_purchase_option.dart';
 export 'catalog/mb_product_variation.dart';
+export 'catalog/mb_attribute_preset.dart';
 
 export 'orders/mb_cart_item.dart';
 export 'orders/mb_order.dart';
