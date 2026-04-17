@@ -1,4 +1,6 @@
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_core/shared_core.dart';
@@ -605,6 +607,201 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     return '${(value / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
+  String get _effectiveRole => _isPrimary ? 'thumbnail' : 'gallery';
+
+  Future<void> _pickResizeAndUploadImage() async {
+    setState(() {
+      _isProcessing = true;
+      _errorText = null;
+    });
+
+    try {
+      final MBOriginalPickedImage? original =
+      await MBImagePipelineService.instance.pickOriginalImage();
+
+      if (original == null) {
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      final MBCroppedImageResult? cropped = await MBImageCropDialog.show(
+        context,
+        original: original,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        title: 'Crop Product Image',
+      );
+
+      if (cropped == null) {
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      final MBPreparedImageSet prepared =
+      await MBImagePipelineService.instance.prepareImageSetFromCropped(
+        cropped: cropped,
+        fullMaxWidth: _productFullMaxWidth,
+        fullMaxHeight: _productFullMaxHeight,
+        fullJpegQuality: _productFullJpegQuality,
+        thumbSize: _productThumbSize,
+        thumbJpegQuality: _productThumbJpegQuality,
+        requestSquareCrop: false,
+        requestAspectCrop: true,
+        cropAspectRatioX: 4,
+        cropAspectRatioY: 5,
+        thumbWidth: _productThumbWidth,
+        thumbHeight: _productThumbHeight,
+      );
+
+      final String mediaId = _idController.text.trim().isEmpty
+          ? makeEditorId('media')
+          : _idController.text.trim();
+
+      final MBUploadedImageSet uploaded =
+      await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/media',
+        entityId: mediaId,
+        fileStem: _labelEnController.text.trim().isEmpty
+            ? prepared.baseName
+            : _labelEnController.text.trim(),
+        customMetadata: <String, String>{
+          'mediaId': mediaId,
+          'role': _effectiveRole,
+          'type': 'image',
+        },
+      );
+
+      if (_labelEnController.text.trim().isEmpty) {
+        _labelEnController.text = prepared.baseName.replaceAll('_', ' ');
+      }
+
+      setState(() {
+        _preparedImage = prepared;
+        _uploadedImage = uploaded;
+        _type = 'image';
+        _role = _effectiveRole;
+        _urlController.text = uploaded.fullUrl;
+        _storagePathController.text = uploaded.fullPath;
+        _isProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isProcessing = false;
+        _errorText = error.toString();
+      });
+    }
+  }
+
+  String get _currentFullPreviewUrl {
+    final current = _urlController.text.trim();
+    if (current.isNotEmpty) return current;
+    return widget.initialValue.effectiveFullUrl.trim();
+  }
+
+  String get _currentThumbPreviewUrl {
+    final uploadedThumb = (_uploadedImage?.thumbUrl ?? '').trim();
+    if (uploadedThumb.isNotEmpty) return uploadedThumb;
+
+    final current = widget.initialValue.effectiveThumbUrl.trim();
+    if (current.isNotEmpty) return current;
+
+    return _currentFullPreviewUrl;
+  }
+
+  bool get _showThumbAndFullMediaPreview =>
+      _isPrimary || _effectiveRole == 'thumbnail';
+
+  Widget _buildPreviewTile(
+      BuildContext context, {
+        required String label,
+        required String url,
+        Uint8List? memoryBytes,
+        double height = 280,
+      }) {
+    final Widget child;
+
+    if (memoryBytes != null) {
+      child = Image.memory(
+        memoryBytes,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+      );
+    } else if (url.trim().isNotEmpty) {
+      child = Image.network(
+        url.trim(),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: const Icon(Icons.broken_image_outlined, size: 42),
+        ),
+      );
+    } else {
+      child = Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: const Icon(Icons.image_outlined, size: 42),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: child,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewBox(BuildContext context) {
+    if (_showThumbAndFullMediaPreview) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _buildPreviewTile(
+              context,
+              label: 'Thumbnail Preview',
+              url: _currentThumbPreviewUrl,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildPreviewTile(
+              context,
+              label: 'Full Preview',
+              url: _currentFullPreviewUrl,
+              memoryBytes: _preparedImage?.previewBytes,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _buildPreviewTile(
+      context,
+      label: 'Full Preview',
+      url: _currentFullPreviewUrl,
+      memoryBytes: _preparedImage?.previewBytes,
+    );
+  }
+
 
   MBPreparedImageSet? _preparedImage;
   MBUploadedImageSet? _uploadedImage;
@@ -822,26 +1019,37 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
 
   MBProductMedia _buildResult() {
     final existing = widget.initialValue;
+    final fullUrl = _currentFullPreviewUrl;
+    final fullStoragePath = _storagePathController.text.trim();
+    final thumbUrl = _currentThumbPreviewUrl;
 
     return existing.copyWith(
       id: _idController.text.trim(),
-      url: _urlController.text.trim(),
-      storagePath: _storagePathController.text.trim(),
+      url: fullUrl,
+      storagePath: fullStoragePath,
+      fullUrl: fullUrl,
+      fullStoragePath: fullStoragePath,
+      thumbUrl: thumbUrl,
       type: _type,
       role: _effectiveRole,
       labelEn: _labelEnController.text.trim(),
       labelBn: _labelBnController.text.trim(),
       altEn: _altEnController.text.trim(),
       altBn: _altBnController.text.trim(),
-      sortOrder: _parsedSortOrder,
+      sortOrder: int.tryParse(_sortOrderController.text.trim()) ?? 0,
       isPrimary: _isPrimary,
       isEnabled: _isEnabled,
       width: _uploadedImage?.fullWidth ?? existing.width,
-      clearWidth: _uploadedImage == null && existing.width == null,
       height: _uploadedImage?.fullHeight ?? existing.height,
-      clearHeight: _uploadedImage == null && existing.height == null,
       sizeBytes: _preparedImage?.fullByteLength ?? existing.sizeBytes,
-      clearSizeBytes: _preparedImage == null && existing.sizeBytes == null,
+      fullWidth: _uploadedImage?.fullWidth ?? existing.fullWidth,
+      fullHeight: _uploadedImage?.fullHeight ?? existing.fullHeight,
+      fullSizeBytes: _preparedImage?.fullByteLength ?? existing.fullSizeBytes,
+      thumbWidth: _preparedImage?.thumbWidth ?? existing.thumbWidth,
+      thumbHeight: _preparedImage?.thumbHeight ?? existing.thumbHeight,
+      thumbSizeBytes: _preparedImage?.thumbByteLength ?? existing.thumbSizeBytes,
+      originalWidth: _preparedImage?.sourceWidth ?? existing.originalWidth,
+      originalHeight: _preparedImage?.sourceHeight ?? existing.originalHeight,
       createdAt: existing.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -882,8 +1090,23 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildPreviewBox(context),
-                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: (_isProcessing || isAtLimit)
+                      ? null
+                      : _pickResizeAndUploadImage,
+                  icon: _isProcessing
+                      ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(
+                    _currentFullPreviewUrl.isEmpty
+                        ? 'Pick, Resize & Upload'
+                        : 'Replace Image',
+                  ),
+                ),
                 if (_errorText != null && _errorText!.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -1645,7 +1868,8 @@ class _VariationDialogState extends State<VariationDialog> {
   late final TextEditingController _barcodeController;
   late final TextEditingController _titleEnController;
   late final TextEditingController _titleBnController;
-  late final TextEditingController _imageUrlController;
+  late final TextEditingController _imageUrlController; // full image URL
+  late final TextEditingController _thumbImageUrlController; // thumb image URL
   late final TextEditingController _descriptionEnController;
   late final TextEditingController _descriptionBnController;
   late final TextEditingController _priceController;
@@ -1844,6 +2068,7 @@ class _VariationDialogState extends State<VariationDialog> {
         _preparedImage = prepared;
         _uploadedImage = uploaded;
         _imageUrlController.text = uploaded.fullUrl;
+        _thumbImageUrlController.text = uploaded.thumbUrl;
         _isImageProcessing = false;
       });
     } catch (error) {
@@ -1853,50 +2078,99 @@ class _VariationDialogState extends State<VariationDialog> {
       });
     }
   }
+  String get _currentVariationFullPreviewUrl {
+    final current = _imageUrlController.text.trim();
+    if (current.isNotEmpty) return current;
+    return widget.initialValue.effectiveFullImageUrl.trim();
+  }
+
+  String get _currentVariationThumbPreviewUrl {
+    final current = _thumbImageUrlController.text.trim();
+    if (current.isNotEmpty) return current;
+    return widget.initialValue.effectiveThumbImageUrl.trim();
+  }
+
+  Widget _buildVariationPreviewTile(
+      BuildContext context, {
+        required String label,
+        required String url,
+        Uint8List? memoryBytes,
+        double height = 220,
+      }) {
+    final Widget child;
+
+    if (memoryBytes != null) {
+      child = Image.memory(
+        memoryBytes,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else if (url.trim().isNotEmpty) {
+      child = Image.network(
+        url.trim(),
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: height,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: const Icon(Icons.broken_image_outlined, size: 42),
+        ),
+      );
+    } else {
+      child = Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: const Icon(Icons.image_outlined, size: 42),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: child,
+        ),
+      ],
+    );
+  }
+
+
 
 
   Widget _buildVariationImagePreview(BuildContext context) {
-    if (_preparedImage != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.memory(
-          _preparedImage!.previewBytes,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 260,
-        ),
-      );
-    }
-
-    if (_imageUrlController.text.trim().isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          _imageUrlController.text.trim(),
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: 260,
-          errorBuilder: (_, __, ___) => Container(
-            height: 260,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).dividerColor),
-            ),
-            child: const Icon(Icons.broken_image_outlined, size: 42),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildVariationPreviewTile(
+            context,
+            label: 'Thumbnail Preview',
+            url: _currentVariationThumbPreviewUrl,
           ),
         ),
-      );
-    }
-
-    return Container(
-      height: 260,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: const Icon(Icons.image_outlined, size: 42),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildVariationPreviewTile(
+            context,
+            label: 'Full Preview',
+            url: _currentVariationFullPreviewUrl,
+            memoryBytes: _preparedImage?.previewBytes,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1973,7 +2247,10 @@ class _VariationDialogState extends State<VariationDialog> {
     _barcodeController = TextEditingController(text: value.barcode ?? '');
     _titleEnController = TextEditingController(text: value.titleEn);
     _titleBnController = TextEditingController(text: value.titleBn);
-    _imageUrlController = TextEditingController(text: value.imageUrl);
+    _imageUrlController =
+        TextEditingController(text: value.effectiveFullImageUrl);
+    _thumbImageUrlController =
+        TextEditingController(text: value.effectiveThumbImageUrl);
     _descriptionEnController = TextEditingController(text: value.descriptionEn);
     _descriptionBnController = TextEditingController(text: value.descriptionBn);
     _priceController = TextEditingController(text: asTextDouble(value.price));
@@ -2007,6 +2284,7 @@ class _VariationDialogState extends State<VariationDialog> {
     _titleEnController.dispose();
     _titleBnController.dispose();
     _imageUrlController.dispose();
+    _thumbImageUrlController.dispose();
     _descriptionEnController.dispose();
     _descriptionBnController.dispose();
     _priceController.dispose();
@@ -2045,7 +2323,7 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ),
                   child: Text(
-                    'Each variation owns one image in this phase. The same shared product portrait resize pipeline is used here.',
+                    'Each variation now keeps a full image and a thumbnail image. The same shared product portrait resize pipeline is used here.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -2142,9 +2420,22 @@ class _VariationDialogState extends State<VariationDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                dialogTextField(
-                  _imageUrlController,
-                  'Variation Image URL',
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _thumbImageUrlController,
+                        'Variation Thumb URL',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _imageUrlController,
+                        'Variation Full URL',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 _buildVariationImageInfo(),
@@ -2317,6 +2608,28 @@ class _VariationDialogState extends State<VariationDialog> {
                 titleEn: _titleEnController.text.trim(),
                 titleBn: _titleBnController.text.trim(),
                 imageUrl: _imageUrlController.text.trim(),
+                fullImageUrl: _imageUrlController.text.trim(),
+                thumbImageUrl: _thumbImageUrlController.text.trim(),
+                fullImageStoragePath:
+                _uploadedImage?.fullPath ?? widget.initialValue.fullImageStoragePath,
+                thumbImageStoragePath:
+                _uploadedImage?.thumbPath ?? widget.initialValue.thumbImageStoragePath,
+                fullImageWidth:
+                _uploadedImage?.fullWidth ?? widget.initialValue.fullImageWidth,
+                fullImageHeight:
+                _uploadedImage?.fullHeight ?? widget.initialValue.fullImageHeight,
+                thumbImageWidth:
+                _preparedImage?.thumbWidth ?? widget.initialValue.thumbImageWidth,
+                thumbImageHeight:
+                _preparedImage?.thumbHeight ?? widget.initialValue.thumbImageHeight,
+                fullImageSizeBytes:
+                _preparedImage?.fullByteLength ?? widget.initialValue.fullImageSizeBytes,
+                thumbImageSizeBytes:
+                _preparedImage?.thumbByteLength ?? widget.initialValue.thumbImageSizeBytes,
+                originalImageWidth:
+                _preparedImage?.sourceWidth ?? widget.initialValue.originalImageWidth,
+                originalImageHeight:
+                _preparedImage?.sourceHeight ?? widget.initialValue.originalImageHeight,
                 descriptionEn: _descriptionEnController.text.trim(),
                 descriptionBn: _descriptionBnController.text.trim(),
                 price: parseDouble(_priceController.text),
