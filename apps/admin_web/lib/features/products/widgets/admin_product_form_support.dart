@@ -1800,23 +1800,53 @@ class _VariationDialogState extends State<VariationDialog> {
   late final TextEditingController _barcodeController;
   late final TextEditingController _titleEnController;
   late final TextEditingController _titleBnController;
-  late final TextEditingController _imageUrlController; // full image URL
-  late final TextEditingController _thumbImageUrlController; // thumb image URL
+  late final TextEditingController _imageUrlController;
+  late final TextEditingController _thumbImageUrlController;
   late final TextEditingController _descriptionEnController;
   late final TextEditingController _descriptionBnController;
+
   late final TextEditingController _priceController;
   late final TextEditingController _salePriceController;
   late final TextEditingController _costPriceController;
+  late final TextEditingController _saleStartsAtController;
+  late final TextEditingController _saleEndsAtController;
+
   late final TextEditingController _stockQtyController;
   late final TextEditingController _reservedQtyController;
+  late final TextEditingController _instantCutoffTimeController;
+  late final TextEditingController _todayInstantCapController;
+  late final TextEditingController _todayInstantSoldController;
+  late final TextEditingController _maxScheduleQtyPerDayController;
+  late final TextEditingController _minScheduleNoticeHoursController;
+  late final TextEditingController _reorderLevelController;
+
+  late final TextEditingController _quantityValueController;
+  late final TextEditingController _toleranceController;
+  late final TextEditingController _minOrderQtyController;
+  late final TextEditingController _maxOrderQtyController;
+  late final TextEditingController _stepQtyController;
+  late final TextEditingController _unitLabelEnController;
+  late final TextEditingController _unitLabelBnController;
   late final TextEditingController _sortOrderController;
 
+  late String _inventoryMode;
+  late String _quantityType;
+  late String _toleranceType;
+  late String _deliveryShift;
+
   late bool _trackInventory;
+  late bool _supportsInstantOrder;
+  late bool _supportsScheduledOrder;
   late bool _allowBackorder;
+  late bool _isToleranceActive;
   late bool _isDefault;
   late bool _isEnabled;
 
+  DateTime? _saleStartsAt;
+  DateTime? _saleEndsAt;
+
   late Map<String, String?> _selectedAttributeValues;
+
 
   bool _isImageProcessing = false;
   String? _imageErrorText;
@@ -2190,14 +2220,57 @@ class _VariationDialogState extends State<VariationDialog> {
         TextEditingController(text: asTextNullableDouble(value.salePrice));
     _costPriceController =
         TextEditingController(text: asTextNullableDouble(value.costPrice));
+
+    _saleStartsAt = value.saleStartsAt;
+    _saleEndsAt = value.saleEndsAt;
+    _saleStartsAtController =
+        TextEditingController(text: formatDateTime(_saleStartsAt));
+    _saleEndsAtController =
+        TextEditingController(text: formatDateTime(_saleEndsAt));
+
     _stockQtyController = TextEditingController(text: value.stockQty.toString());
     _reservedQtyController =
         TextEditingController(text: value.reservedQty.toString());
+    _instantCutoffTimeController =
+        TextEditingController(text: value.instantCutoffTime ?? '');
+    _todayInstantCapController =
+        TextEditingController(text: value.todayInstantCap.toString());
+    _todayInstantSoldController =
+        TextEditingController(text: value.todayInstantSold.toString());
+    _maxScheduleQtyPerDayController =
+        TextEditingController(text: value.maxScheduleQtyPerDay.toString());
+    _minScheduleNoticeHoursController =
+        TextEditingController(text: value.minScheduleNoticeHours.toString());
+    _reorderLevelController =
+        TextEditingController(text: value.reorderLevel.toString());
+
+    _quantityValueController =
+        TextEditingController(text: asTextDouble(value.quantityValue));
+    _toleranceController =
+        TextEditingController(text: asTextDouble(value.tolerance));
+    _minOrderQtyController =
+        TextEditingController(text: asTextNullableDouble(value.minOrderQty));
+    _maxOrderQtyController =
+        TextEditingController(text: asTextNullableDouble(value.maxOrderQty));
+    _stepQtyController =
+        TextEditingController(text: asTextNullableDouble(value.stepQty));
+    _unitLabelEnController =
+        TextEditingController(text: value.unitLabelEn ?? '');
+    _unitLabelBnController =
+        TextEditingController(text: value.unitLabelBn ?? '');
     _sortOrderController =
         TextEditingController(text: value.sortOrder.toString());
 
+    _inventoryMode = value.inventoryMode;
+    _quantityType = value.quantityType;
+    _toleranceType = value.toleranceType;
+    _deliveryShift = value.deliveryShift;
+
     _trackInventory = value.trackInventory;
+    _supportsInstantOrder = value.supportsInstantOrder;
+    _supportsScheduledOrder = value.supportsScheduledOrder;
     _allowBackorder = value.allowBackorder;
+    _isToleranceActive = value.isToleranceActive;
     _isDefault = value.isDefault;
     _isEnabled = value.isEnabled;
 
@@ -2225,6 +2298,21 @@ class _VariationDialogState extends State<VariationDialog> {
     _stockQtyController.dispose();
     _reservedQtyController.dispose();
     _sortOrderController.dispose();
+    _saleStartsAtController.dispose();
+    _saleEndsAtController.dispose();
+    _instantCutoffTimeController.dispose();
+    _todayInstantCapController.dispose();
+    _todayInstantSoldController.dispose();
+    _maxScheduleQtyPerDayController.dispose();
+    _minScheduleNoticeHoursController.dispose();
+    _reorderLevelController.dispose();
+    _quantityValueController.dispose();
+    _toleranceController.dispose();
+    _minOrderQtyController.dispose();
+    _maxOrderQtyController.dispose();
+    _stepQtyController.dispose();
+    _unitLabelEnController.dispose();
+    _unitLabelBnController.dispose();
     super.dispose();
   }
 
@@ -2399,6 +2487,7 @@ class _VariationDialogState extends State<VariationDialog> {
                   ],
                 ),
 
+
                 const SizedBox(height: 20),
                 Text(
                   'Variation Pricing',
@@ -2430,11 +2519,134 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: buildDateTimeField(
+                        controller: _saleStartsAtController,
+                        label: 'Sale Starts At',
+                        onPick: () async {
+                          final picked = await pickDateTime(
+                            context,
+                            initial: _saleStartsAt,
+                          );
+                          if (picked == null) return;
+                          setState(() {
+                            _saleStartsAt = picked;
+                            _saleStartsAtController.text = formatDateTime(picked);
+                          });
+                        },
+                        onClear: () {
+                          setState(() {
+                            _saleStartsAt = null;
+                            _saleStartsAtController.clear();
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: buildDateTimeField(
+                        controller: _saleEndsAtController,
+                        label: 'Sale Ends At',
+                        onPick: () async {
+                          final picked = await pickDateTime(
+                            context,
+                            initial: _saleEndsAt,
+                          );
+                          if (picked == null) return;
+                          setState(() {
+                            _saleEndsAt = picked;
+                            _saleEndsAtController.text = formatDateTime(picked);
+                          });
+                        },
+                        onClear: () {
+                          setState(() {
+                            _saleEndsAt = null;
+                            _saleEndsAtController.clear();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
 
                 const SizedBox(height: 20),
                 Text(
-                  'Variation Inventory',
+                  'Variation Inventory and Availability',
                   style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogDropdown(
+                        label: 'Inventory Mode',
+                        value: _inventoryMode,
+                        items: const [
+                          'stocked',
+                          'hybrid_fresh',
+                          'schedule_only',
+                          'untracked',
+                        ],
+                        onChanged: (value) {
+                          setState(() => _inventoryMode = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _instantCutoffTimeController,
+                        'Instant Cutoff Time',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    buildFilterChip(
+                      label: 'Track Inventory',
+                      selected: _trackInventory,
+                      onSelected: (value) =>
+                          setState(() => _trackInventory = value),
+                    ),
+                    buildFilterChip(
+                      label: 'Supports Instant Order',
+                      selected: _supportsInstantOrder,
+                      onSelected: (value) =>
+                          setState(() => _supportsInstantOrder = value),
+                    ),
+                    buildFilterChip(
+                      label: 'Supports Scheduled Order',
+                      selected: _supportsScheduledOrder,
+                      onSelected: (value) =>
+                          setState(() => _supportsScheduledOrder = value),
+                    ),
+                    buildFilterChip(
+                      label: 'Allow Backorder',
+                      selected: _allowBackorder,
+                      onSelected: (value) =>
+                          setState(() => _allowBackorder = value),
+                    ),
+                    buildFilterChip(
+                      label: 'Default',
+                      selected: _isDefault,
+                      onSelected: (value) =>
+                          setState(() => _isDefault = value),
+                    ),
+                    buildFilterChip(
+                      label: 'Enabled',
+                      selected: _isEnabled,
+                      onSelected: (value) =>
+                          setState(() => _isEnabled = value),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -2462,34 +2674,166 @@ class _VariationDialogState extends State<VariationDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
+                Row(
                   children: [
-                    buildFilterChip(
-                      label: 'Track Inventory',
-                      selected: _trackInventory,
-                      onSelected: (value) =>
-                          setState(() => _trackInventory = value),
+                    Expanded(
+                      child: dialogTextField(
+                        _todayInstantCapController,
+                        'Today Instant Cap',
+                      ),
                     ),
-                    buildFilterChip(
-                      label: 'Allow Backorder',
-                      selected: _allowBackorder,
-                      onSelected: (value) =>
-                          setState(() => _allowBackorder = value),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _todayInstantSoldController,
+                        'Today Instant Sold',
+                      ),
                     ),
-                    buildFilterChip(
-                      label: 'Default',
-                      selected: _isDefault,
-                      onSelected: (value) =>
-                          setState(() => _isDefault = value),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _maxScheduleQtyPerDayController,
+                        'Max Schedule Qty / Day',
+                      ),
                     ),
-                    buildFilterChip(
-                      label: 'Enabled',
-                      selected: _isEnabled,
-                      onSelected: (value) =>
-                          setState(() => _isEnabled = value),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _minScheduleNoticeHoursController,
+                        'Min Schedule Notice Hours',
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _reorderLevelController,
+                        'Reorder Level',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(child: SizedBox()),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Text(
+                  'Variation Quantity, Packaging, and Tolerance',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogDropdown(
+                        label: 'Quantity Type',
+                        value: _quantityType,
+                        items: const ['pcs', 'kg', 'g', 'litre', 'ml', 'pack'],
+                        onChanged: (value) {
+                          setState(() => _quantityType = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _quantityValueController,
+                        'Quantity Value',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogDropdown(
+                        label: 'Tolerance Type',
+                        value: _toleranceType,
+                        items: const ['g', 'kg', '%', 'ml'],
+                        onChanged: (value) {
+                          setState(() => _toleranceType = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _toleranceController,
+                        'Tolerance',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _minOrderQtyController,
+                        'Min Order Qty',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _maxOrderQtyController,
+                        'Max Order Qty',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogTextField(
+                        _stepQtyController,
+                        'Step Qty',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _unitLabelEnController,
+                        'Unit Label (English)',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: dialogTextField(
+                        _unitLabelBnController,
+                        'Unit Label (Bangla)',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: dialogDropdown(
+                        label: 'Delivery Shift',
+                        value: _deliveryShift,
+                        items: const ['any', 'morning', 'afternoon', 'evening'],
+                        onChanged: (value) {
+                          setState(() => _deliveryShift = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: buildFilterChip(
+                          label: 'Tolerance Active',
+                          selected: _isToleranceActive,
+                          onSelected: (value) =>
+                              setState(() => _isToleranceActive = value),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
 
@@ -2567,10 +2911,46 @@ class _VariationDialogState extends State<VariationDialog> {
                 price: parseDouble(_priceController.text),
                 salePrice: parseNullableDouble(_salePriceController.text),
                 costPrice: parseNullableDouble(_costPriceController.text),
+                saleStartsAt: _saleStartsAt,
+                saleEndsAt: _saleEndsAt,
                 stockQty: parseInt(_stockQtyController.text),
                 reservedQty: parseInt(_reservedQtyController.text),
+                inventoryMode: _inventoryMode,
                 trackInventory: _trackInventory,
+                supportsInstantOrder: _supportsInstantOrder,
+                supportsScheduledOrder: _supportsScheduledOrder,
                 allowBackorder: _allowBackorder,
+                instantCutoffTime: _instantCutoffTimeController.text.trim().isEmpty
+                    ? null
+                    : _instantCutoffTimeController.text.trim(),
+                todayInstantCap: parseInt(
+                  _todayInstantCapController.text,
+                  fallback: 999999,
+                ),
+                todayInstantSold: parseInt(_todayInstantSoldController.text),
+                maxScheduleQtyPerDay: parseInt(
+                  _maxScheduleQtyPerDayController.text,
+                  fallback: 999999,
+                ),
+                minScheduleNoticeHours: parseInt(
+                  _minScheduleNoticeHoursController.text,
+                ),
+                reorderLevel: parseInt(_reorderLevelController.text),
+                quantityType: _quantityType,
+                quantityValue: parseDouble(_quantityValueController.text),
+                toleranceType: _toleranceType,
+                tolerance: parseDouble(_toleranceController.text),
+                isToleranceActive: _isToleranceActive,
+                deliveryShift: _deliveryShift,
+                minOrderQty: parseNullableDouble(_minOrderQtyController.text),
+                maxOrderQty: parseNullableDouble(_maxOrderQtyController.text),
+                stepQty: parseNullableDouble(_stepQtyController.text),
+                unitLabelEn: _unitLabelEnController.text.trim().isEmpty
+                    ? null
+                    : _unitLabelEnController.text.trim(),
+                unitLabelBn: _unitLabelBnController.text.trim().isEmpty
+                    ? null
+                    : _unitLabelBnController.text.trim(),
                 attributeValues: _buildSelectedAttributeMap(),
                 sortOrder: parseInt(_sortOrderController.text),
                 isDefault: _isDefault,

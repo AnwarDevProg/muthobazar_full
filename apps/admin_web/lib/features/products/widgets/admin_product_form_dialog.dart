@@ -172,6 +172,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   late bool _isBestSeller;
   late bool _isToleranceActive;
   late bool _isDeleted;
+  bool get _showProductLevelInventory => !_isVariableProduct;
+
+  bool get _showProductLevelQuantity => !_isVariableProduct;
 
   late int _sortOrder;
 
@@ -719,10 +722,15 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                           const SizedBox(height: 16),
                         ],
 
-                        _buildInventorySection(context),
-                        const SizedBox(height: 16),
-                        _buildQuantitySection(context),
-                        const SizedBox(height: 16),
+                        if (_showProductLevelInventory) ...[
+                          _buildInventorySection(context),
+                          const SizedBox(height: 16),
+                        ],
+
+                        if (_showProductLevelQuantity) ...[
+                          _buildQuantitySection(context),
+                          const SizedBox(height: 16),
+                        ],
 
                         if (_showAttributesSection) ...[
                           _buildAttributesSection(context),
@@ -2195,6 +2203,77 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   MBProduct _buildProductFromForm() {
     final now = DateTime.now();
+    final primaryVariation =
+    _isVariableProduct ? _primaryVariationForOwnership : null;
+
+    final effectiveSaleStartsAt =
+        primaryVariation?.saleStartsAt ?? _saleStartsAt;
+    final effectiveSaleEndsAt =
+        primaryVariation?.saleEndsAt ?? _saleEndsAt;
+
+    final effectiveStockQty =
+        primaryVariation?.stockQty ?? parseInt(_stockQtyController.text);
+    final effectiveRegularStockQty =
+        primaryVariation?.stockQty ?? parseInt(_regularStockQtyController.text);
+    final effectiveReservedQty =
+        primaryVariation?.reservedQty ??
+            parseInt(_reservedInstantQtyController.text);
+
+    final effectiveInventoryMode =
+        primaryVariation?.inventoryMode ?? _inventoryMode;
+    final effectiveTrackInventory =
+        primaryVariation?.trackInventory ?? _trackInventory;
+    final effectiveSupportsInstantOrder =
+        primaryVariation?.supportsInstantOrder ?? _supportsInstantOrder;
+    final effectiveSupportsScheduledOrder =
+        primaryVariation?.supportsScheduledOrder ?? _supportsScheduledOrder;
+    final effectiveAllowBackorder =
+        primaryVariation?.allowBackorder ?? _allowBackorder;
+
+    final effectiveInstantCutoffTime =
+        primaryVariation?.instantCutoffTime ??
+            _instantCutoffTimeController.text.trim();
+    final effectiveTodayInstantCap =
+        primaryVariation?.todayInstantCap ??
+            parseInt(_todayInstantCapController.text, fallback: 999999);
+    final effectiveTodayInstantSold =
+        primaryVariation?.todayInstantSold ??
+            parseInt(_todayInstantSoldController.text);
+    final effectiveMaxScheduleQtyPerDay =
+        primaryVariation?.maxScheduleQtyPerDay ??
+            parseInt(_maxScheduleQtyPerDayController.text, fallback: 999999);
+    final effectiveMinScheduleNoticeHours =
+        primaryVariation?.minScheduleNoticeHours ??
+            parseInt(_minScheduleNoticeHoursController.text);
+    final effectiveReorderLevel =
+        primaryVariation?.reorderLevel ?? parseInt(_reorderLevelController.text);
+
+    final effectiveQuantityType =
+        primaryVariation?.quantityType ?? _quantityType;
+    final effectiveQuantityValue =
+        primaryVariation?.quantityValue ?? parseDouble(_quantityValueController.text);
+    final effectiveToleranceType =
+        primaryVariation?.toleranceType ?? _toleranceType;
+    final effectiveTolerance =
+        primaryVariation?.tolerance ?? parseDouble(_toleranceController.text);
+    final effectiveIsToleranceActive =
+        primaryVariation?.isToleranceActive ?? _isToleranceActive;
+    final effectiveDeliveryShift =
+        primaryVariation?.deliveryShift ?? _deliveryShift;
+
+    final effectiveMinOrderQty =
+        primaryVariation?.minOrderQty ??
+            parseNullableDouble(_minOrderQtyController.text);
+    final effectiveMaxOrderQty =
+        primaryVariation?.maxOrderQty ??
+            parseNullableDouble(_maxOrderQtyController.text);
+    final effectiveStepQty =
+        primaryVariation?.stepQty ?? parseNullableDouble(_stepQtyController.text);
+
+    final effectiveUnitLabelEn =
+        primaryVariation?.unitLabelEn ?? _unitLabelEnController.text.trim();
+    final effectiveUnitLabelBn =
+        primaryVariation?.unitLabelBn ?? _unitLabelBnController.text.trim();
     final media = _effectiveProductMediaItems;
     final derivedThumbnail = _effectiveThumbnailUrl;
     final derivedImageUrls = _effectiveImageUrls;
@@ -2222,39 +2301,41 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       clearSalePrice: _effectiveRootSalePrice == null,
       costPrice: _effectiveRootCostPrice,
       clearCostPrice: _effectiveRootCostPrice == null,
-      saleStartsAt: _saleStartsAt,
-      clearSaleStartsAt: _saleStartsAt == null,
-      saleEndsAt: _saleEndsAt,
-      clearSaleEndsAt: _saleEndsAt == null,
-      stockQty: parseInt(_stockQtyController.text),
-      inventoryMode: _inventoryMode,
-      trackInventory: _trackInventory,
-      supportsInstantOrder: _supportsInstantOrder,
-      supportsScheduledOrder: _supportsScheduledOrder,
-      regularStockQty: parseInt(_regularStockQtyController.text),
-      reservedInstantQty: parseInt(_reservedInstantQtyController.text),
-      todayInstantCap: parseInt(
-        _todayInstantCapController.text,
-        fallback: 999999,
-      ),
-      todayInstantSold: parseInt(_todayInstantSoldController.text),
-      maxScheduleQtyPerDay: parseInt(
-        _maxScheduleQtyPerDayController.text,
-        fallback: 999999,
-      ),
+
+
+      saleStartsAt: effectiveSaleStartsAt,
+      clearSaleStartsAt: effectiveSaleStartsAt == null,
+      saleEndsAt: effectiveSaleEndsAt,
+      clearSaleEndsAt: effectiveSaleEndsAt == null,
+      stockQty: effectiveStockQty,
+      inventoryMode: effectiveInventoryMode,
+      trackInventory: effectiveTrackInventory,
+      supportsInstantOrder: effectiveSupportsInstantOrder,
+      supportsScheduledOrder: effectiveSupportsScheduledOrder,
+      regularStockQty: effectiveRegularStockQty,
+      reservedInstantQty: effectiveReservedQty,
+      todayInstantCap: effectiveTodayInstantCap,
+      todayInstantSold: effectiveTodayInstantSold,
+      maxScheduleQtyPerDay: effectiveMaxScheduleQtyPerDay,
+      instantCutoffTime:
+      effectiveInstantCutoffTime.isEmpty ? null : effectiveInstantCutoffTime,
+      clearInstantCutoffTime: effectiveInstantCutoffTime.isEmpty,
+      minScheduleNoticeHours: effectiveMinScheduleNoticeHours,
+      reorderLevel: effectiveReorderLevel,
+      allowBackorder: effectiveAllowBackorder,
+
+
       schedulePriceType: _schedulePriceType,
       estimatedSchedulePrice: parseNullableDouble(
         _estimatedSchedulePriceController.text,
       ),
       clearEstimatedSchedulePrice:
       parseNullableDouble(_estimatedSchedulePriceController.text) == null,
-      instantCutoffTime: _instantCutoffTimeController.text.trim().isEmpty
-          ? null
-          : _instantCutoffTimeController.text.trim(),
-      clearInstantCutoffTime: _instantCutoffTimeController.text.trim().isEmpty,
-      minScheduleNoticeHours: parseInt(_minScheduleNoticeHoursController.text),
-      reorderLevel: parseInt(_reorderLevelController.text),
-      allowBackorder: _allowBackorder,
+
+
+
+
+
       categoryId: _categoryIdController.text.trim().isEmpty
           ? null
           : _categoryIdController.text.trim(),
@@ -2307,26 +2388,27 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       clearPublishAt: _publishAt == null,
       unpublishAt: _unpublishAt,
       clearUnpublishAt: _unpublishAt == null,
-      quantityType: _quantityType,
-      quantityValue: parseDouble(_quantityValueController.text),
-      toleranceType: _toleranceType,
-      tolerance: parseDouble(_toleranceController.text),
-      isToleranceActive: _isToleranceActive,
-      deliveryShift: _deliveryShift,
-      minOrderQty: parseNullableDouble(_minOrderQtyController.text),
-      clearMinOrderQty: parseNullableDouble(_minOrderQtyController.text) == null,
-      maxOrderQty: parseNullableDouble(_maxOrderQtyController.text),
-      clearMaxOrderQty: parseNullableDouble(_maxOrderQtyController.text) == null,
-      stepQty: parseNullableDouble(_stepQtyController.text),
-      clearStepQty: parseNullableDouble(_stepQtyController.text) == null,
-      unitLabelEn: _unitLabelEnController.text.trim().isEmpty
-          ? null
-          : _unitLabelEnController.text.trim(),
-      clearUnitLabelEn: _unitLabelEnController.text.trim().isEmpty,
-      unitLabelBn: _unitLabelBnController.text.trim().isEmpty
-          ? null
-          : _unitLabelBnController.text.trim(),
-      clearUnitLabelBn: _unitLabelBnController.text.trim().isEmpty,
+
+
+      quantityType: effectiveQuantityType,
+      quantityValue: effectiveQuantityValue,
+      toleranceType: effectiveToleranceType,
+      tolerance: effectiveTolerance,
+      isToleranceActive: effectiveIsToleranceActive,
+      deliveryShift: effectiveDeliveryShift,
+      minOrderQty: effectiveMinOrderQty,
+      clearMinOrderQty: effectiveMinOrderQty == null,
+      maxOrderQty: effectiveMaxOrderQty,
+      clearMaxOrderQty: effectiveMaxOrderQty == null,
+      stepQty: effectiveStepQty,
+      clearStepQty: effectiveStepQty == null,
+      unitLabelEn: effectiveUnitLabelEn.isEmpty ? null : effectiveUnitLabelEn,
+      clearUnitLabelEn: effectiveUnitLabelEn.isEmpty,
+      unitLabelBn: effectiveUnitLabelBn.isEmpty ? null : effectiveUnitLabelBn,
+      clearUnitLabelBn: effectiveUnitLabelBn.isEmpty,
+
+
+
       isDeleted: _isDeleted,
       deletedAt: _isDeleted ? (_deletedAt ?? now) : null,
       clearDeletedAt: !_isDeleted,

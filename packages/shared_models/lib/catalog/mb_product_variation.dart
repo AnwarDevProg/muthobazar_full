@@ -54,10 +54,34 @@ class MBProductVariation {
   final double price;
   final double? salePrice;
   final double? costPrice;
+  final DateTime? saleStartsAt;
+  final DateTime? saleEndsAt;
+
   final int stockQty;
   final int reservedQty;
+  final String inventoryMode;
   final bool trackInventory;
+  final bool supportsInstantOrder;
+  final bool supportsScheduledOrder;
   final bool allowBackorder;
+  final String? instantCutoffTime;
+  final int todayInstantCap;
+  final int todayInstantSold;
+  final int maxScheduleQtyPerDay;
+  final int minScheduleNoticeHours;
+  final int reorderLevel;
+
+  final String quantityType;
+  final double quantityValue;
+  final String toleranceType;
+  final double tolerance;
+  final bool isToleranceActive;
+  final String deliveryShift;
+  final double? minOrderQty;
+  final double? maxOrderQty;
+  final double? stepQty;
+  final String? unitLabelEn;
+  final String? unitLabelBn;
   final Map<String, String> attributeValues;
   final int sortOrder;
   final bool isDefault;
@@ -94,10 +118,32 @@ class MBProductVariation {
     this.price = 0.0,
     this.salePrice,
     this.costPrice,
+    this.saleStartsAt,
+    this.saleEndsAt,
     this.stockQty = 0,
     this.reservedQty = 0,
+    this.inventoryMode = 'stocked',
     this.trackInventory = true,
+    this.supportsInstantOrder = true,
+    this.supportsScheduledOrder = false,
     this.allowBackorder = false,
+    this.instantCutoffTime,
+    this.todayInstantCap = 999999,
+    this.todayInstantSold = 0,
+    this.maxScheduleQtyPerDay = 999999,
+    this.minScheduleNoticeHours = 0,
+    this.reorderLevel = 0,
+    this.quantityType = 'pcs',
+    this.quantityValue = 0.0,
+    this.toleranceType = 'g',
+    this.tolerance = 0.0,
+    this.isToleranceActive = false,
+    this.deliveryShift = 'any',
+    this.minOrderQty,
+    this.maxOrderQty,
+    this.stepQty,
+    this.unitLabelEn,
+    this.unitLabelBn,
     this.attributeValues = const {},
     this.sortOrder = 0,
     this.isDefault = false,
@@ -152,10 +198,40 @@ class MBProductVariation {
     bool clearSalePrice = false,
     double? costPrice,
     bool clearCostPrice = false,
+    DateTime? saleStartsAt,
+    bool clearSaleStartsAt = false,
+    DateTime? saleEndsAt,
+    bool clearSaleEndsAt = false,
     int? stockQty,
     int? reservedQty,
+    String? inventoryMode,
+    bool? supportsInstantOrder,
+    bool? supportsScheduledOrder,
     bool? trackInventory,
     bool? allowBackorder,
+    String? instantCutoffTime,
+    bool clearInstantCutoffTime = false,
+    int? todayInstantCap,
+    int? todayInstantSold,
+    int? maxScheduleQtyPerDay,
+    int? minScheduleNoticeHours,
+    int? reorderLevel,
+    String? quantityType,
+    double? quantityValue,
+    String? toleranceType,
+    double? tolerance,
+    bool? isToleranceActive,
+    String? deliveryShift,
+    double? minOrderQty,
+    bool clearMinOrderQty = false,
+    double? maxOrderQty,
+    bool clearMaxOrderQty = false,
+    double? stepQty,
+    bool clearStepQty = false,
+    String? unitLabelEn,
+    bool clearUnitLabelEn = false,
+    String? unitLabelBn,
+    bool clearUnitLabelBn = false,
     Map<String, String>? attributeValues,
     int? sortOrder,
     bool? isDefault,
@@ -214,10 +290,41 @@ class MBProductVariation {
       price: price ?? this.price,
       salePrice: clearSalePrice ? null : (salePrice ?? this.salePrice),
       costPrice: clearCostPrice ? null : (costPrice ?? this.costPrice),
+      saleStartsAt: clearSaleStartsAt ? null : (saleStartsAt ?? this.saleStartsAt),
+      saleEndsAt: clearSaleEndsAt ? null : (saleEndsAt ?? this.saleEndsAt),
       stockQty: stockQty ?? this.stockQty,
       reservedQty: reservedQty ?? this.reservedQty,
+      inventoryMode: inventoryMode ?? this.inventoryMode,
+      supportsInstantOrder: supportsInstantOrder ?? this.supportsInstantOrder,
+      supportsScheduledOrder:
+      supportsScheduledOrder ?? this.supportsScheduledOrder,
       trackInventory: trackInventory ?? this.trackInventory,
       allowBackorder: allowBackorder ?? this.allowBackorder,
+      instantCutoffTime: clearInstantCutoffTime
+          ? null
+          : (instantCutoffTime ?? this.instantCutoffTime),
+      todayInstantCap: todayInstantCap ?? this.todayInstantCap,
+      todayInstantSold: todayInstantSold ?? this.todayInstantSold,
+      maxScheduleQtyPerDay:
+      maxScheduleQtyPerDay ?? this.maxScheduleQtyPerDay,
+      minScheduleNoticeHours:
+      minScheduleNoticeHours ?? this.minScheduleNoticeHours,
+      reorderLevel: reorderLevel ?? this.reorderLevel,
+      quantityType: quantityType ?? this.quantityType,
+      quantityValue: quantityValue ?? this.quantityValue,
+      toleranceType: toleranceType ?? this.toleranceType,
+      tolerance: tolerance ?? this.tolerance,
+      isToleranceActive: isToleranceActive ?? this.isToleranceActive,
+      deliveryShift: deliveryShift ?? this.deliveryShift,
+      minOrderQty:
+      clearMinOrderQty ? null : (minOrderQty ?? this.minOrderQty),
+      maxOrderQty:
+      clearMaxOrderQty ? null : (maxOrderQty ?? this.maxOrderQty),
+      stepQty: clearStepQty ? null : (stepQty ?? this.stepQty),
+      unitLabelEn:
+      clearUnitLabelEn ? null : (unitLabelEn ?? this.unitLabelEn),
+      unitLabelBn:
+      clearUnitLabelBn ? null : (unitLabelBn ?? this.unitLabelBn),
       attributeValues: attributeValues ?? this.attributeValues,
       sortOrder: sortOrder ?? this.sortOrder,
       isDefault: isDefault ?? this.isDefault,
@@ -225,9 +332,35 @@ class MBProductVariation {
     );
   }
 
-  bool get hasDiscount => salePrice != null && salePrice! > 0 && salePrice! < price;
+  bool isSaleActiveAt(DateTime at) {
+    final currentSalePrice = salePrice;
+    if (currentSalePrice == null || currentSalePrice <= 0 || currentSalePrice >= price) {
+      return false;
+    }
 
-  double get effectivePrice => hasDiscount ? salePrice! : price;
+    final startsAt = saleStartsAt;
+    final endsAt = saleEndsAt;
+
+    if (startsAt != null && at.isBefore(startsAt)) {
+      return false;
+    }
+
+    if (endsAt != null && at.isAfter(endsAt)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool get isSaleActiveNow => isSaleActiveAt(DateTime.now());
+
+  bool get hasDiscount => isSaleActiveNow;
+
+  double get effectivePrice => isSaleActiveNow ? salePrice! : price;
+
+  double effectivePriceAt(DateTime at) {
+    return isSaleActiveAt(at) ? salePrice! : price;
+  }
 
   int get discountPercent {
     if (!hasDiscount || price <= 0) return 0;
@@ -350,8 +483,30 @@ class MBProductVariation {
       'price': price,
       'salePrice': salePrice,
       'costPrice': costPrice,
+      'saleStartsAt': saleStartsAt?.toIso8601String(),
+      'saleEndsAt': saleEndsAt?.toIso8601String(),
       'stockQty': stockQty,
       'reservedQty': reservedQty,
+      'inventoryMode': inventoryMode,
+      'supportsInstantOrder': supportsInstantOrder,
+      'supportsScheduledOrder': supportsScheduledOrder,
+      'instantCutoffTime': instantCutoffTime,
+      'todayInstantCap': todayInstantCap,
+      'todayInstantSold': todayInstantSold,
+      'maxScheduleQtyPerDay': maxScheduleQtyPerDay,
+      'minScheduleNoticeHours': minScheduleNoticeHours,
+      'reorderLevel': reorderLevel,
+      'quantityType': quantityType,
+      'quantityValue': quantityValue,
+      'toleranceType': toleranceType,
+      'tolerance': tolerance,
+      'isToleranceActive': isToleranceActive,
+      'deliveryShift': deliveryShift,
+      'minOrderQty': minOrderQty,
+      'maxOrderQty': maxOrderQty,
+      'stepQty': stepQty,
+      'unitLabelEn': unitLabelEn,
+      'unitLabelBn': unitLabelBn,
       'trackInventory': trackInventory,
       'allowBackorder': allowBackorder,
       'attributeValues': attributeValues,
@@ -413,8 +568,35 @@ class MBProductVariation {
       price: _asDouble(map['price'], fallback: 0.0),
       salePrice: _asNullableDouble(map['salePrice']),
       costPrice: _asNullableDouble(map['costPrice']),
+      saleStartsAt: _asNullableDateTime(map['saleStartsAt']),
+      saleEndsAt: _asNullableDateTime(map['saleEndsAt']),
       stockQty: _asInt(map['stockQty'], fallback: 0),
       reservedQty: _asInt(map['reservedQty'], fallback: 0),
+      inventoryMode: _asString(map['inventoryMode'], fallback: 'stocked'),
+      supportsInstantOrder:
+      _asBool(map['supportsInstantOrder'], fallback: true),
+      supportsScheduledOrder:
+      _asBool(map['supportsScheduledOrder'], fallback: false),
+      instantCutoffTime: _asNullableString(map['instantCutoffTime']),
+      todayInstantCap: _asInt(map['todayInstantCap'], fallback: 999999),
+      todayInstantSold: _asInt(map['todayInstantSold'], fallback: 0),
+      maxScheduleQtyPerDay:
+      _asInt(map['maxScheduleQtyPerDay'], fallback: 999999),
+      minScheduleNoticeHours:
+      _asInt(map['minScheduleNoticeHours'], fallback: 0),
+      reorderLevel: _asInt(map['reorderLevel'], fallback: 0),
+      quantityType: _asString(map['quantityType'], fallback: 'pcs'),
+      quantityValue: _asDouble(map['quantityValue'], fallback: 0.0),
+      toleranceType: _asString(map['toleranceType'], fallback: 'g'),
+      tolerance: _asDouble(map['tolerance'], fallback: 0.0),
+      isToleranceActive:
+      _asBool(map['isToleranceActive'], fallback: false),
+      deliveryShift: _asString(map['deliveryShift'], fallback: 'any'),
+      minOrderQty: _asNullableDouble(map['minOrderQty']),
+      maxOrderQty: _asNullableDouble(map['maxOrderQty']),
+      stepQty: _asNullableDouble(map['stepQty']),
+      unitLabelEn: _asNullableString(map['unitLabelEn']),
+      unitLabelBn: _asNullableString(map['unitLabelBn']),
       trackInventory: _asBool(map['trackInventory'], fallback: true),
       allowBackorder: _asBool(map['allowBackorder'], fallback: false),
       attributeValues: _asStringMap(map['attributeValues']),
@@ -444,8 +626,30 @@ class MBProductVariation {
       price: _asDouble(map['Price'], fallback: 0.0),
       salePrice: _asNullableDouble(map['SalePrice']),
       costPrice: _asNullableDouble(map['CostPrice']),
+      saleStartsAt: null,
+      saleEndsAt: null,
       stockQty: _asInt(map['Stock'], fallback: 0),
       reservedQty: _asInt(map['ReservedQty'], fallback: 0),
+      inventoryMode: 'stocked',
+      supportsInstantOrder: true,
+      supportsScheduledOrder: false,
+      instantCutoffTime: null,
+      todayInstantCap: 999999,
+      todayInstantSold: 0,
+      maxScheduleQtyPerDay: 999999,
+      minScheduleNoticeHours: 0,
+      reorderLevel: 0,
+      quantityType: 'pcs',
+      quantityValue: 0.0,
+      toleranceType: 'g',
+      tolerance: 0.0,
+      isToleranceActive: false,
+      deliveryShift: 'any',
+      minOrderQty: null,
+      maxOrderQty: null,
+      stepQty: null,
+      unitLabelEn: null,
+      unitLabelBn: null,
       trackInventory: true,
       allowBackorder: false,
       attributeValues: _asStringMap(rawAttributeValues),
@@ -510,4 +714,15 @@ Map<String, String> _asStringMap(dynamic value) {
     );
   }
   return const {};
+}
+
+String? _asNullableString(dynamic value) {
+  if (value == null) return null;
+  final parsed = value.toString().trim();
+  return parsed.isEmpty ? null : parsed;
+}
+
+DateTime? _asNullableDateTime(dynamic value) {
+  if (value == null) return null;
+  return DateTime.tryParse(value.toString());
 }
