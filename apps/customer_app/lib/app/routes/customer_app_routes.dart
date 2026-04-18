@@ -3,11 +3,12 @@ class AppRoutes {
 
   static const appLaunchRoute = '/';
   static const forceUpdate = '/force-update';
+
   static const String accountBlocked = '/account-blocked';
   static const String completeProfile = '/complete-profile';
+
   static const onboarding = '/onboarding';
   static const shell = '/shell';
-
   static const welcome = '/welcome';
   static const login = '/login';
   static const register = '/register';
@@ -25,9 +26,9 @@ class AppRoutes {
   static const helpCenter = '/profile/help-center';
   static const wishlist = '/profile/wishlist';
 
-
   static const orderDetails = '/order-details';
   static const checkout = '/checkout';
 
+  // Product
+  static const productDetails = '/product-details';
 }
-
