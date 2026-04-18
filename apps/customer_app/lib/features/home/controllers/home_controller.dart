@@ -133,7 +133,7 @@ class MBHomeController extends ChangeNotifier {
   }
 
   void closeFloatingOffer({bool showNext = false}) {
-    final MBOffer? current = _floatingOffer;
+    final current = _floatingOffer;
 
     if (current != null) {
       _overlayManager.markClosed(current.id);

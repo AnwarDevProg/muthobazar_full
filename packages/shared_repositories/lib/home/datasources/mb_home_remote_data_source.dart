@@ -1,10 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_models/shared_models.dart';
 
-// MB Home Remote Data Source
-// --------------------------
-// Supports both dummy data and real Firestore binding.
-
 abstract class MBHomeRemoteDataSource {
   Future<MBHomeCacheBundle> fetchHomeBundle();
 }
@@ -22,7 +18,7 @@ class MBDummyHomeRemoteDataSource implements MBHomeRemoteDataSource {
   @override
   Future<MBHomeCacheBundle> fetchHomeBundle() async {
     await Future.delayed(_delay);
-    final MBHomeCacheBundle bundle = _bundleBuilder();
+    final bundle = _bundleBuilder();
     return bundle.copyWith(cachedAt: DateTime.now());
   }
 }
@@ -108,11 +104,9 @@ class MBFirestoreHomeRemoteDataSource implements MBHomeRemoteDataSource {
     return snapshot.docs.map((doc) {
       final raw = Map<String, dynamic>.from(doc.data());
       final id = (raw['id'] ?? '').toString().trim();
-
       if (id.isEmpty) {
         raw['id'] = doc.id;
       }
-
       return fromMap(raw);
     }).toList(growable: false);
   }
