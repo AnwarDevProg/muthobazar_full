@@ -1,5 +1,4 @@
 import 'package:customer_app/features/home/controllers/offer_overlay_manager.dart';
-import 'package:customer_app/features/home/data/dummy_catalog_data.dart';
 import 'package:customer_app/features/home/data/home_dummy_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_core/helpers/mb_cache_policy.dart';

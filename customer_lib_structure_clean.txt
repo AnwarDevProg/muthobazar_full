@@ -64,6 +64,8 @@ C.
 |   +---cart
 |   |   +---controllers
 |   |   |   \---cart_controller.dart
+|   |   +---helpers
+|   |   |   \---cart_item_builder.dart
 |   |   +---pages
 |   |   |   \---cart_page.dart
 |   |   \---widgets

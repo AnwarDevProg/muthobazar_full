@@ -30,6 +30,7 @@ class MBHomeRenderer extends StatelessWidget {
   final void Function(MBOffer offer)? onOfferTap;
   final void Function(MBCategory category)? onCategoryTap;
   final void Function(MBProduct product)? onProductTap;
+  final void Function(MBProduct product)? onProductAddToCart;
   final VoidCallback? onViewAllTap;
 
   const MBHomeRenderer({
@@ -42,6 +43,7 @@ class MBHomeRenderer extends StatelessWidget {
     this.onOfferTap,
     this.onCategoryTap,
     this.onProductTap,
+    this.onProductAddToCart,
     this.onViewAllTap,
   });
 
@@ -107,6 +109,7 @@ class MBHomeRenderer extends StatelessWidget {
           products: resolvedProducts,
           offers: config.activeOffers,
           onProductTap: onProductTap,
+          onAddToCart: onProductAddToCart,
           onViewAllTap: onViewAllTap,
         );
 
@@ -119,6 +122,7 @@ class MBHomeRenderer extends StatelessWidget {
           products: resolvedProducts,
           offers: config.activeOffers,
           onProductTap: onProductTap,
+          onAddToCart: onProductAddToCart,
           onViewAllTap: onViewAllTap,
         );
 

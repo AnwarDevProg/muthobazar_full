@@ -4,8 +4,11 @@ import 'package:customer_app/features/home/pages/offer_details_page.dart';
 import 'package:customer_app/features/home/widgets/floating_offer_card.dart';
 import 'package:customer_app/features/home/widgets/home_cache_debug_section.dart';
 import 'package:customer_app/features/home/widgets/home_renderer.dart';
+import 'package:customer_app/features/cart/controllers/cart_controller.dart';
+import 'package:customer_app/features/cart/helpers/cart_item_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 class HomePage extends StatefulWidget {
@@ -58,6 +61,29 @@ class _HomePageState extends State<HomePage> {
 
   void _handleProductTap(dynamic product) {
     _controller.onProductTap(product.id);
+  }
+  void _handleProductAddToCart(dynamic product) {
+    if (product is! MBProduct) return;
+
+    if (product.productType.trim().toLowerCase() == 'variable') {
+      MBNotification.info(
+        title: 'Select Options',
+        message: 'Please open the product and choose a variation first.',
+      );
+      _handleProductTap(product);
+      return;
+    }
+
+    final cartController = Get.find<CartController>();
+
+    final item = MBCartItemBuilder.buildForProduct(
+      product: product,
+      quantity: 1,
+      purchaseMode: 'instant',
+      offers: _controller.config.activeOffers,
+    );
+
+    cartController.addItem(item);
   }
 
   void _handleViewAllTap() {
@@ -141,6 +167,7 @@ class _HomePageState extends State<HomePage> {
                           onOfferTap: _handleOfferTap,
                           onCategoryTap: _handleCategoryTap,
                           onProductTap: _handleProductTap,
+                          onProductAddToCart: _handleProductAddToCart,
                           onViewAllTap: _handleViewAllTap,
                         ),
                         const SizedBox(height: 140),

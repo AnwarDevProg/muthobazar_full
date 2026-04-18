@@ -11,6 +11,7 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
   final List<MBProduct> products;
   final List<MBOffer> offers;
   final void Function(MBProduct product)? onProductTap;
+  final void Function(MBProduct product)? onAddToCart;
   final VoidCallback? onViewAllTap;
 
   const MBHomeProductHorizontalSection({
@@ -19,6 +20,7 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
     required this.products,
     this.offers = const <MBOffer>[],
     this.onProductTap,
+    this.onAddToCart,
     this.onViewAllTap,
   });
 
@@ -63,6 +65,7 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
                         ? '৳${resolved.basePrice.toStringAsFixed(0)}'
                         : null,
                     imageUrl: product.thumbnailUrl,
+                    onAddToCart: () => onAddToCart?.call(product),
                   ),
                 ),
               );
