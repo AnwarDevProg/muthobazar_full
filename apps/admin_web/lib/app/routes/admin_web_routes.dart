@@ -22,6 +22,7 @@ class AdminWebRoutes {
 
   // Marketing
   static const String offers = '/offers';
+  static const String homeSections = '/home-sections';
   static const String promos = '/promos';
 
   // Administration
@@ -125,6 +126,7 @@ class AdminPermissionKeys {
 
   // Marketing
   static const String manageOffers = 'manageOffers';
+  static const String manageHomeSections = 'manageHomeSections';
   static const String managePromos = 'managePromos';
 
   // Administration
@@ -340,6 +342,16 @@ class AdminRouteRegistry {
       permissionKey: AdminPermissionKeys.manageOffers,
       description: 'Manage offers.',
       commandKeywords: <String>['offers', 'discount offers'],
+    ),
+    AdminRouteMeta(
+      route: AdminWebRoutes.homeSections,
+      title: 'Home Sections',
+      sidebarGroup: AdminSidebarGroups.marketing,
+      icon: Icons.view_quilt_outlined,
+      breadcrumbs: <String>['Marketing', 'Home Sections'],
+      permissionKey: AdminPermissionKeys.manageHomeSections,
+      description: 'Manage homepage section layout and content rules.',
+      commandKeywords: <String>['home sections', 'homepage', 'home cms', 'landing sections'],
     ),
     AdminRouteMeta(
       route: AdminWebRoutes.promos,

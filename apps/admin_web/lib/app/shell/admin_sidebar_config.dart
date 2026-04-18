@@ -34,11 +34,10 @@ class AdminSidebarItemConfig {
 class AdminSidebarConfig {
   AdminSidebarConfig._();
 
-  static const List<AdminSidebarGroupConfig> groups =
-  <AdminSidebarGroupConfig>[
+  static const List<AdminSidebarGroupConfig> groups = [
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.overview,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.dashboard,
         AdminWebRoutes.profile,
       ],
@@ -46,7 +45,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.catalog,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.categories,
         AdminWebRoutes.brands,
         AdminWebRoutes.products,
@@ -56,14 +55,15 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.marketing,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.offers,
         AdminWebRoutes.promos,
+        AdminWebRoutes.homeSections,
       ],
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.administration,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.users,
         AdminWebRoutes.admins,
         AdminWebRoutes.stuffs,
@@ -74,7 +74,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.orders,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.orders,
         AdminWebRoutes.manualOrders,
         AdminWebRoutes.picking,
@@ -86,7 +86,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.inventoryProcurement,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.inventory,
         AdminWebRoutes.stockLedger,
         AdminWebRoutes.purchaseReceiving,
@@ -96,7 +96,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.finance,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.finance,
         AdminWebRoutes.expenses,
         AdminWebRoutes.dailyClosing,
@@ -105,7 +105,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.delivery,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.delivery,
         AdminWebRoutes.riders,
         AdminWebRoutes.zones,
@@ -115,7 +115,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.services,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.services,
         AdminWebRoutes.serviceCategories,
         AdminWebRoutes.technicians,
@@ -124,7 +124,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.customers,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.customers,
         AdminWebRoutes.customerSegments,
         AdminWebRoutes.customerComplaints,
@@ -132,7 +132,7 @@ class AdminSidebarConfig {
     ),
     AdminSidebarGroupConfig(
       title: AdminSidebarGroups.reportingConfig,
-      routes: <String>[
+      routes: [
         AdminWebRoutes.reports,
         AdminWebRoutes.settings,
       ],
@@ -156,9 +156,7 @@ class AdminSidebarConfig {
       ) {
     return groups.where((group) {
       if (group.alwaysVisible) return true;
-
       final items = _groupItemsCache[group.title] ?? const [];
-
       return items.any((item) => canAccessItem(item, permission));
     }).toList();
   }
@@ -197,6 +195,11 @@ class AdminSidebarConfig {
       case AdminPermissionKeys.manageOffers:
       case AdminPermissionKeys.managePromos:
         return permission.canManageBanners;
+
+      case 'manage_home_sections':
+        return permission.canManageProducts ||
+            permission.canManageBanners ||
+            permission.canManageOffers;
 
       case AdminPermissionKeys.manageUsers:
         return permission.canManageUsers;

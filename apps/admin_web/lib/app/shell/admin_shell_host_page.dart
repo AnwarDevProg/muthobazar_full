@@ -1,5 +1,6 @@
 import 'package:admin_web/app/bindings/admin_access_binding.dart';
 import 'package:admin_web/app/bindings/admin_activity_logs_binding.dart';
+import 'package:admin_web/app/bindings/admin_home_section_binding.dart';
 import 'package:admin_web/app/bindings/admin_user_binding.dart';
 import 'package:admin_web/app/bindings/banners_binding.dart';
 import 'package:admin_web/app/bindings/brands_binding.dart';
@@ -18,6 +19,7 @@ import 'package:admin_web/features/banners/pages/admin_banners_page.dart';
 import 'package:admin_web/features/brands/pages/admin_brands_page.dart';
 import 'package:admin_web/features/categories/pages/admin_categories_page.dart';
 import 'package:admin_web/features/dashboard/pages/admin_dashboard_page.dart';
+import 'package:admin_web/features/marketing/pages/admin_home_sections_page.dart';
 import 'package:admin_web/features/marketing/pages/admin_offers_page.dart';
 import 'package:admin_web/features/marketing/pages/admin_promos_page.dart';
 import 'package:admin_web/features/products/pages/admin_products_page.dart';
@@ -82,43 +84,61 @@ class _AdminShellHostPageState extends State<AdminShellHostPage> {
     switch (route) {
       case AdminWebRoutes.dashboard:
         return const AdminDashboardPage();
+
       case AdminWebRoutes.profile:
         return const AdminProfilePage();
+
       case AdminWebRoutes.categories:
         return const AdminCategoriesPage();
+
       case AdminWebRoutes.brands:
         return const AdminBrandsPage();
+
       case AdminWebRoutes.products:
         return const AdminProductsPage();
+
       case AdminWebRoutes.quarantineProducts:
         return const AdminQuarantineProductsPage();
+
       case AdminWebRoutes.banners:
         return const AdminBannersPage();
+
+      case AdminWebRoutes.homeSections:
+        return const AdminHomeSectionsPage();
+
       case AdminWebRoutes.offers:
         return const AdminOffersPage();
+
       case AdminWebRoutes.promos:
         return const AdminPromosPage();
+
       case AdminWebRoutes.users:
         return const AdminUsersPage();
+
       case AdminWebRoutes.auditLogs:
         return const AdminActivityLogsPage();
+
       case AdminWebRoutes.adminAccess:
         return const AdminPermissionsPage();
+
       case AdminWebRoutes.admins:
         return const AdminFeaturePlaceholderPage(
           title: 'Admins',
           description: 'Admins management page will be implemented next.',
         );
+
       case AdminWebRoutes.stuffs:
         return const AdminFeaturePlaceholderPage(
           title: 'Stuffs',
           description: 'Stuffs management page will be implemented next.',
         );
+
       case AdminWebRoutes.invites:
         return const AdminFeaturePlaceholderPage(
           title: 'Invites',
           description: 'Admin invites page will be implemented next.',
         );
+
       default:
         final meta = AdminRouteRegistry.find(route);
         return AdminFeaturePlaceholderPage(
@@ -130,13 +150,13 @@ class _AdminShellHostPageState extends State<AdminShellHostPage> {
   }
 
   void _markBindingsPreparedForRoute(String route) {
-    for (final spec in _bindingSpecsForRoute(route)) {
+    for (final _BindingSpec spec in _bindingSpecsForRoute(route)) {
       _preparedBindingKeys.add(spec.id);
     }
   }
 
   void _ensureBindingsForRoute(String route) {
-    for (final spec in _bindingSpecsForRoute(route)) {
+    for (final _BindingSpec spec in _bindingSpecsForRoute(route)) {
       if (_preparedBindingKeys.add(spec.id)) {
         spec.binding.dependencies();
       }
@@ -151,52 +171,68 @@ class _AdminShellHostPageState extends State<AdminShellHostPage> {
           _BindingSpec('dashboard', DashboardBinding()),
           _BindingSpec('profile', ProfileBinding()),
         ];
+
       case AdminWebRoutes.profile:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('profile', ProfileBinding()),
         ];
+
       case AdminWebRoutes.categories:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('categories', CategoriesBinding()),
         ];
+
       case AdminWebRoutes.brands:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('brands', BrandsBinding()),
         ];
+
       case AdminWebRoutes.products:
       case AdminWebRoutes.quarantineProducts:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('products', ProductsBinding()),
         ];
+
       case AdminWebRoutes.banners:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('banners', BannersBinding()),
         ];
+
+      case AdminWebRoutes.homeSections:
+        return <_BindingSpec>[
+          _BindingSpec('admin_access', AdminAccessBinding()),
+          _BindingSpec('admin_home_sections', AdminHomeSectionBinding()),
+        ];
+
       case AdminWebRoutes.offers:
       case AdminWebRoutes.promos:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
         ];
+
       case AdminWebRoutes.users:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('admin_user', AdminUserBinding()),
           _BindingSpec('profile', ProfileBinding()),
         ];
+
       case AdminWebRoutes.auditLogs:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
           _BindingSpec('admin_activity_logs', AdminActivityLogsBinding()),
         ];
+
       case AdminWebRoutes.adminAccess:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
         ];
+
       default:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),

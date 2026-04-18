@@ -76,6 +76,9 @@ class AdminAccessController extends GetxController {
   bool get canManageOffers =>
       isPermissionActive && permission.value?.canManageOffers == true;
 
+  bool get canManageHomeSections =>
+      isPermissionActive && permission.value?.canManageHomeSections == true;
+
   bool get canDeleteProducts =>
       isPermissionActive && permission.value?.canDeleteProducts == true;
 
@@ -174,7 +177,7 @@ class AdminAccessController extends GetxController {
       await AdminActivityLogger.log(
         actorUid: uid,
         actorName: name,
-        actorPhone: '', // not available yet
+        actorPhone: '',
         actorRole: 'super_admin',
         action: 'admin.bootstrap_super_admin',
         module: 'admin_access',

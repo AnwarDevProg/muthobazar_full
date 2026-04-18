@@ -1,5 +1,6 @@
 import 'package:admin_web/app/bindings/admin_access_binding.dart';
 import 'package:admin_web/app/bindings/admin_activity_logs_binding.dart';
+import 'package:admin_web/app/bindings/admin_home_section_binding.dart';
 import 'package:admin_web/app/bindings/admin_user_binding.dart';
 import 'package:admin_web/app/bindings/banners_binding.dart';
 import 'package:admin_web/app/bindings/brands_binding.dart';
@@ -143,6 +144,20 @@ class AdminWebPages {
         AdminAuthMiddleware(),
         PermissionGuardMiddleware(
           permissionKey: AdminPermissionKeys.manageBanners,
+        ),
+      ],
+    ),
+    _shellPage(
+      route: AdminWebRoutes.homeSections,
+      initialRoute: AdminWebRoutes.homeSections,
+      bindings: <Bindings>[
+        AdminHomeSectionBinding(),
+        AdminAccessBinding(),
+      ],
+      middlewares: <GetMiddleware>[
+        AdminAuthMiddleware(),
+        PermissionGuardMiddleware(
+          permissionKey: AdminPermissionKeys.manageHomeSections,
         ),
       ],
     ),

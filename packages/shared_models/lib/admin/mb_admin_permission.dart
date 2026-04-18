@@ -3,6 +3,7 @@ import 'dart:convert';
 // MB Admin Permission Model
 // -------------------------
 // Must stay aligned with Firestore rules.
+//
 // Important:
 // - field names are camelCase
 // - superAdmin() must set every required permission to true
@@ -19,18 +20,22 @@ class MBAdminPermission {
   final bool canManageAdminInvites;
   final bool canManageAdminPermissions;
   final bool canManageUsers;
+
   final bool canManageCategories;
   final bool canManageBrands;
   final bool canManageProducts;
   final bool canManageBanners;
   final bool canManageCoupons;
   final bool canManageOffers;
+  final bool canManageHomeSections;
+
   final bool canDeleteProducts;
   final bool canRestoreProducts;
   final bool canViewActivityLogs;
 
   final String createdByUid;
   final String updatedByUid;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -49,6 +54,7 @@ class MBAdminPermission {
     this.canManageBanners = false,
     this.canManageCoupons = false,
     this.canManageOffers = false,
+    this.canManageHomeSections = false,
     this.canDeleteProducts = false,
     this.canRestoreProducts = false,
     this.canViewActivityLogs = false,
@@ -90,6 +96,7 @@ class MBAdminPermission {
       canManageBanners: true,
       canManageCoupons: true,
       canManageOffers: true,
+      canManageHomeSections: true,
       canDeleteProducts: true,
       canRestoreProducts: true,
       canViewActivityLogs: true,
@@ -115,6 +122,7 @@ class MBAdminPermission {
     bool canManageBanners = false,
     bool canManageCoupons = false,
     bool canManageOffers = false,
+    bool canManageHomeSections = false,
     bool canDeleteProducts = false,
     bool canRestoreProducts = false,
     bool canViewActivityLogs = false,
@@ -138,6 +146,7 @@ class MBAdminPermission {
       canManageBanners: canManageBanners,
       canManageCoupons: canManageCoupons,
       canManageOffers: canManageOffers,
+      canManageHomeSections: canManageHomeSections,
       canDeleteProducts: canDeleteProducts,
       canRestoreProducts: canRestoreProducts,
       canViewActivityLogs: canViewActivityLogs,
@@ -163,6 +172,7 @@ class MBAdminPermission {
     bool? canManageBanners,
     bool? canManageCoupons,
     bool? canManageOffers,
+    bool? canManageHomeSections,
     bool? canDeleteProducts,
     bool? canRestoreProducts,
     bool? canViewActivityLogs,
@@ -188,6 +198,8 @@ class MBAdminPermission {
       canManageBanners: canManageBanners ?? this.canManageBanners,
       canManageCoupons: canManageCoupons ?? this.canManageCoupons,
       canManageOffers: canManageOffers ?? this.canManageOffers,
+      canManageHomeSections:
+      canManageHomeSections ?? this.canManageHomeSections,
       canDeleteProducts: canDeleteProducts ?? this.canDeleteProducts,
       canRestoreProducts: canRestoreProducts ?? this.canRestoreProducts,
       canViewActivityLogs: canViewActivityLogs ?? this.canViewActivityLogs,
@@ -199,7 +211,7 @@ class MBAdminPermission {
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
+    return {
       'uid': uid,
       'role': role,
       'isActive': isActive,
@@ -214,6 +226,7 @@ class MBAdminPermission {
       'canManageBanners': canManageBanners,
       'canManageCoupons': canManageCoupons,
       'canManageOffers': canManageOffers,
+      'canManageHomeSections': canManageHomeSections,
       'canDeleteProducts': canDeleteProducts,
       'canRestoreProducts': canRestoreProducts,
       'canViewActivityLogs': canViewActivityLogs,
@@ -245,6 +258,7 @@ class MBAdminPermission {
       canManageBanners: _asBool(map['canManageBanners']),
       canManageCoupons: _asBool(map['canManageCoupons']),
       canManageOffers: _asBool(map['canManageOffers']),
+      canManageHomeSections: _asBool(map['canManageHomeSections']),
       canDeleteProducts: _asBool(map['canDeleteProducts']),
       canRestoreProducts: _asBool(map['canRestoreProducts']),
       canViewActivityLogs: _asBool(map['canViewActivityLogs']),
@@ -281,7 +295,6 @@ class MBAdminPermission {
 
   static DateTime? _parseDate(dynamic value) {
     if (value == null) return null;
-
     if (value is DateTime) return value;
 
     if (value is String) {
