@@ -225,7 +225,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   String? get _effectiveThumbnailUrl {
     if (_isVariableProduct) {
-      final url = _primaryVariationForOwnership?.imageUrl.trim() ?? '';
+      final url =
+          _primaryVariationForOwnership?.effectiveThumbImageUrl.trim() ?? '';
       return url.isEmpty ? null : url;
     }
 
@@ -234,14 +235,15 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   List<String> get _effectiveImageUrls {
     if (_isVariableProduct) {
-      final url = _primaryVariationForOwnership?.imageUrl.trim() ?? '';
+      final url =
+          _primaryVariationForOwnership?.effectiveFullImageUrl.trim() ?? '';
       if (url.isEmpty) return <String>[];
       return <String>[url];
     }
 
     return _effectiveProductMediaItems
         .where((item) => item.isEnabled && item.type == 'image')
-        .map((item) => item.url.trim())
+        .map((item) => item.effectiveFullUrl.trim())
         .where((item) => item.isNotEmpty)
         .toSet()
         .toList();
@@ -269,6 +271,15 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     }
 
     return parseNullableDouble(_costPriceController.text);
+  }
+
+  double get _effectivePreviewPrice {
+    if (_isVariableProduct) {
+      return _primaryVariationForOwnership?.effectivePrice ?? 0;
+    }
+
+    final preview = _buildProductFromForm();
+    return preview.effectivePrice;
   }
 
   bool get _showProductLevelMedia => !_isVariableProduct;
@@ -1187,12 +1198,12 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         children: _mediaItems
             .map(
               (item) => EditableTile(
-            title: item.labelEn.trim().isEmpty ? item.url : item.labelEn,
-            subtitle:
-            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
-            leading: item.url.trim().isEmpty
-                ? const Icon(Icons.image_not_supported_outlined)
-                : PreviewImage(url: item.url),
+                title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
+                subtitle:
+                'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
+                leading: item.effectiveThumbUrl.trim().isEmpty
+                    ? const Icon(Icons.image_not_supported_outlined)
+                    : PreviewImage(url: item.effectiveThumbUrl),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -2086,12 +2097,13 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
             runSpacing: 8,
             children: [
               buildInfoChip('type: ${preview.productType}'),
-              buildInfoChip('price: ${preview.price.toStringAsFixed(2)}'),
+              buildInfoChip('effective price: ${_effectivePreviewPrice.toStringAsFixed(2)}'),
+              buildInfoChip('base price: ${preview.price.toStringAsFixed(2)}'),
               buildInfoChip('enabled: ${preview.isEnabled}'),
               buildInfoChip('deleted: ${preview.isDeleted}'),
               buildInfoChip('product media: ${preview.mediaItems.length}'),
               buildInfoChip(
-                'variation image: ${_primaryVariationForOwnership?.imageUrl.trim().isNotEmpty == true}',
+                'variation image: ${_primaryVariationForOwnership?.effectiveFullImageUrl.trim().isNotEmpty == true}',
               ),
               buildInfoChip('attributes: ${preview.attributes.length}'),
               buildInfoChip('variations: ${preview.variations.length}'),
@@ -2103,6 +2115,17 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           buildReadOnlyInfoRow('Category', preview.categoryNameEn ?? '-'),
           buildReadOnlyInfoRow('Brand', preview.brandNameEn ?? '-'),
           buildReadOnlyInfoRow('Stock', preview.stockQty.toString()),
+          buildReadOnlyInfoRow(
+            'Effective Price',
+            _effectivePreviewPrice.toStringAsFixed(2),
+          ),
+          buildReadOnlyInfoRow(
+            'Sale Active Now',
+            (_isVariableProduct
+                ? (_primaryVariationForOwnership?.isSaleActiveNow ?? false)
+                : preview.isSaleActive)
+                .toString(),
+          ),
           buildReadOnlyInfoRow(
             'Published Now',
             preview.isPublishedNow.toString(),
