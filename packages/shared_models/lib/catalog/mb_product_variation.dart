@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+// File: mb_product_variation.dart
 // MB Product Variation Model
 // --------------------------
 // Defines a concrete sellable variation of a product.
@@ -12,6 +13,9 @@ import 'dart:convert';
 // Upgrade notes:
 // - Keeps legacy `imageUrl` behavior for old data and old UI code.
 // - Adds separate thumbnail/full/original image fields for variation preview.
+// - Adds variation-level sale window fields.
+// - Adds variation-level inventory / availability fields.
+// - Adds variation-level quantity / packaging / tolerance fields.
 // - Safely reads old Firestore documents that only stored a single image URL.
 
 class MBProductVariation {
@@ -51,6 +55,7 @@ class MBProductVariation {
 
   final String descriptionEn;
   final String descriptionBn;
+
   final double price;
   final double? salePrice;
   final double? costPrice;
@@ -82,6 +87,7 @@ class MBProductVariation {
   final double? stepQty;
   final String? unitLabelEn;
   final String? unitLabelBn;
+
   final Map<String, String> attributeValues;
   final int sortOrder;
   final bool isDefault;
@@ -205,9 +211,9 @@ class MBProductVariation {
     int? stockQty,
     int? reservedQty,
     String? inventoryMode,
+    bool? trackInventory,
     bool? supportsInstantOrder,
     bool? supportsScheduledOrder,
-    bool? trackInventory,
     bool? allowBackorder,
     String? instantCutoffTime,
     bool clearInstantCutoffTime = false,
@@ -295,10 +301,10 @@ class MBProductVariation {
       stockQty: stockQty ?? this.stockQty,
       reservedQty: reservedQty ?? this.reservedQty,
       inventoryMode: inventoryMode ?? this.inventoryMode,
+      trackInventory: trackInventory ?? this.trackInventory,
       supportsInstantOrder: supportsInstantOrder ?? this.supportsInstantOrder,
       supportsScheduledOrder:
       supportsScheduledOrder ?? this.supportsScheduledOrder,
-      trackInventory: trackInventory ?? this.trackInventory,
       allowBackorder: allowBackorder ?? this.allowBackorder,
       instantCutoffTime: clearInstantCutoffTime
           ? null
@@ -356,14 +362,18 @@ class MBProductVariation {
 
   bool get hasDiscount => isSaleActiveNow;
 
-  double get effectivePrice => isSaleActiveNow ? salePrice! : price;
+  double get effectivePrice => effectivePriceAt(DateTime.now());
 
   double effectivePriceAt(DateTime at) {
-    return isSaleActiveAt(at) ? salePrice! : price;
+    if (!isSaleActiveAt(at)) {
+      return price;
+    }
+
+    return salePrice ?? price;
   }
 
   int get discountPercent {
-    if (!hasDiscount || price <= 0) return 0;
+    if (!hasDiscount || price <= 0 || salePrice == null) return 0;
     return (((price - salePrice!) / price) * 100).round();
   }
 
@@ -488,8 +498,10 @@ class MBProductVariation {
       'stockQty': stockQty,
       'reservedQty': reservedQty,
       'inventoryMode': inventoryMode,
+      'trackInventory': trackInventory,
       'supportsInstantOrder': supportsInstantOrder,
       'supportsScheduledOrder': supportsScheduledOrder,
+      'allowBackorder': allowBackorder,
       'instantCutoffTime': instantCutoffTime,
       'todayInstantCap': todayInstantCap,
       'todayInstantSold': todayInstantSold,
@@ -507,8 +519,6 @@ class MBProductVariation {
       'stepQty': stepQty,
       'unitLabelEn': unitLabelEn,
       'unitLabelBn': unitLabelBn,
-      'trackInventory': trackInventory,
-      'allowBackorder': allowBackorder,
       'attributeValues': attributeValues,
       'sortOrder': sortOrder,
       'isDefault': isDefault,
@@ -532,7 +542,7 @@ class MBProductVariation {
     return MBProductVariation(
       id: _asString(map['id']),
       sku: _asString(map['sku']),
-      barcode: map['barcode']?.toString(),
+      barcode: _asNullableString(map['barcode']),
       titleEn: _asString(map['titleEn']),
       titleBn: _asString(map['titleBn']),
       imageUrl: legacyImageUrl.isNotEmpty ? legacyImageUrl : parsedFullImageUrl,
@@ -573,10 +583,12 @@ class MBProductVariation {
       stockQty: _asInt(map['stockQty'], fallback: 0),
       reservedQty: _asInt(map['reservedQty'], fallback: 0),
       inventoryMode: _asString(map['inventoryMode'], fallback: 'stocked'),
+      trackInventory: _asBool(map['trackInventory'], fallback: true),
       supportsInstantOrder:
       _asBool(map['supportsInstantOrder'], fallback: true),
       supportsScheduledOrder:
       _asBool(map['supportsScheduledOrder'], fallback: false),
+      allowBackorder: _asBool(map['allowBackorder'], fallback: false),
       instantCutoffTime: _asNullableString(map['instantCutoffTime']),
       todayInstantCap: _asInt(map['todayInstantCap'], fallback: 999999),
       todayInstantSold: _asInt(map['todayInstantSold'], fallback: 0),
@@ -597,8 +609,6 @@ class MBProductVariation {
       stepQty: _asNullableDouble(map['stepQty']),
       unitLabelEn: _asNullableString(map['unitLabelEn']),
       unitLabelBn: _asNullableString(map['unitLabelBn']),
-      trackInventory: _asBool(map['trackInventory'], fallback: true),
-      allowBackorder: _asBool(map['allowBackorder'], fallback: false),
       attributeValues: _asStringMap(map['attributeValues']),
       sortOrder: _asInt(map['sortOrder'], fallback: 0),
       isDefault: _asBool(map['isDefault'], fallback: false),
@@ -616,7 +626,7 @@ class MBProductVariation {
     return MBProductVariation(
       id: _asString(map['Id']),
       sku: _asString(map['SKU']),
-      barcode: map['Barcode']?.toString(),
+      barcode: _asNullableString(map['Barcode']),
       titleEn: _asString(map['Title']),
       titleBn: '',
       imageUrl: legacyImage,
@@ -631,8 +641,10 @@ class MBProductVariation {
       stockQty: _asInt(map['Stock'], fallback: 0),
       reservedQty: _asInt(map['ReservedQty'], fallback: 0),
       inventoryMode: 'stocked',
+      trackInventory: true,
       supportsInstantOrder: true,
       supportsScheduledOrder: false,
+      allowBackorder: false,
       instantCutoffTime: null,
       todayInstantCap: 999999,
       todayInstantSold: 0,
@@ -650,8 +662,6 @@ class MBProductVariation {
       stepQty: null,
       unitLabelEn: null,
       unitLabelBn: null,
-      trackInventory: true,
-      allowBackorder: false,
       attributeValues: _asStringMap(rawAttributeValues),
       sortOrder: 0,
       isDefault: false,
@@ -707,15 +717,6 @@ bool _asBool(dynamic value, {bool fallback = false}) {
   return fallback;
 }
 
-Map<String, String> _asStringMap(dynamic value) {
-  if (value is Map) {
-    return value.map(
-          (key, item) => MapEntry(key.toString(), item?.toString() ?? ''),
-    );
-  }
-  return const {};
-}
-
 String? _asNullableString(dynamic value) {
   if (value == null) return null;
   final parsed = value.toString().trim();
@@ -725,4 +726,13 @@ String? _asNullableString(dynamic value) {
 DateTime? _asNullableDateTime(dynamic value) {
   if (value == null) return null;
   return DateTime.tryParse(value.toString());
+}
+
+Map<String, String> _asStringMap(dynamic value) {
+  if (value is Map) {
+    return value.map(
+          (key, item) => MapEntry(key.toString(), item?.toString() ?? ''),
+    );
+  }
+  return const {};
 }

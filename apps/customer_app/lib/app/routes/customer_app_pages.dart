@@ -12,9 +12,9 @@ import 'package:customer_app/features/auth/pages/register_page.dart';
 import 'package:customer_app/features/auth/pages/welcome_page.dart';
 import 'package:customer_app/features/checkout/pages/checkout_page.dart';
 import 'package:customer_app/features/onboarding/pages/onboarding_page.dart';
-
 import 'package:customer_app/features/orders/pages/my_orders_page.dart';
 import 'package:customer_app/features/orders/pages/order_details_page.dart';
+import 'package:customer_app/features/products/pages/product_details_page.dart';
 import 'package:customer_app/features/profile/pages/app_settings_page.dart';
 import 'package:customer_app/features/profile/pages/delete_account_verify_page.dart';
 import 'package:customer_app/features/profile/pages/edit_profile_page.dart';
@@ -22,14 +22,13 @@ import 'package:customer_app/features/profile/pages/help_center_page.dart';
 import 'package:customer_app/features/profile/pages/my_coupons_page.dart';
 import 'package:customer_app/features/profile/pages/update_phone_page.dart';
 import 'package:customer_app/features/profile_completion/pages/complete_profile_page.dart';
-
 import 'package:customer_app/features/wishlist/pages/wishlist_page.dart';
 import 'package:get/get.dart';
 
 class AppPages {
   AppPages._();
 
-  static final routes = <GetPage>[
+  static final routes = [
     GetPage(
       name: AppRoutes.appLaunchRoute,
       page: () => const AppLaunchRouterPage(),
@@ -133,7 +132,11 @@ class AppPages {
       },
       middlewares: [AuthMiddleware()],
     ),
+
+    // Product
+    GetPage(
+      name: AppRoutes.productDetails,
+      page: () => const ProductDetailsPage(),
+    ),
   ];
 }
-
-

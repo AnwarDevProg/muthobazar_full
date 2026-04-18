@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:customer_app/app/routes/customer_app_routes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -60,7 +61,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleProductTap(dynamic product) {
+    if (product is! MBProduct) return;
+
     _controller.onProductTap(product.id);
+
+    Get.toNamed(
+      AppRoutes.productDetails,
+      arguments: <String, dynamic>{
+        'product': product,
+        'offers': _controller.config.activeOffers,
+      },
+    );
   }
   void _handleProductAddToCart(dynamic product) {
     if (product is! MBProduct) return;

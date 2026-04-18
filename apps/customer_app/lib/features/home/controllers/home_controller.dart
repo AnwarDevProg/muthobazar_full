@@ -1,5 +1,4 @@
 import 'package:customer_app/features/home/controllers/offer_overlay_manager.dart';
-import 'package:customer_app/features/home/data/home_dummy_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_core/helpers/mb_cache_policy.dart';
 import 'package:shared_core/helpers/mb_cache_state.dart';
@@ -47,20 +46,15 @@ class MBHomeController extends ChangeNotifier {
   static MBHomeRepository _buildDefaultRepository() {
     return MBHomeRepository(
       localDataSource: MBHiveHomeLocalDataSource(),
-      remoteDataSource: MBDummyHomeRemoteDataSource(
-        bundleBuilder: _buildDummyBundle,
+      remoteDataSource: MBFirestoreHomeRemoteDataSource(
+        bannersCollection: 'banners',
+        offersCollection: 'offers',
+        sectionsCollection: 'home_sections',
+        categoriesCollection: 'categories',
+        brandsCollection: 'brands',
+        productsCollection: 'products',
       ),
       cachePolicy: MBCachePolicy.homeDefault,
-    );
-  }
-
-  static MBHomeCacheBundle _buildDummyBundle() {
-    return MBHomeCacheBundle(
-      config: HomeDummyData.config,
-      categories: DummyCatalogData.categories,
-      brands: DummyCatalogData.brands,
-      products: DummyCatalogData.products,
-      cachedAt: DateTime.now(),
     );
   }
 
