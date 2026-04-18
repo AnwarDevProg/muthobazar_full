@@ -39,7 +39,7 @@ C.
 |   |   |   +---mb_cache_policy.dart
 |   |   |   \---mb_cache_state.dart
 |   |   +---media
-|   |   |   +---image_presets.dart
+|   |   |   +---mb_image_crop_dialog.dart
 |   |   |   \---mb_image_pipeline_service.dart
 |   |   +---services
 |   |   |   +---app_initializer.dart
@@ -66,11 +66,13 @@ C.
 |   |   +---auth
 |   |   |   \---phone_auth_eligibility_result.dart
 |   |   +---catalog
+|   |   |   +---mb_attribute_preset.dart
 |   |   |   +---mb_brand.dart
 |   |   |   +---mb_category.dart
 |   |   |   +---mb_product.dart
 |   |   |   +---mb_product_attribute.dart
 |   |   |   +---mb_product_attribute_value.dart
+|   |   |   +---mb_product_card_layout.dart
 |   |   |   +---mb_product_media.dart
 |   |   |   +---mb_product_purchase_option.dart
 |   |   |   \---mb_product_variation.dart
@@ -88,6 +90,7 @@ C.
 |   |   +---marketing
 |   |   |   +---mb_banner.dart
 |   |   |   +---mb_offer.dart
+|   |   |   +---mb_pricing_resolver.dart
 |   |   |   +---mb_promo_code.dart
 |   |   |   \---mb_user_promo_code.dart
 |   |   +---orders
@@ -222,6 +225,12 @@ C.
 |   |   |   \---mb_app_text.dart
 |   |   +---widgets
 |   |   |   +---common
+|   |   |   |   +---product_cards
+|   |   |   |   |   +---mb_product_card_compact.dart
+|   |   |   |   |   +---mb_product_card_deal.dart
+|   |   |   |   |   +---mb_product_card_featured.dart
+|   |   |   |   |   +---mb_product_card_renderer.dart
+|   |   |   |   |   \---mb_product_card_standard.dart
 |   |   |   |   +---mb_bottom_nav_bar.dart
 |   |   |   |   +---mb_card.dart
 |   |   |   |   +---mb_gradient_header.dart

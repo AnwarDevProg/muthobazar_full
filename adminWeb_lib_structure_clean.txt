@@ -140,8 +140,9 @@ C.
 |   |       \---admin_promo_form_dialog.dart
 |   +---offer
 |   |   +---controllers
-|   |   \---pages
-|   |       \---admin_offer_page.dart
+|   |   +---pages
+|   |   |   \---admin_offer_page.dart
+|   |   \---read.md
 |   +---orders
 |   +---packing
 |   +---picking
@@ -153,9 +154,11 @@ C.
 |   |   |   +---admin_product_page_support.dart
 |   |   |   +---admin_products_page.dart
 |   |   |   \---admin_quarantine_products_page.dart
-|   |   \---widgets
-|   |       +---admin_product_form_dialog.dart
-|   |       \---admin_product_form_support.dart
+|   |   +---widgets
+|   |   |   +---admin_product_card_style_selector.dart
+|   |   |   +---admin_product_form_dialog.dart
+|   |   |   \---admin_product_form_support.dart
+|   |   \---read.md
 |   +---profile
 |   |   +---controllers
 |   |   |   \---admin_profile_controller.dart

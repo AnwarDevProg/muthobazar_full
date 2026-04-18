@@ -315,8 +315,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         bool isStrong = false,
         bool isNegative = false,
       }) {
-    final displayAmount =
-    isNegative ? '-৳ ${amount.toStringAsFixed(0)}' : '৳ ${amount.toStringAsFixed(0)}';
+    final displayAmount = isNegative
+        ? '-৳ ${amount.toStringAsFixed(0)}'
+        : '৳ ${amount.toStringAsFixed(0)}';
 
     return Row(
       children: [
