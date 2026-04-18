@@ -105,6 +105,7 @@ class MBHomeRenderer extends StatelessWidget {
         return MBHomeProductHorizontalSection(
           section: section,
           products: resolvedProducts,
+          offers: config.activeOffers,
           onProductTap: onProductTap,
           onViewAllTap: onViewAllTap,
         );
@@ -116,6 +117,7 @@ class MBHomeRenderer extends StatelessWidget {
         return MBHomeProductGridSection(
           section: section,
           products: resolvedProducts,
+          offers: config.activeOffers,
           onProductTap: onProductTap,
           onViewAllTap: onViewAllTap,
         );

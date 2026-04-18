@@ -4,22 +4,30 @@ import 'package:shared_ui/shared_ui.dart';
 
 // MB Home Product Grid Section
 // ----------------------------
-// Uses MBProductCardRenderer so each product can choose its card layout,
-// while still enforcing grid-safe fallback behavior.
+// Styled to match old approved product section layout using MBProductCard.
 
 class MBHomeProductGridSection extends StatelessWidget {
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final List<MBOffer> offers;
+  final void Function(MBProduct product)? onProductTap;
+  final VoidCallback? onViewAllTap;
+
   const MBHomeProductGridSection({
     super.key,
     required this.section,
     required this.products,
+    this.offers = const <MBOffer>[],
     this.onProductTap,
     this.onViewAllTap,
   });
 
-  final MBHomeSection section;
-  final List<MBProduct> products;
-  final void Function(MBProduct product)? onProductTap;
-  final VoidCallback? onViewAllTap;
+  MBResolvedPrice _resolvedPrice(MBProduct product) {
+    return MBPricingResolver.resolveProduct(
+      product: product,
+      offers: offers,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,15 +49,20 @@ class MBHomeProductGridSection extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: products.length,
           gridDelegate: MBLayoutGrid.delegate(config: productGrid),
-          itemBuilder: (context, index) {
+          itemBuilder: (_, index) {
             final product = products[index];
+            final resolved = _resolvedPrice(product);
 
-            return MBProductCardRenderer(
-              product: product,
-              contextType: MBProductCardRenderContext.grid,
+            return GestureDetector(
               onTap: () => onProductTap?.call(product),
-              showAddToCart: true,
-              showFavorite: true,
+              child: MBProductCard(
+                title: product.titleEn,
+                priceText: '৳${resolved.finalUnitPrice.toStringAsFixed(0)}',
+                oldPriceText: resolved.isDiscounted
+                    ? '৳${resolved.basePrice.toStringAsFixed(0)}'
+                    : null,
+                imageUrl: product.thumbnailUrl,
+              ),
             );
           },
         ),

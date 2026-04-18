@@ -4,22 +4,30 @@ import 'package:shared_ui/shared_ui.dart';
 
 // MB Home Product Horizontal Section
 // ----------------------------------
-// Uses MBProductCardRenderer so each product can choose its card layout,
-// while still enforcing horizontal-safe fallback behavior.
+// Styled to match old MuthoBazar cards, but in a horizontal layout.
 
 class MBHomeProductHorizontalSection extends StatelessWidget {
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final List<MBOffer> offers;
+  final void Function(MBProduct product)? onProductTap;
+  final VoidCallback? onViewAllTap;
+
   const MBHomeProductHorizontalSection({
     super.key,
     required this.section,
     required this.products,
+    this.offers = const <MBOffer>[],
     this.onProductTap,
     this.onViewAllTap,
   });
 
-  final MBHomeSection section;
-  final List<MBProduct> products;
-  final void Function(MBProduct product)? onProductTap;
-  final VoidCallback? onViewAllTap;
+  MBResolvedPrice _resolvedPrice(MBProduct product) {
+    return MBPricingResolver.resolveProduct(
+      product: product,
+      offers: offers,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,23 +43,27 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
         ),
         MBSpacing.h(MBSpacing.sm),
         SizedBox(
-          height: 320,
+          height: 255,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (context, index) => MBSpacing.w(MBSpacing.sm),
+            separatorBuilder: (_, __) => MBSpacing.w(MBSpacing.sm),
             itemBuilder: (context, index) {
               final product = products[index];
+              final resolved = _resolvedPrice(product);
 
               return SizedBox(
-                width: 210,
-                child: MBProductCardRenderer(
-                  product: product,
-                  contextType: MBProductCardRenderContext.horizontal,
+                width: 170,
+                child: GestureDetector(
                   onTap: () => onProductTap?.call(product),
-                  showAddToCart: true,
-                  showFavorite: true,
-                  featuredHeight: 320,
+                  child: MBProductCard(
+                    title: product.titleEn,
+                    priceText: '৳${resolved.finalUnitPrice.toStringAsFixed(0)}',
+                    oldPriceText: resolved.isDiscounted
+                        ? '৳${resolved.basePrice.toStringAsFixed(0)}'
+                        : null,
+                    imageUrl: product.thumbnailUrl,
+                  ),
                 ),
               );
             },
