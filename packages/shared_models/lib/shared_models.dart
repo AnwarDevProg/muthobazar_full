@@ -27,6 +27,8 @@ export 'marketing/mb_banner.dart';
 export 'marketing/mb_offer.dart';
 export 'marketing/mb_promo_code.dart';
 export 'marketing/mb_user_promo_code.dart';
+export 'marketing/mb_pricing_resolver.dart';
+
 
 export 'reviews/mb_review.dart';
 export 'reviews/mb_review_reply.dart';

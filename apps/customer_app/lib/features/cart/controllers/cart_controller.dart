@@ -1,15 +1,30 @@
 import 'dart:async';
 
-import 'package:get/get.dart';
-
-import 'package:shared_ui/shared_ui.dart';
-import 'package:shared_models/shared_models.dart';
 import 'package:customer_app/features/orders/controllers/order_controller.dart';
+import 'package:get/get.dart';
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
+import 'package:shared_ui/shared_ui.dart';
+
+// File: cart_controller.dart
+
+class MBCartPriceBreakdown {
+  const MBCartPriceBreakdown({
+    required this.baseSubTotal,
+    required this.payableSubTotal,
+    required this.lineDiscountTotal,
+  });
+
+  final double baseSubTotal;
+  final double payableSubTotal;
+  final double lineDiscountTotal;
+
+  double get effectiveSubTotal => payableSubTotal;
+}
 
 class CartController extends GetxController {
   final CartRepository _repository = CartRepository.instance;
-  final OrderController _orderController = Get.find<OrderController>();
+  final OrderController _orderController = Get.find();
 
   final RxList<MBCartItem> cartItems = <MBCartItem>[].obs;
 
@@ -57,14 +72,49 @@ class CartController extends GetxController {
   bool get hasScheduledItems => scheduledItems.isNotEmpty;
   bool get hasMixedCart => hasInstantItems && hasScheduledItems;
 
-  double get instantSubTotal =>
-      instantItems.fold<double>(0.0, (sum, item) => sum + item.total);
+  double _lineBaseTotal(MBCartItem item) => item.unitPrice * item.quantity;
 
-  double get scheduledSubTotal =>
-      scheduledItems.fold<double>(0.0, (sum, item) => sum + item.total);
+  double _linePayableTotal(MBCartItem item) => item.total;
 
-  double get cartSubTotal =>
-      cartItems.fold<double>(0.0, (sum, item) => sum + item.total);
+  MBCartPriceBreakdown _buildBreakdown(List<MBCartItem> items) {
+    final baseSubTotal = items.fold<double>(
+      0.0,
+          (sum, item) => sum + _lineBaseTotal(item),
+    );
+
+    final payableSubTotal = items.fold<double>(
+      0.0,
+          (sum, item) => sum + _linePayableTotal(item),
+    );
+
+    final lineDiscountTotal = (baseSubTotal - payableSubTotal) < 0
+        ? 0.0
+        : (baseSubTotal - payableSubTotal);
+
+    return MBCartPriceBreakdown(
+      baseSubTotal: baseSubTotal,
+      payableSubTotal: payableSubTotal,
+      lineDiscountTotal: lineDiscountTotal,
+    );
+  }
+
+  MBCartPriceBreakdown get instantPricing => _buildBreakdown(instantItems);
+
+  MBCartPriceBreakdown get scheduledPricing => _buildBreakdown(scheduledItems);
+
+  MBCartPriceBreakdown get cartPricing => _buildBreakdown(cartItems);
+
+  double get instantBaseSubTotal => instantPricing.baseSubTotal;
+  double get instantSubTotal => instantPricing.payableSubTotal;
+  double get instantDiscountTotal => instantPricing.lineDiscountTotal;
+
+  double get scheduledBaseSubTotal => scheduledPricing.baseSubTotal;
+  double get scheduledSubTotal => scheduledPricing.payableSubTotal;
+  double get scheduledDiscountTotal => scheduledPricing.lineDiscountTotal;
+
+  double get cartBaseSubTotal => cartPricing.baseSubTotal;
+  double get cartSubTotal => cartPricing.payableSubTotal;
+  double get cartDiscountTotal => cartPricing.lineDiscountTotal;
 
   void addItem(MBCartItem item) {
     _repository.addItem(item);
@@ -99,7 +149,7 @@ class CartController extends GetxController {
     );
   }
 
-  Future<MBOrder?> checkoutInstant({
+  Future<dynamic> checkoutInstant({
     required String deliveryAddress,
     String paymentMethod = 'cod',
     String? note,
@@ -136,7 +186,7 @@ class CartController extends GetxController {
     }
   }
 
-  Future<MBOrder?> checkoutScheduled({
+  Future<dynamic> checkoutScheduled({
     required String deliveryAddress,
     String paymentMethod = 'cod',
     String? note,
@@ -173,7 +223,7 @@ class CartController extends GetxController {
     }
   }
 
-  Future<MBOrder?> checkoutAll({
+  Future<dynamic> checkoutAll({
     required String deliveryAddress,
     String paymentMethod = 'cod',
     String? note,
@@ -216,4 +266,3 @@ class CartController extends GetxController {
     super.onClose();
   }
 }
-
