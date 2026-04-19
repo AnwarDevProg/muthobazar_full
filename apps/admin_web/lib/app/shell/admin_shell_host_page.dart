@@ -1,6 +1,5 @@
 import 'package:admin_web/app/bindings/admin_access_binding.dart';
 import 'package:admin_web/app/bindings/admin_activity_logs_binding.dart';
-import 'package:admin_web/app/bindings/admin_home_section_binding.dart';
 import 'package:admin_web/app/bindings/admin_user_binding.dart';
 import 'package:admin_web/app/bindings/banners_binding.dart';
 import 'package:admin_web/app/bindings/brands_binding.dart';
@@ -206,7 +205,7 @@ class _AdminShellHostPageState extends State<AdminShellHostPage> {
       case AdminWebRoutes.homeSections:
         return <_BindingSpec>[
           _BindingSpec('admin_access', AdminAccessBinding()),
-          _BindingSpec('admin_home_sections', AdminHomeSectionBinding()),
+          //_BindingSpec('admin_home_sections', AdminHomeSectionBinding()),
         ];
 
       case AdminWebRoutes.offers:
