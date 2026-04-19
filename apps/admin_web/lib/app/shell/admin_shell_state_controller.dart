@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:admin_web/app/routes/admin_web_routes.dart';
+import 'package:admin_web/app/shell/admin_sidebar_config.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'admin_sidebar_config.dart';
 
 class AdminShellStateController extends GetxController {
   AdminShellStateController({

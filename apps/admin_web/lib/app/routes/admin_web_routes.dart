@@ -123,11 +123,13 @@ class AdminPermissionKeys {
   static const String manageProducts = 'manageProducts';
   static const String restoreProducts = 'restoreProducts';
   static const String manageBanners = 'manageBanners';
+  static const String deleteProducts = 'deleteProducts';
 
   // Marketing
   static const String manageOffers = 'manageOffers';
   static const String manageHomeSections = 'manageHomeSections';
   static const String managePromos = 'managePromos';
+  static const String manageCoupons = 'manageCoupons';
 
   // Administration
   static const String manageUsers = 'manageUsers';

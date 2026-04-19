@@ -177,6 +177,18 @@ class AdminSidebarConfig {
       case AdminPermissionKeys.viewProfile:
         return permission.canAccessAdminPanel;
 
+      case AdminPermissionKeys.manageAdmins:
+        return permission.canManageAdmins;
+
+      case AdminPermissionKeys.manageAdminInvites:
+        return permission.canManageAdminInvites;
+
+      case AdminPermissionKeys.manageAdminPermissions:
+        return permission.canManageAdminPermissions;
+
+      case AdminPermissionKeys.manageUsers:
+        return permission.canManageUsers;
+
       case AdminPermissionKeys.manageCategories:
         return permission.canManageCategories;
 
@@ -186,38 +198,27 @@ class AdminSidebarConfig {
       case AdminPermissionKeys.manageProducts:
         return permission.canManageProducts;
 
-      case AdminPermissionKeys.restoreProducts:
-        return permission.canRestoreProducts;
-
       case AdminPermissionKeys.manageBanners:
         return permission.canManageBanners;
 
+      case AdminPermissionKeys.manageCoupons:
+        return permission.canManageCoupons;
+
       case AdminPermissionKeys.manageOffers:
       case AdminPermissionKeys.managePromos:
-        return permission.canManageBanners;
+        return permission.canManageOffers;
 
-      case 'manage_home_sections':
-        return permission.canManageProducts ||
-            permission.canManageBanners ||
-            permission.canManageOffers;
+      case AdminPermissionKeys.manageHomeSections:
+        return permission.canManageHomeSections;
 
-      case AdminPermissionKeys.manageUsers:
-        return permission.canManageUsers;
+      case AdminPermissionKeys.deleteProducts:
+        return permission.canDeleteProducts;
 
-      case AdminPermissionKeys.manageAdmins:
-        return permission.canManageAdmins;
-
-      case AdminPermissionKeys.manageStuffs:
-        return permission.canManageAdmins;
+      case AdminPermissionKeys.restoreProducts:
+        return permission.canRestoreProducts;
 
       case AdminPermissionKeys.viewActivityLogs:
         return permission.canViewActivityLogs;
-
-      case AdminPermissionKeys.manageAdminPermissions:
-        return permission.canManageAdminPermissions;
-
-      case AdminPermissionKeys.manageAdminInvites:
-        return permission.canManageAdminInvites;
 
       case AdminPermissionKeys.manageOrders:
       case AdminPermissionKeys.manageManualOrders:
