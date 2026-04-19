@@ -1,23 +1,19 @@
+import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
 import 'package:admin_web/features/dashboard/controllers/admin_management_controller.dart';
 import 'package:admin_web/features/profile/controllers/admin_profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_models/shared_models.dart';
-
-import 'package:admin_web/features/admin_access/controllers/admin_access_controller.dart';
 import 'package:shared_repositories/shared_repositories.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 class AdminPermissionsPage extends StatelessWidget {
   const AdminPermissionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final AdminAccessController accessController =
-    Get.find<AdminAccessController>();
-    final AdminManagementController managementController =
-    Get.find<AdminManagementController>();
+    final AdminAccessController accessController = Get.find();
+    final AdminManagementController managementController = Get.find();
 
     return Obx(() {
       if (!accessController.isSuperAdmin) {
@@ -101,11 +97,11 @@ class _PermissionsPageHeader extends StatelessWidget {
 }
 
 class _PermissionsSummaryRow extends StatelessWidget {
-  final AdminManagementController managementController;
-
   const _PermissionsSummaryRow({
     required this.managementController,
   });
+
+  final AdminManagementController managementController;
 
   @override
   Widget build(BuildContext context) {
@@ -140,15 +136,15 @@ class _PermissionsSummaryRow extends StatelessWidget {
 }
 
 class _PermissionSummaryCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
   const _PermissionSummaryCard({
     required this.title,
     required this.value,
     required this.icon,
   });
+
+  final String title;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -193,11 +189,11 @@ class _PermissionSummaryCard extends StatelessWidget {
 }
 
 class _AdminPermissionListCard extends StatelessWidget {
-  final Map<String, dynamic> admin;
-
   const _AdminPermissionListCard({
     required this.admin,
   });
+
+  final Map admin;
 
   @override
   Widget build(BuildContext context) {
@@ -270,15 +266,15 @@ class _AdminPermissionListCard extends StatelessWidget {
 }
 
 class _AdminPermissionEditorDialog extends StatefulWidget {
-  final String uid;
-  final String name;
-  final String email;
-
   const _AdminPermissionEditorDialog({
     required this.uid,
     required this.name,
     required this.email,
   });
+
+  final String uid;
+  final String name;
+  final String email;
 
   @override
   State<_AdminPermissionEditorDialog> createState() =>
@@ -315,9 +311,8 @@ class _AdminPermissionEditorDialogState
 
   @override
   Widget build(BuildContext context) {
-    final AdminProfileController profileController = Get.find<AdminProfileController>();
-    final AdminManagementController managementController =
-    Get.find<AdminManagementController>();
+    final AdminProfileController profileController = Get.find();
+    final AdminManagementController managementController = Get.find();
 
     return Dialog(
       insetPadding: const EdgeInsets.all(32),
@@ -393,8 +388,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canAccessAdminPanel,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canAccessAdminPanel: value);
+                          _permission = _permission!.copyWith(
+                            canAccessAdminPanel: value,
+                          );
                         });
                       },
                     ),
@@ -403,8 +399,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageAdmins,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageAdmins: value);
+                          _permission = _permission!.copyWith(
+                            canManageAdmins: value,
+                          );
                         });
                       },
                     ),
@@ -413,8 +410,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageAdminInvites,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageAdminInvites: value);
+                          _permission = _permission!.copyWith(
+                            canManageAdminInvites: value,
+                          );
                         });
                       },
                     ),
@@ -434,8 +432,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageUsers,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageUsers: value);
+                          _permission = _permission!.copyWith(
+                            canManageUsers: value,
+                          );
                         });
                       },
                     ),
@@ -444,8 +443,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageCategories,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageCategories: value);
+                          _permission = _permission!.copyWith(
+                            canManageCategories: value,
+                          );
                         });
                       },
                     ),
@@ -454,8 +454,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageBrands,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageBrands: value);
+                          _permission = _permission!.copyWith(
+                            canManageBrands: value,
+                          );
                         });
                       },
                     ),
@@ -464,8 +465,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageProducts,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageProducts: value);
+                          _permission = _permission!.copyWith(
+                            canManageProducts: value,
+                          );
                         });
                       },
                     ),
@@ -474,8 +476,42 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canManageBanners,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canManageBanners: value);
+                          _permission = _permission!.copyWith(
+                            canManageBanners: value,
+                          );
+                        });
+                      },
+                    ),
+                    _SwitchTile(
+                      label: 'Manage coupons',
+                      value: _permission!.canManageCoupons,
+                      onChanged: (value) {
+                        setState(() {
+                          _permission = _permission!.copyWith(
+                            canManageCoupons: value,
+                          );
+                        });
+                      },
+                    ),
+                    _SwitchTile(
+                      label: 'Manage offers',
+                      value: _permission!.canManageOffers,
+                      onChanged: (value) {
+                        setState(() {
+                          _permission = _permission!.copyWith(
+                            canManageOffers: value,
+                          );
+                        });
+                      },
+                    ),
+                    _SwitchTile(
+                      label: 'Manage home sections',
+                      value: _permission!.canManageHomeSections,
+                      onChanged: (value) {
+                        setState(() {
+                          _permission = _permission!.copyWith(
+                            canManageHomeSections: value,
+                          );
                         });
                       },
                     ),
@@ -484,8 +520,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canDeleteProducts,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canDeleteProducts: value);
+                          _permission = _permission!.copyWith(
+                            canDeleteProducts: value,
+                          );
                         });
                       },
                     ),
@@ -494,8 +531,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canRestoreProducts,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canRestoreProducts: value);
+                          _permission = _permission!.copyWith(
+                            canRestoreProducts: value,
+                          );
                         });
                       },
                     ),
@@ -504,8 +542,9 @@ class _AdminPermissionEditorDialogState
                       value: _permission!.canViewActivityLogs,
                       onChanged: (value) {
                         setState(() {
-                          _permission = _permission!
-                              .copyWith(canViewActivityLogs: value);
+                          _permission = _permission!.copyWith(
+                            canViewActivityLogs: value,
+                          );
                         });
                       },
                     ),
@@ -584,7 +623,8 @@ class _AdminPermissionEditorDialogState
                         name: widget.name,
                         email: widget.email,
                         permission: _permission!,
-                        actorUid: profileController.currentUser.value!.id.trim(),
+                        actorUid:
+                        profileController.currentUser.value!.id.trim(),
                       );
 
                       if (mounted) {
@@ -606,15 +646,15 @@ class _AdminPermissionEditorDialogState
 }
 
 class _SwitchTile extends StatelessWidget {
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
   const _SwitchTile({
     required this.label,
     required this.value,
     required this.onChanged,
   });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -632,15 +672,3 @@ class _SwitchTile extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

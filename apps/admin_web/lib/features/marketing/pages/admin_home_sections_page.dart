@@ -25,20 +25,31 @@ class AdminHomeSectionsPage extends StatelessWidget {
         return const _NoPermissionState();
       }
 
-      return Column(
-        children: [
-          const _HomeSectionsHeader(),
-          Expanded(
-            child: controller.filteredSections.isEmpty
-                ? const _EmptyHomeSectionsState()
-                : RefreshIndicator(
-              onRefresh: controller.refreshSections,
-              child: _HomeSectionsTable(
-                sections: controller.filteredSections,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(MBSpacing.lg),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (MBSpacing.lg * 2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _HomeSectionsHeader(),
+                  MBSpacing.h(MBSpacing.lg),
+                  if (controller.filteredSections.isEmpty)
+                    const _EmptyHomeSectionsState()
+                  else
+                    _HomeSectionsTable(
+                      sections: controller.filteredSections,
+                    ),
+                ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       );
     });
   }
@@ -52,13 +63,20 @@ class _HomeSectionsHeader extends StatelessWidget {
     final AdminHomeSectionController controller = Get.find();
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(MBSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        boxShadow: [
+          BoxShadow(
+            color: MBColors.shadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
+        ],
+        border: Border.all(
+          color: MBColors.border.withValues(alpha: 0.85),
         ),
       ),
       child: Obx(() {
@@ -124,10 +142,13 @@ class _HomeSectionsHeader extends StatelessWidget {
               ],
             ),
             MBSpacing.h(MBSpacing.md),
-            Row(
+            Wrap(
+              spacing: MBSpacing.md,
+              runSpacing: MBSpacing.md,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
-                  flex: 3,
+                SizedBox(
+                  width: 340,
                   child: TextField(
                     onChanged: controller.setSearchQuery,
                     decoration: const InputDecoration(
@@ -137,8 +158,8 @@ class _HomeSectionsHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
+                SizedBox(
+                  width: 180,
                   child: DropdownButtonFormField<String>(
                     value: controller.statusFilter.value,
                     decoration: const InputDecoration(
@@ -165,8 +186,8 @@ class _HomeSectionsHeader extends StatelessWidget {
                         controller.setStatusFilter(value ?? 'all'),
                   ),
                 ),
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
+                SizedBox(
+                  width: 220,
                   child: DropdownButtonFormField<String>(
                     value: controller.sectionTypeFilter.value,
                     decoration: const InputDecoration(
@@ -208,8 +229,8 @@ class _HomeSectionsHeader extends StatelessWidget {
                         controller.setSectionTypeFilter(value ?? 'all'),
                   ),
                 ),
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
+                SizedBox(
+                  width: 220,
                   child: DropdownButtonFormField<String>(
                     value: controller.dataSourceFilter.value,
                     decoration: const InputDecoration(
@@ -249,8 +270,8 @@ class _HomeSectionsHeader extends StatelessWidget {
                         controller.setDataSourceFilter(value ?? 'all'),
                   ),
                 ),
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
+                SizedBox(
+                  width: 180,
                   child: DropdownButtonFormField<String>(
                     value: controller.layoutFilter.value,
                     decoration: const InputDecoration(
@@ -284,7 +305,6 @@ class _HomeSectionsHeader extends StatelessWidget {
                         controller.setLayoutFilter(value ?? 'all'),
                   ),
                 ),
-                MBSpacing.w(MBSpacing.md),
                 OutlinedButton(
                   onPressed: controller.resetFilters,
                   child: const Text('Reset'),
@@ -309,248 +329,245 @@ class _HomeSectionsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final AdminHomeSectionController controller = Get.find();
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(MBRadius.lg),
-          side: BorderSide(
-            color: MBColors.border.withValues(alpha: 0.90),
-          ),
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        side: BorderSide(
+          color: MBColors.border.withValues(alpha: 0.90),
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 24,
-            headingRowHeight: 56,
-            dataRowMinHeight: 88,
-            dataRowMaxHeight: 104,
-            columns: const [
-              DataColumn(label: Text('Section')),
-              DataColumn(label: Text('Type')),
-              DataColumn(label: Text('Source')),
-              DataColumn(label: Text('Content')),
-              DataColumn(label: Text('Config')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: sections.map((section) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    SizedBox(
-                      width: 320,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            section.titleEn.trim().isEmpty
-                                ? 'Untitled Section'
-                                : section.titleEn,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: MBTextStyles.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.all(MBSpacing.lg),
+        child: DataTable(
+          columnSpacing: 24,
+          headingRowHeight: 56,
+          dataRowMinHeight: 88,
+          dataRowMaxHeight: 104,
+          columns: const [
+            DataColumn(label: Text('Section')),
+            DataColumn(label: Text('Type')),
+            DataColumn(label: Text('Source')),
+            DataColumn(label: Text('Content')),
+            DataColumn(label: Text('Config')),
+            DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Actions')),
+          ],
+          rows: sections.map((section) {
+            return DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 320,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section.titleEn.trim().isEmpty
+                              ? 'Untitled Section'
+                              : section.titleEn,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: MBTextStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          if (section.titleBn.trim().isNotEmpty) ...[
-                            MBSpacing.h(MBSpacing.xxxs),
-                            Text(
-                              section.titleBn,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: MBTextStyles.caption.copyWith(
-                                color: MBColors.textSecondary,
-                              ),
-                            ),
-                          ],
+                        ),
+                        if (section.titleBn.trim().isNotEmpty) ...[
                           MBSpacing.h(MBSpacing.xxxs),
                           Text(
-                            'ID: ${section.id}',
+                            section.titleBn,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    SizedBox(
-                      width: 180,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _InlinePill(
-                            label: _labelize(section.sectionType),
-                            active: true,
-                          ),
-                          MBSpacing.h(MBSpacing.xs),
-                          Text(
-                            'Layout: ${_labelize(section.layoutStyle)}',
-                            style: MBTextStyles.caption.copyWith(
                               color: MBColors.textSecondary,
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    SizedBox(
-                      width: 220,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _labelize(section.dataSourceType),
-                            style: MBTextStyles.body.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if ((section.sourceCategoryId ?? '').trim().isNotEmpty)
-                            Text(
-                              'Category: ${section.sourceCategoryId}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: MBTextStyles.caption.copyWith(
-                                color: MBColors.textSecondary,
-                              ),
-                            ),
-                          if ((section.sourceBrandId ?? '').trim().isNotEmpty)
-                            Text(
-                              'Brand: ${section.sourceBrandId}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: MBTextStyles.caption.copyWith(
-                                color: MBColors.textSecondary,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    SizedBox(
-                      width: 200,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Products: ${section.productIds.length}',
-                            style: MBTextStyles.caption,
-                          ),
-                          Text(
-                            'Categories: ${section.categoryIds.length}',
-                            style: MBTextStyles.caption,
-                          ),
-                          Text(
-                            'Brands: ${section.brandIds.length}',
-                            style: MBTextStyles.caption,
-                          ),
-                          Text(
-                            'Banners: ${section.bannerIds.length}',
-                            style: MBTextStyles.caption,
-                          ),
-                          Text(
-                            'Offers: ${section.offerIds.length}',
-                            style: MBTextStyles.caption,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    SizedBox(
-                      width: 160,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Sort: ${section.sortOrder}'),
-                          Text('Limit: ${section.itemLimit}'),
-                          Text(
-                            section.showViewAll
-                                ? 'View All: Enabled'
-                                : 'View All: Disabled',
-                            style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    _InlinePill(
-                      label: section.isActive ? 'Active' : 'Inactive',
-                      active: section.isActive,
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      children: [
-                        Switch(
-                          value: section.isActive,
-                          onChanged: (_) =>
-                              controller.toggleSectionActive(section),
-                        ),
-                        IconButton(
-                          tooltip: 'Edit section',
-                          onPressed: () {
-                            Get.dialog(
-                              AdminHomeSectionFormDialog(section: section),
-                              barrierDismissible: false,
-                            );
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete section',
-                          onPressed: () async {
-                            final bool? confirmed = await Get.dialog<bool>(
-                              AlertDialog(
-                                title: const Text('Delete Home Section'),
-                                content: Text(
-                                  'Are you sure you want to delete "${section.titleEn.trim().isEmpty ? 'this section' : section.titleEn}"?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Get.back(result: false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => Get.back(result: true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirmed == true) {
-                              await controller.deleteSection(section.id);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: MBColors.error,
+                        MBSpacing.h(MBSpacing.xxxs),
+                        Text(
+                          'ID: ${section.id}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: MBTextStyles.caption.copyWith(
+                            color: MBColors.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              );
-            }).toList(),
-          ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 180,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _InlinePill(
+                          label: _labelize(section.sectionType),
+                          active: true,
+                        ),
+                        MBSpacing.h(MBSpacing.xs),
+                        Text(
+                          'Layout: ${_labelize(section.layoutStyle)}',
+                          style: MBTextStyles.caption.copyWith(
+                            color: MBColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 220,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _labelize(section.dataSourceType),
+                          style: MBTextStyles.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if ((section.sourceCategoryId ?? '').trim().isNotEmpty)
+                          Text(
+                            'Category: ${section.sourceCategoryId}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                        if ((section.sourceBrandId ?? '').trim().isNotEmpty)
+                          Text(
+                            'Brand: ${section.sourceBrandId}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 200,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Products: ${section.productIds.length}',
+                          style: MBTextStyles.caption,
+                        ),
+                        Text(
+                          'Categories: ${section.categoryIds.length}',
+                          style: MBTextStyles.caption,
+                        ),
+                        Text(
+                          'Brands: ${section.brandIds.length}',
+                          style: MBTextStyles.caption,
+                        ),
+                        Text(
+                          'Banners: ${section.bannerIds.length}',
+                          style: MBTextStyles.caption,
+                        ),
+                        Text(
+                          'Offers: ${section.offerIds.length}',
+                          style: MBTextStyles.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 160,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Sort: ${section.sortOrder}'),
+                        Text('Limit: ${section.itemLimit}'),
+                        Text(
+                          section.showViewAll
+                              ? 'View All: Enabled'
+                              : 'View All: Disabled',
+                          style: MBTextStyles.caption.copyWith(
+                            color: MBColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                DataCell(
+                  _InlinePill(
+                    label: section.isActive ? 'Active' : 'Inactive',
+                    active: section.isActive,
+                  ),
+                ),
+                DataCell(
+                  Row(
+                    children: [
+                      Switch(
+                        value: section.isActive,
+                        onChanged: (_) =>
+                            controller.toggleSectionActive(section),
+                      ),
+                      IconButton(
+                        tooltip: 'Edit section',
+                        onPressed: () {
+                          Get.dialog(
+                            AdminHomeSectionFormDialog(section: section),
+                            barrierDismissible: false,
+                          );
+                        },
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete section',
+                        onPressed: () async {
+                          final bool? confirmed = await Get.dialog<bool>(
+                            AlertDialog(
+                              title: const Text('Delete Home Section'),
+                              content: Text(
+                                'Are you sure you want to delete "${section.titleEn.trim().isEmpty ? 'this section' : section.titleEn}"?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(result: false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Get.back(result: true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed == true) {
+                            await controller.deleteSection(section.id);
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: MBColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );
@@ -696,45 +713,48 @@ class _EmptyHomeSectionsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 480,
-        padding: const EdgeInsets.all(MBSpacing.xl),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: MBColors.shadow.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.view_quilt_outlined,
-              size: 44,
-              color: MBColors.primaryOrange,
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Text(
-              'No Home Sections Found',
-              style: MBTextStyles.sectionTitle.copyWith(
-                fontWeight: FontWeight.w700,
+    return SizedBox(
+      width: double.infinity,
+      child: Center(
+        child: Container(
+          width: 480,
+          padding: const EdgeInsets.all(MBSpacing.xl),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(MBRadius.xl),
+            boxShadow: [
+              BoxShadow(
+                color: MBColors.shadow.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
-            ),
-            MBSpacing.h(MBSpacing.xs),
-            Text(
-              'Create your first homepage section to control the customer app home layout.',
-              textAlign: TextAlign.center,
-              style: MBTextStyles.body.copyWith(
-                color: MBColors.textSecondary,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.view_quilt_outlined,
+                size: 44,
+                color: MBColors.primaryOrange,
               ),
-            ),
-          ],
+              MBSpacing.h(MBSpacing.md),
+              Text(
+                'No Home Sections Found',
+                style: MBTextStyles.sectionTitle.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              MBSpacing.h(MBSpacing.xs),
+              Text(
+                'Create your first homepage section to control the customer app home layout.',
+                textAlign: TextAlign.center,
+                style: MBTextStyles.body.copyWith(
+                  color: MBColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

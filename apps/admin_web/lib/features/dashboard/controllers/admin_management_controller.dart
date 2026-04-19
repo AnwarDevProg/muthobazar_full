@@ -14,41 +14,24 @@ class AdminManagementController extends GetxController {
   }) : _repository = repository ?? AdminAccessRepository.instance;
 
   final AdminAccessRepository _repository;
-
-  final AdminProfileController _profileController =
-  Get.find<AdminProfileController>();
-
-  final AdminAccessController _accessController =
-  Get.find<AdminAccessController>();
+  final AdminProfileController _profileController = Get.find();
+  final AdminAccessController _accessController = Get.find();
 
   final RxList<Map<String, dynamic>> admins = <Map<String, dynamic>>[].obs;
-
   final RxBool isLoading = true.obs;
   final RxBool isSaving = false.obs;
   final RxBool isRefreshing = false.obs;
 
   StreamSubscription<List<Map<String, dynamic>>>? _adminsSubscription;
 
-
-  // =========================================================
-// EXPOSE ACCESS CONTROLLER (REQUIRED FOR DASHBOARD UI)
-// =========================================================
-
   AdminAccessController get accessController => _accessController;
-
-  // =========================================================
-  // DASHBOARD / PROFILE BRIDGE
-  // =========================================================
 
   String get currentAdminUid =>
       _profileController.currentUser.value?.id.trim() ?? '';
 
   String get adminName => _profileController.fullName;
-
   String get adminEmail => _profileController.email;
-
-  String get adminRole =>
-      _accessController.permission.value?.role.trim() ?? '-';
+  String get adminRole => _accessController.permission.value?.role.trim() ?? '-';
 
   String get greetingLabel {
     final int hour = DateTime.now().hour;
@@ -68,6 +51,9 @@ class AdminManagementController extends GetxController {
   bool get canManageBrands => _accessController.canManageBrands;
   bool get canManageProducts => _accessController.canManageProducts;
   bool get canManageBanners => _accessController.canManageBanners;
+  bool get canManageCoupons => _accessController.canManageCoupons;
+  bool get canManageOffers => _accessController.canManageOffers;
+  bool get canManageHomeSections => _accessController.canManageHomeSections;
   bool get canDeleteProducts => _accessController.canDeleteProducts;
   bool get canRestoreProducts => _accessController.canRestoreProducts;
   bool get canViewActivityLogs => _accessController.canViewActivityLogs;
@@ -83,19 +69,15 @@ class AdminManagementController extends GetxController {
       canManageBrands,
       canManageProducts,
       canManageBanners,
+      canManageCoupons,
+      canManageOffers,
+      canManageHomeSections,
       canDeleteProducts,
       canRestoreProducts,
       canViewActivityLogs,
     ];
-
     return flags.where((e) => e).length;
   }
-
-
-
-  // =========================================================
-  // LIFECYCLE
-  // =========================================================
 
   @override
   void onInit() {
@@ -111,7 +93,6 @@ class AdminManagementController extends GetxController {
           (items) {
         final normalized = items.map(_normalizeAdminMap).toList()
           ..sort(_sortAdminsForView);
-
         admins.assignAll(normalized);
         isLoading.value = false;
       },
@@ -127,11 +108,9 @@ class AdminManagementController extends GetxController {
 
     try {
       isRefreshing.value = true;
-
       final items = await _repository.fetchAdminsOnce();
       final normalized = items.map(_normalizeAdminMap).toList()
         ..sort(_sortAdminsForView);
-
       admins.assignAll(normalized);
     } catch (_) {
       _showError('Failed to refresh admin list.');
@@ -139,10 +118,6 @@ class AdminManagementController extends GetxController {
       isRefreshing.value = false;
     }
   }
-
-  // =========================================================
-  // ADMIN ACCESS OPERATIONS
-  // =========================================================
 
   Future<void> saveAdminPermission({
     required String uid,
@@ -171,7 +146,8 @@ class AdminManagementController extends GetxController {
         action: 'update_admin_permission',
         targetId: uid,
         targetTitle: name.trim().isEmpty ? uid : name.trim(),
-        summary: 'Updated admin permission for "${name.trim().isEmpty ? uid : name.trim()}"',
+        summary:
+        'Updated admin permission for "${name.trim().isEmpty ? uid : name.trim()}"',
         beforeData: before?.toMap(),
         afterData: permission.toMap(),
       );
@@ -199,15 +175,18 @@ class AdminManagementController extends GetxController {
     }
 
     if (uid.trim() == currentAdminUid) {
-      _showWarning('You cannot remove your own admin access from this screen.');
+      _showWarning(
+        'You cannot remove your own admin access from this screen.',
+      );
       return;
     }
 
     try {
       isSaving.value = true;
 
-      final Map<String, dynamic>? admin =
-      admins.firstWhereOrNull((e) => (e['uid'] ?? '').toString() == uid);
+      final Map<String, dynamic>? admin = admins.firstWhereOrNull(
+            (e) => (e['uid'] ?? '').toString() == uid,
+      );
 
       final MBAdminPermission? before = await _repository.fetchPermission(uid);
 
@@ -237,10 +216,6 @@ class AdminManagementController extends GetxController {
     }
   }
 
-  // =========================================================
-  // SECURITY
-  // =========================================================
-
   bool _canViewAdminManagement() {
     if (!canManageAdmins && !canManageAdminPermissions && !isSuperAdmin) {
       _showAccessDenied();
@@ -257,10 +232,6 @@ class AdminManagementController extends GetxController {
     return true;
   }
 
-  // =========================================================
-  // LOGGING
-  // =========================================================
-
   Future<void> _logAdminAccessAction({
     required String action,
     required String targetId,
@@ -270,14 +241,10 @@ class AdminManagementController extends GetxController {
     Map<String, dynamic>? afterData,
   }) async {
     /// Insert actual logger during development
-    /// await AdminActivityLogger.log(      );
+    /// await AdminActivityLogger.log(...);
   }
 
-  // =========================================================
-  // HELPERS
-  // =========================================================
-
-  Map<String, dynamic> _normalizeAdminMap(Map<String, dynamic> raw) {
+  Map<String, dynamic> _normalizeAdminMap(Map raw) {
     return <String, dynamic>{
       ...raw,
       'uid': (raw['uid'] ?? '').toString().trim(),
@@ -288,7 +255,7 @@ class AdminManagementController extends GetxController {
     };
   }
 
-  int _sortAdminsForView(Map<String, dynamic> a, Map<String, dynamic> b) {
+  int _sortAdminsForView(Map a, Map b) {
     final String roleA = (a['role'] ?? '').toString().trim().toLowerCase();
     final String roleB = (b['role'] ?? '').toString().trim().toLowerCase();
 
@@ -297,7 +264,6 @@ class AdminManagementController extends GetxController {
 
     final String nameA = (a['name'] ?? '').toString().trim().toLowerCase();
     final String nameB = (b['name'] ?? '').toString().trim().toLowerCase();
-
     return nameA.compareTo(nameB);
   }
 
@@ -332,10 +298,6 @@ class AdminManagementController extends GetxController {
       message: message,
     );
   }
-
-  // =========================================================
-  // CLEANUP
-  // =========================================================
 
   @override
   void onClose() {

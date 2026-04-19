@@ -121,6 +121,7 @@ service cloud.firestore {
         && request.resource.data.canManageBanners == true
         && request.resource.data.canManageCoupons == true
         && request.resource.data.canManageOffers == true
+        && request.resource.data.canManageHomeSections == true
         && request.resource.data.canDeleteProducts == true
         && request.resource.data.canRestoreProducts == true
         && request.resource.data.canViewActivityLogs == true;
@@ -193,6 +194,10 @@ service cloud.firestore {
 
     function canManageOffers() {
       return isActiveAdmin() && adminPermission().canManageOffers == true;
+    }
+
+    function canManageHomeSections() {
+      return isActiveAdmin() && adminPermission().canManageHomeSections == true;
     }
 
     function canManageAdmins() {
@@ -504,6 +509,11 @@ service cloud.firestore {
       allow create, update, delete: if canManageCoupons() || isSuperAdmin();
     }
 
+    match /home_sections/{sectionId} {
+      allow read: if true;
+      allow create, update, delete: if canManageHomeSections() || isSuperAdmin();
+    }
+
     // =========================================================
     // Orders
     // =========================================================
@@ -530,3 +540,6 @@ service cloud.firestore {
     }
   }
 }
+
+// cd "firebase"
+//  firebase deploy --only firestore:rules

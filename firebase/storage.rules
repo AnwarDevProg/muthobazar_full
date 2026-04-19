@@ -82,3 +82,6 @@ service firebase.storage {
     }
   }
 }
+
+// cd "firebase"
+// firebase deploy --only storage

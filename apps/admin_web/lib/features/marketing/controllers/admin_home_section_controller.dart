@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_repositories/shared_repositories.dart';
@@ -47,11 +48,12 @@ class AdminHomeSectionController extends GetxController {
         applyFilters();
         isLoading.value = false;
       },
-      onError: (_) {
+      onError: (error) {
         isLoading.value = false;
-        MBNotification.error(
+        _showError(
           title: 'Error',
-          message: 'Failed to load home sections.',
+          fallback: 'Failed to load home sections.',
+          error: error,
         );
       },
     );
@@ -63,10 +65,11 @@ class AdminHomeSectionController extends GetxController {
       final items = await _repository.fetchSectionsOnce();
       sections.assignAll(items);
       applyFilters();
-    } catch (_) {
-      MBNotification.error(
+    } catch (error) {
+      _showError(
         title: 'Error',
-        message: 'Failed to refresh home sections.',
+        fallback: 'Failed to refresh home sections.',
+        error: error,
       );
     } finally {
       isRefreshing.value = false;
@@ -204,10 +207,11 @@ class AdminHomeSectionController extends GetxController {
       );
 
       return id;
-    } catch (_) {
-      MBNotification.error(
+    } catch (error) {
+      _showError(
         title: 'Error',
-        message: 'Failed to create home section.',
+        fallback: 'Failed to create home section.',
+        error: error,
       );
       return null;
     } finally {
@@ -228,10 +232,11 @@ class AdminHomeSectionController extends GetxController {
       );
 
       return true;
-    } catch (_) {
-      MBNotification.error(
+    } catch (error) {
+      _showError(
         title: 'Error',
-        message: 'Failed to update home section.',
+        fallback: 'Failed to update home section.',
+        error: error,
       );
       return false;
     } finally {
@@ -252,10 +257,11 @@ class AdminHomeSectionController extends GetxController {
       );
 
       return true;
-    } catch (_) {
-      MBNotification.error(
+    } catch (error) {
+      _showError(
         title: 'Error',
-        message: 'Failed to delete home section.',
+        fallback: 'Failed to delete home section.',
+        error: error,
       );
       return false;
     } finally {
@@ -278,13 +284,58 @@ class AdminHomeSectionController extends GetxController {
       );
 
       return true;
-    } catch (_) {
-      MBNotification.error(
+    } catch (error) {
+      _showError(
         title: 'Error',
-        message: 'Failed to update home section state.',
+        fallback: 'Failed to update home section state.',
+        error: error,
       );
       return false;
     }
+  }
+
+  void _showError({
+    required String title,
+    required String fallback,
+    required Object error,
+  }) {
+    MBNotification.error(
+      title: title,
+      message: _humanizeError(error, fallback),
+    );
+  }
+
+  String _humanizeError(Object error, String fallback) {
+    if (error is FirebaseException) {
+      final rawMessage = (error.message ?? '').trim();
+      if (rawMessage.isNotEmpty) {
+        return rawMessage;
+      }
+
+      switch (error.code) {
+        case 'permission-denied':
+          return 'Permission denied. Check Firestore rules and admin permissions.';
+        case 'unavailable':
+          return 'Firestore is temporarily unavailable. Please try again.';
+        case 'not-found':
+          return 'Requested document was not found.';
+        case 'failed-precondition':
+          return 'Firestore precondition failed. Check indexes or document structure.';
+        default:
+          return fallback;
+      }
+    }
+
+    final text = error.toString().trim();
+    if (text.isEmpty) {
+      return fallback;
+    }
+
+    if (text.startsWith('Exception: ')) {
+      return text.replaceFirst('Exception: ', '').trim();
+    }
+
+    return text;
   }
 
   @override
