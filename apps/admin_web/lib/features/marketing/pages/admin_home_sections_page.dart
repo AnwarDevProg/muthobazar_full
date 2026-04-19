@@ -25,31 +25,18 @@ class AdminHomeSectionsPage extends StatelessWidget {
         return const _NoPermissionState();
       }
 
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(MBSpacing.lg),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight - (MBSpacing.lg * 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _HomeSectionsHeader(),
-                  MBSpacing.h(MBSpacing.lg),
-                  if (controller.filteredSections.isEmpty)
-                    const _EmptyHomeSectionsState()
-                  else
-                    _HomeSectionsTable(
-                      sections: controller.filteredSections,
-                    ),
-                ],
-              ),
+      return ListView(
+        padding: const EdgeInsets.all(MBSpacing.lg),
+        children: [
+          const _HomeSectionsHeader(),
+          MBSpacing.h(MBSpacing.lg),
+          if (controller.filteredSections.isEmpty)
+            const _EmptyHomeSectionsState()
+          else
+            _HomeSectionsTable(
+              sections: controller.filteredSections,
             ),
-          );
-        },
+        ],
       );
     });
   }
@@ -145,7 +132,6 @@ class _HomeSectionsHeader extends StatelessWidget {
             Wrap(
               spacing: MBSpacing.md,
               runSpacing: MBSpacing.md,
-              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 SizedBox(
                   width: 340,
