@@ -14,9 +14,9 @@ class AdminHomeSectionController extends GetxController {
   final RxList<MBHomeSection> filteredSections = <MBHomeSection>[].obs;
 
   final RxBool isLoading = true.obs;
+  final RxBool isRefreshing = false.obs;
   final RxBool isSaving = false.obs;
   final RxBool isDeleting = false.obs;
-  final RxBool isRefreshing = false.obs;
 
   final RxString searchQuery = ''.obs;
   final RxString statusFilter = 'all'.obs;
@@ -24,13 +24,15 @@ class AdminHomeSectionController extends GetxController {
   final RxString dataSourceFilter = 'all'.obs;
   final RxString layoutFilter = 'all'.obs;
 
+  final RxnString operationError = RxnString();
+
   StreamSubscription<List<MBHomeSection>>? _sectionsSubscription;
 
-  bool get isBusy =>
+  bool get isAnyBusy =>
       isLoading.value ||
+          isRefreshing.value ||
           isSaving.value ||
-          isDeleting.value ||
-          isRefreshing.value;
+          isDeleting.value;
 
   @override
   void onInit() {
@@ -38,38 +40,53 @@ class AdminHomeSectionController extends GetxController {
     _listenSections();
   }
 
+  void clearOperationError() {
+    operationError.value = null;
+  }
+
+  void _setOperationError(Object error) {
+    operationError.value = _humanizeError(error);
+  }
+
   void _listenSections() {
     _sectionsSubscription?.cancel();
     isLoading.value = true;
+    clearOperationError();
 
     _sectionsSubscription = _repository.watchSections().listen(
-          (items) {
+          (List<MBHomeSection> items) {
         sections.assignAll(items);
         applyFilters();
         isLoading.value = false;
       },
-      onError: (error) {
+      onError: (Object error) {
+        _setOperationError(error);
         isLoading.value = false;
-        _showError(
+
+        MBNotification.error(
           title: 'Error',
-          fallback: 'Failed to load home sections.',
-          error: error,
+          message: operationError.value ?? 'Failed to load home sections.',
         );
       },
     );
   }
 
   Future<void> refreshSections() async {
+    if (isRefreshing.value) return;
+
     try {
       isRefreshing.value = true;
-      final items = await _repository.fetchSectionsOnce();
+      clearOperationError();
+
+      final List<MBHomeSection> items = await _repository.fetchSectionsOnce();
       sections.assignAll(items);
       applyFilters();
     } catch (error) {
-      _showError(
+      _setOperationError(error);
+
+      MBNotification.error(
         title: 'Error',
-        fallback: 'Failed to refresh home sections.',
-        error: error,
+        message: operationError.value ?? 'Failed to refresh home sections.',
       );
     } finally {
       isRefreshing.value = false;
@@ -82,22 +99,22 @@ class AdminHomeSectionController extends GetxController {
   }
 
   void setStatusFilter(String value) {
-    statusFilter.value = value.trim();
+    statusFilter.value = value.trim().isEmpty ? 'all' : value.trim();
     applyFilters();
   }
 
   void setSectionTypeFilter(String value) {
-    sectionTypeFilter.value = value.trim();
+    sectionTypeFilter.value = value.trim().isEmpty ? 'all' : value.trim();
     applyFilters();
   }
 
   void setDataSourceFilter(String value) {
-    dataSourceFilter.value = value.trim();
+    dataSourceFilter.value = value.trim().isEmpty ? 'all' : value.trim();
     applyFilters();
   }
 
   void setLayoutFilter(String value) {
-    layoutFilter.value = value.trim();
+    layoutFilter.value = value.trim().isEmpty ? 'all' : value.trim();
     applyFilters();
   }
 
@@ -111,51 +128,60 @@ class AdminHomeSectionController extends GetxController {
   }
 
   void applyFilters() {
-    final query = searchQuery.value;
-    final status = statusFilter.value;
-    final sectionType = sectionTypeFilter.value;
-    final dataSource = dataSourceFilter.value;
-    final layout = layoutFilter.value;
+    final String query = searchQuery.value.trim().toLowerCase();
+    final String status = statusFilter.value.trim().toLowerCase();
+    final String sectionType = sectionTypeFilter.value.trim().toLowerCase();
+    final String dataSource = dataSourceFilter.value.trim().toLowerCase();
+    final String layout = layoutFilter.value.trim().toLowerCase();
 
-    final result = sections.where((section) {
-      final titleEn = section.titleEn.trim().toLowerCase();
-      final titleBn = section.titleBn.trim().toLowerCase();
-      final subtitleEn = section.subtitleEn.trim().toLowerCase();
-      final subtitleBn = section.subtitleBn.trim().toLowerCase();
-      final type = section.sectionType.trim().toLowerCase();
-      final sourceType = section.dataSourceType.trim().toLowerCase();
-      final style = section.layoutStyle.trim().toLowerCase();
-      final sourceCategoryId =
+    final List<MBHomeSection> result = sections.where((MBHomeSection section) {
+      final String titleEn = section.titleEn.trim().toLowerCase();
+      final String titleBn = section.titleBn.trim().toLowerCase();
+      final String subtitleEn = section.subtitleEn.trim().toLowerCase();
+      final String subtitleBn = section.subtitleBn.trim().toLowerCase();
+      final String type = section.sectionType.trim().toLowerCase();
+      final String style = section.layoutStyle.trim().toLowerCase();
+      final String sourceType = section.dataSourceType.trim().toLowerCase();
+      final String id = section.id.trim().toLowerCase();
+      final String sourceCategoryId =
       (section.sourceCategoryId ?? '').trim().toLowerCase();
-      final sourceBrandId = (section.sourceBrandId ?? '').trim().toLowerCase();
+      final String sourceBrandId =
+      (section.sourceBrandId ?? '').trim().toLowerCase();
 
-      final matchesQuery = query.isEmpty ||
+      final bool matchesQuery = query.isEmpty ||
           titleEn.contains(query) ||
           titleBn.contains(query) ||
           subtitleEn.contains(query) ||
           subtitleBn.contains(query) ||
           type.contains(query) ||
+          style.contains(query) ||
           sourceType.contains(query) ||
+          id.contains(query) ||
           sourceCategoryId.contains(query) ||
-          sourceBrandId.contains(query) ||
-          section.id.trim().toLowerCase().contains(query);
+          sourceBrandId.contains(query);
 
-      final matchesStatus = switch (status) {
+      final bool matchesStatus = switch (status) {
         'active' => section.isActive,
         'inactive' => !section.isActive,
-        'viewAllOn' => section.showViewAll,
-        'viewAllOff' => !section.showViewAll,
+        'viewallon' => section.showViewAll,
+        'viewalloff' => !section.showViewAll,
         _ => true,
       };
 
-      final matchesSectionType =
-          sectionType == 'all' || type == sectionType.toLowerCase();
+      final bool matchesSectionType = switch (sectionType) {
+        'all' => true,
+        _ => type == sectionType,
+      };
 
-      final matchesDataSource =
-          dataSource == 'all' || sourceType == dataSource.toLowerCase();
+      final bool matchesDataSource = switch (dataSource) {
+        'all' => true,
+        _ => sourceType == dataSource,
+      };
 
-      final matchesLayout =
-          layout == 'all' || style == layout.toLowerCase();
+      final bool matchesLayout = switch (layout) {
+        'all' => true,
+        _ => style == layout,
+      };
 
       return matchesQuery &&
           matchesStatus &&
@@ -164,42 +190,48 @@ class AdminHomeSectionController extends GetxController {
           matchesLayout;
     }).toList(growable: false);
 
-    result.sort((a, b) {
-      final bySort = a.sortOrder.compareTo(b.sortOrder);
-      if (bySort != 0) return bySort;
-
-      return a.titleEn.trim().toLowerCase().compareTo(
-        b.titleEn.trim().toLowerCase(),
-      );
-    });
-
+    result.sort(_sortSectionsForView);
     filteredSections.assignAll(result);
   }
 
   Future<int> suggestSortOrder({
     String? excludeSectionId,
-  }) {
-    return _repository.suggestSortOrder(
-      excludeSectionId: excludeSectionId,
-    );
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.suggestSortOrder(
+        excludeSectionId: excludeSectionId,
+      );
+    } catch (error) {
+      _setOperationError(error);
+      rethrow;
+    }
   }
 
   Future<bool> sortExists({
     required int sortOrder,
     String? excludeSectionId,
-  }) {
-    return _repository.sortExists(
-      sortOrder: sortOrder,
-      excludeSectionId: excludeSectionId,
-    );
+  }) async {
+    try {
+      clearOperationError();
+      return await _repository.sortExists(
+        sortOrder: sortOrder,
+        excludeSectionId: excludeSectionId,
+      );
+    } catch (error) {
+      _setOperationError(error);
+      rethrow;
+    }
   }
 
   Future<String?> createSection(MBHomeSection section) async {
     if (isSaving.value) return null;
 
+    isSaving.value = true;
+    clearOperationError();
+
     try {
-      isSaving.value = true;
-      final id = await _repository.createSection(section);
+      final String id = await _repository.createSection(section);
 
       MBNotification.success(
         title: 'Success',
@@ -208,11 +240,13 @@ class AdminHomeSectionController extends GetxController {
 
       return id;
     } catch (error) {
-      _showError(
+      _setOperationError(error);
+
+      MBNotification.error(
         title: 'Error',
-        fallback: 'Failed to create home section.',
-        error: error,
+        message: operationError.value ?? 'Failed to create home section.',
       );
+
       return null;
     } finally {
       isSaving.value = false;
@@ -222,8 +256,10 @@ class AdminHomeSectionController extends GetxController {
   Future<bool> updateSection(MBHomeSection section) async {
     if (isSaving.value) return false;
 
+    isSaving.value = true;
+    clearOperationError();
+
     try {
-      isSaving.value = true;
       await _repository.updateSection(section);
 
       MBNotification.success(
@@ -233,23 +269,33 @@ class AdminHomeSectionController extends GetxController {
 
       return true;
     } catch (error) {
-      _showError(
+      _setOperationError(error);
+
+      MBNotification.error(
         title: 'Error',
-        fallback: 'Failed to update home section.',
-        error: error,
+        message: operationError.value ?? 'Failed to update home section.',
       );
+
       return false;
     } finally {
       isSaving.value = false;
     }
   }
 
-  Future<bool> deleteSection(String sectionId) async {
+  Future<bool> deleteSection(
+      String sectionId, {
+        String? reason,
+      }) async {
     if (isDeleting.value) return false;
 
+    isDeleting.value = true;
+    clearOperationError();
+
     try {
-      isDeleting.value = true;
-      await _repository.deleteSection(sectionId);
+      await _repository.deleteSection(
+        sectionId,
+        reason: reason,
+      );
 
       MBNotification.success(
         title: 'Success',
@@ -258,58 +304,74 @@ class AdminHomeSectionController extends GetxController {
 
       return true;
     } catch (error) {
-      _showError(
+      _setOperationError(error);
+
+      MBNotification.error(
         title: 'Error',
-        fallback: 'Failed to delete home section.',
-        error: error,
+        message: operationError.value ?? 'Failed to delete home section.',
       );
+
       return false;
     } finally {
       isDeleting.value = false;
     }
   }
 
-  Future<bool> toggleSectionActive(MBHomeSection section) async {
+  Future<bool> toggleSectionActive(
+      MBHomeSection section, {
+        String? reason,
+      }) async {
+    clearOperationError();
+
     try {
+      final bool newState = !section.isActive;
+
       await _repository.setSectionActiveState(
         sectionId: section.id,
-        isActive: !section.isActive,
+        isActive: newState,
+        reason: reason,
       );
 
       MBNotification.success(
         title: 'Success',
-        message: !section.isActive
+        message: newState
             ? 'Home section activated.'
             : 'Home section deactivated.',
       );
 
       return true;
     } catch (error) {
-      _showError(
+      _setOperationError(error);
+
+      MBNotification.error(
         title: 'Error',
-        fallback: 'Failed to update home section state.',
-        error: error,
+        message:
+        operationError.value ?? 'Failed to update home section state.',
       );
+
       return false;
     }
   }
 
-  void _showError({
-    required String title,
-    required String fallback,
-    required Object error,
-  }) {
-    MBNotification.error(
-      title: title,
-      message: _humanizeError(error, fallback),
+  int _sortSectionsForView(MBHomeSection a, MBHomeSection b) {
+    final int bySort = a.sortOrder.compareTo(b.sortOrder);
+    if (bySort != 0) return bySort;
+
+    final int byType = a.sectionType.trim().toLowerCase().compareTo(
+      b.sectionType.trim().toLowerCase(),
+    );
+    if (byType != 0) return byType;
+
+    return a.titleEn.trim().toLowerCase().compareTo(
+      b.titleEn.trim().toLowerCase(),
     );
   }
 
-  String _humanizeError(Object error, String fallback) {
+  String _humanizeError(Object error) {
     if (error is FirebaseException) {
-      final rawMessage = (error.message ?? '').trim();
-      if (rawMessage.isNotEmpty) {
-        return rawMessage;
+      final String message = (error.message ?? '').trim();
+      if (message.isNotEmpty) {
+        return message;
       }
 
       switch (error.code) {
@@ -318,24 +380,20 @@ class AdminHomeSectionController extends GetxController {
         case 'unavailable':
           return 'Firestore is temporarily unavailable. Please try again.';
         case 'not-found':
-          return 'Requested document was not found.';
+          return 'Requested home section was not found.';
         case 'failed-precondition':
           return 'Firestore precondition failed. Check indexes or document structure.';
         default:
-          return fallback;
+          return 'Firestore error: ${error.code}';
       }
     }
 
-    final text = error.toString().trim();
-    if (text.isEmpty) {
-      return fallback;
-    }
-
+    final String text = error.toString().trim();
     if (text.startsWith('Exception: ')) {
       return text.replaceFirst('Exception: ', '').trim();
     }
 
-    return text;
+    return text.isEmpty ? 'Unexpected error occurred.' : text;
   }
 
   @override

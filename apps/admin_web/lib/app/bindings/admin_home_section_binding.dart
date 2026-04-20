@@ -4,11 +4,8 @@ import 'package:get/get.dart';
 class AdminHomeSectionBinding extends Bindings {
   @override
   void dependencies() {
-    if (!Get.isRegistered<AdminHomeSectionController>()) {
-      Get.lazyPut<AdminHomeSectionController>(
-            () => AdminHomeSectionController(),
-        fenix: true,
-      );
-    }
+    Get.lazyPut<AdminHomeSectionController>(
+          () => AdminHomeSectionController(),
+    );
   }
 }

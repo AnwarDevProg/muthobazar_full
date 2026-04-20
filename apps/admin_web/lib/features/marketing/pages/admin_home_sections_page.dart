@@ -1,668 +1,638 @@
+import 'package:admin_web/features/marketing/controllers/admin_home_section_controller.dart';
+import 'package:admin_web/features/marketing/widgets/admin_home_section_form_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-class AdminHomeSectionsPage extends StatelessWidget {
+class AdminHomeSectionsPage extends GetView<AdminHomeSectionController> {
   const AdminHomeSectionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      children: [
-        _HomeSectionsHeader(
-          onAddPressed: () => showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const _StaticHomeSectionDialog(),
+    return Scaffold(
+      backgroundColor: MBColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(MBSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              MBSpacing.h(MBSpacing.lg),
+              Expanded(
+                child: Obx(() {
+                  final bool loading = controller.isLoading.value;
+                  final List<MBHomeSection> items = controller.filteredSections;
+                  final List<MBHomeSection> allItems = controller.sections;
+
+                  if (loading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      _buildTopCard(context, allItems),
+                      MBSpacing.h(MBSpacing.lg),
+                      Expanded(
+                        child: items.isEmpty
+                            ? _buildEmptyState()
+                            : _buildSectionsTable(items),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ],
           ),
         ),
-        MBSpacing.h(MBSpacing.lg),
-        const _PhaseInfoCard(),
-        MBSpacing.h(MBSpacing.lg),
-        const _EmptyHomeSectionsState(),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Home Sections',
+                style: MBTextStyles.pageTitle.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              MBSpacing.h(MBSpacing.xs),
+              Text(
+                'Manage homepage sections, layout blocks, source behavior, and visibility.',
+                style: MBTextStyles.body.copyWith(
+                  color: MBColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: () => _openFormDialog(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Create Section'),
+        ),
       ],
     );
   }
-}
 
-class _HomeSectionsHeader extends StatelessWidget {
-  const _HomeSectionsHeader({
-    required this.onAddPressed,
-  });
+  Widget _buildTopCard(BuildContext context, List<MBHomeSection> items) {
+    final int total = items.length;
+    final int active = items.where((e) => e.isActive).length;
+    final int manual = items
+        .where((e) => e.dataSourceType.trim().toLowerCase() == 'manual')
+        .length;
+    final int dynamic = total - manual;
 
-  final VoidCallback onAddPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.xl),
-        boxShadow: [
-          BoxShadow(
-            color: MBColors.shadow.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
+    return MBAdminFormSectionCard(
+      title: 'Search & filters',
+      subtitle:
+      'Filter by text, status, section type, data source, and review quick stats.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double gap = MBSpacing.sm;
+              final double width = constraints.maxWidth;
+
+              final double itemWidth = width >= 1000
+                  ? (width - (gap * 3)) / 4
+                  : width >= 720
+                  ? (width - gap) / 2
+                  : width;
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  _summaryChipCard('Total', '$total', itemWidth),
+                  _summaryChipCard('Active', '$active', itemWidth),
+                  _summaryChipCard('Manual', '$manual', itemWidth),
+                  _summaryChipCard('Dynamic', '$dynamic', itemWidth),
+                ],
+              );
+            },
+          ),
+          MBSpacing.h(MBSpacing.lg),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Home Sections',
-                      style: MBTextStyles.sectionTitle.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    MBSpacing.h(MBSpacing.xxs),
-                    Text(
-                      'Static phase only. Page and dialog are now isolated from controller and repository logic.',
-                      style: MBTextStyles.body.copyWith(
-                        color: MBColors.textSecondary,
-                      ),
-                    ),
-                  ],
+              SizedBox(
+                width: 260,
+                child: TextField(
+                  onChanged: controller.setSearchQuery,
+                  decoration: const InputDecoration(
+                    labelText: 'Search sections',
+                    hintText: 'title, subtitle, ids, source',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: onAddPressed,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Section'),
+              SizedBox(
+                width: 150,
+                child: Obx(
+                      () => DropdownButtonFormField<String>(
+                    initialValue: controller.statusFilter.value,
+                    decoration: const InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(
+                        value: 'inactive',
+                        child: Text('Inactive'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'viewAllOn',
+                        child: Text('View All On'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'viewAllOff',
+                        child: Text('View All Off'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      controller.setStatusFilter(value ?? 'all');
+                    },
+                  ),
+                ),
               ),
-            ],
-          ),
-          MBSpacing.h(MBSpacing.md),
-          Wrap(
-            spacing: MBSpacing.sm,
-            runSpacing: MBSpacing.sm,
-            children: const [
-              _SummaryChip(label: 'Total', value: '0'),
-              _SummaryChip(label: 'Active', value: '0'),
-              _SummaryChip(label: 'Inactive', value: '0'),
-              _SummaryChip(label: 'Manual', value: '0'),
-              _SummaryChip(label: 'Dynamic', value: '0'),
-            ],
-          ),
-          MBSpacing.h(MBSpacing.md),
-          Wrap(
-            spacing: MBSpacing.md,
-            runSpacing: MBSpacing.md,
-            children: const [
-              _DisabledSearchField(),
-              _DisabledDropdownField(
+              SizedBox(
+                width: 200,
+                child: Obx(
+                      () => DropdownButtonFormField<String>(
+                    initialValue: controller.sectionTypeFilter.value,
+                    decoration: const InputDecoration(
+                      labelText: 'Section Type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(
+                        value: 'hero_banner',
+                        child: Text('Hero Banner'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'category_grid',
+                        child: Text('Category Grid'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'product_horizontal',
+                        child: Text('Product Horizontal'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'product_grid',
+                        child: Text('Product Grid'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'offer_strip',
+                        child: Text('Offer Strip'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'promo_banner',
+                        child: Text('Promo Banner'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'brand_row',
+                        child: Text('Brand Row'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      controller.setSectionTypeFilter(value ?? 'all');
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(
                 width: 180,
-                label: 'Status',
-                value: 'All',
+                child: Obx(
+                      () => DropdownButtonFormField<String>(
+                    initialValue: controller.dataSourceFilter.value,
+                    decoration: const InputDecoration(
+                      labelText: 'Data Source',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(value: 'manual', child: Text('Manual')),
+                      DropdownMenuItem(
+                        value: 'featured',
+                        child: Text('Featured'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'flash_sale',
+                        child: Text('Flash Sale'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'new_arrival',
+                        child: Text('New Arrival'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'best_seller',
+                        child: Text('Best Seller'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'recommended',
+                        child: Text('Recommended'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'category',
+                        child: Text('Category'),
+                      ),
+                      DropdownMenuItem(value: 'brand', child: Text('Brand')),
+                    ],
+                    onChanged: (value) {
+                      controller.setDataSourceFilter(value ?? 'all');
+                    },
+                  ),
+                ),
               ),
-              _DisabledDropdownField(
-                width: 220,
-                label: 'Section Type',
-                value: 'All',
+              FilledButton.tonalIcon(
+                onPressed: controller.refreshSections,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
               ),
-              _DisabledDropdownField(
-                width: 220,
-                label: 'Data Source',
-                value: 'All',
+              OutlinedButton.icon(
+                onPressed: controller.resetFilters,
+                icon: const Icon(Icons.restart_alt_rounded),
+                label: const Text('Reset'),
               ),
-              _DisabledDropdownField(
-                width: 180,
-                label: 'Layout',
-                value: 'All',
-              ),
-              _DisabledResetButton(),
             ],
           ),
         ],
       ),
     );
   }
-}
 
-class _PhaseInfoCard extends StatelessWidget {
-  const _PhaseInfoCard();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _summaryChipCard(String label, String value, double width) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.xl),
-        boxShadow: [
-          BoxShadow(
-            color: MBColors.shadow.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Current Phase',
-            style: MBTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          MBSpacing.h(MBSpacing.xs),
-          Text(
-            'Step 1: Static page and static dialog only.\n'
-                'Next: repository CRUD one by one.\n'
-                'Controller will be added later in a controlled way.',
-            style: MBTextStyles.body.copyWith(
-              color: MBColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
+      width: width,
       padding: const EdgeInsets.symmetric(
         horizontal: MBSpacing.md,
         vertical: MBSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: MBColors.background,
-        borderRadius: BorderRadius.circular(MBRadius.pill),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(MBRadius.xl),
         border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.9),
+          color: MBColors.border.withValues(alpha: 0.90),
         ),
       ),
-      child: RichText(
-        text: TextSpan(
-          style: MBTextStyles.caption.copyWith(
-            color: MBColors.textSecondary,
-          ),
-          children: [
-            TextSpan(text: '$label: '),
-            TextSpan(
-              text: value,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: MBTextStyles.caption.copyWith(
-                color: MBColors.textPrimary,
-                fontWeight: FontWeight.w700,
+                color: MBColors.textSecondary,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DisabledSearchField extends StatelessWidget {
-  const _DisabledSearchField();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 340,
-      child: TextField(
-        enabled: false,
-        decoration: const InputDecoration(
-          hintText: 'Search sections, titles, ids, source ids...',
-          prefixIcon: Icon(Icons.search_rounded),
-          border: OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-}
-
-class _DisabledDropdownField extends StatelessWidget {
-  const _DisabledDropdownField({
-    required this.width,
-    required this.label,
-    required this.value,
-  });
-
-  final double width;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: TextFormField(
-        initialValue: value,
-        enabled: false,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-}
-
-class _DisabledResetButton extends StatelessWidget {
-  const _DisabledResetButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: null,
-      child: const Text('Reset'),
-    );
-  }
-}
-
-class _EmptyHomeSectionsState extends StatelessWidget {
-  const _EmptyHomeSectionsState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 480,
-        padding: const EdgeInsets.all(MBSpacing.xl),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: MBColors.shadow.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+          ),
+          MBSpacing.w(MBSpacing.sm),
+          Text(
+            value,
+            style: MBTextStyles.body.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(MBRadius.xl),
+        border: Border.all(
+          color: MBColors.border.withValues(alpha: 0.90),
         ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(MBSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.view_quilt_outlined,
-              size: 44,
-              color: MBColors.primaryOrange,
+              size: 48,
+              color: MBColors.textMuted,
             ),
             MBSpacing.h(MBSpacing.md),
             Text(
-              'No Home Sections Found',
+              'No home sections found',
               style: MBTextStyles.sectionTitle.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
-            MBSpacing.h(MBSpacing.xs),
+            MBSpacing.h(MBSpacing.sm),
             Text(
-              'Static phase is ready. Next step is repository-based loading and CRUD.',
-              textAlign: TextAlign.center,
+              'Try changing your filters or create a new home section.',
               style: MBTextStyles.body.copyWith(
                 color: MBColors.textSecondary,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _StaticHomeSectionDialog extends StatelessWidget {
-  const _StaticHomeSectionDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(MBSpacing.xl),
-      shape: RoundedRectangleBorder(
+  Widget _buildSectionsTable(List<MBHomeSection> items) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(MBRadius.xl),
-      ),
-      child: Container(
-        width: 920,
-        constraints: const BoxConstraints(maxHeight: 820),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(MBRadius.xl),
+        border: Border.all(
+          color: MBColors.border.withValues(alpha: 0.90),
         ),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(MBSpacing.lg),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: MBColors.border.withValues(alpha: 0.85),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(MBSpacing.lg),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 24,
+            headingRowHeight: 56,
+            dataRowMinHeight: 88,
+            dataRowMaxHeight: 104,
+            columns: const [
+              DataColumn(label: Text('Section')),
+              DataColumn(label: Text('Type')),
+              DataColumn(label: Text('Source')),
+              DataColumn(label: Text('Config')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
+            ],
+            rows: items.map((section) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            section.titleEn.trim().isEmpty
+                                ? 'Untitled Section'
+                                : section.titleEn,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MBTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          MBSpacing.h(MBSpacing.xxs),
+                          Text(
+                            section.subtitleEn.trim().isEmpty
+                                ? 'No subtitle'
+                                : section.subtitleEn,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                          MBSpacing.h(MBSpacing.xxs),
+                          Text(
+                            'ID: ${section.id}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  DataCell(
+                    SizedBox(
+                      width: 180,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _labelize(section.sectionType),
+                            style: MBTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          MBSpacing.h(MBSpacing.xxs),
+                          Text(
+                            'Layout: ${_labelize(section.layoutStyle)}',
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    SizedBox(
+                      width: 220,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _labelize(section.dataSourceType),
+                            style: MBTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if ((section.sourceCategoryId ?? '').trim().isNotEmpty)
+                            Text(
+                              'Category: ${section.sourceCategoryId}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: MBTextStyles.caption.copyWith(
+                                color: MBColors.textSecondary,
+                              ),
+                            ),
+                          if ((section.sourceBrandId ?? '').trim().isNotEmpty)
+                            Text(
+                              'Brand: ${section.sourceBrandId}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: MBTextStyles.caption.copyWith(
+                                color: MBColors.textSecondary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    SizedBox(
+                      width: 170,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Sort: ${section.sortOrder}'),
+                          Text('Limit: ${section.itemLimit}'),
+                          Text(
+                            section.showViewAll
+                                ? 'View All: Enabled'
+                                : 'View All: Disabled',
+                            style: MBTextStyles.caption.copyWith(
+                              color: MBColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: MBSpacing.sm,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: section.isActive
+                            ? MBColors.success.withValues(alpha: 0.12)
+                            : MBColors.textMuted.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(MBRadius.lg),
+                      ),
+                      child: Text(
+                        section.isActive ? 'Active' : 'Inactive',
+                        style: MBTextStyles.caption.copyWith(
+                          color: section.isActive
+                              ? MBColors.success
+                              : MBColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
                       children: [
-                        Text(
-                          'Create Home Section',
-                          style: MBTextStyles.sectionTitle.copyWith(
-                            fontWeight: FontWeight.w700,
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openFormDialog(Get.context!, section: section),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: const Text('Edit'),
+                            ),
                           ),
                         ),
-                        MBSpacing.h(MBSpacing.xxs),
-                        Text(
-                          'Static dialog only. No repository or controller submission yet.',
-                          style: MBTextStyles.body.copyWith(
-                            color: MBColors.textSecondary,
+                        MBSpacing.w(MBSpacing.xs),
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () =>
+                                  controller.toggleSectionActive(section),
+                              icon: Icon(
+                                section.isActive
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 16,
+                              ),
+                              label: Text(
+                                section.isActive ? 'Disable' : 'Enable',
+                              ),
+                            ),
+                          ),
+                        ),
+                        MBSpacing.w(MBSpacing.xs),
+                        SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: IconButton(
+                            tooltip: 'Delete',
+                            onPressed: () =>
+                                _deleteSection(Get.context!, section),
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
                 ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(MBSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _DialogSectionCard(
-                      title: 'Basic Information',
-                      subtitle: 'Static preview fields for section titles.',
-                      child: _StaticBasicFields(),
-                    ),
-                    MBSpacing.h(MBSpacing.lg),
-                    const _DialogSectionCard(
-                      title: 'Layout',
-                      subtitle: 'Static preview fields for section type and layout style.',
-                      child: _StaticLayoutFields(),
-                    ),
-                    MBSpacing.h(MBSpacing.lg),
-                    const _DialogSectionCard(
-                      title: 'Source Mapping',
-                      subtitle: 'Static preview fields for ids and source setup.',
-                      child: _StaticSourceFields(),
-                    ),
-                    MBSpacing.h(MBSpacing.lg),
-                    const _DialogSectionCard(
-                      title: 'Settings',
-                      subtitle: 'Static preview fields for item limit, sort order and visibility.',
-                      child: _StaticSettingsFields(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(MBSpacing.lg),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: MBColors.border.withValues(alpha: 0.85),
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
-                  ),
-                  MBSpacing.w(MBSpacing.sm),
-                  ElevatedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.check_circle_outline_rounded),
-                    label: const Text('Static OK'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
   }
-}
 
-class _DialogSectionCard extends StatelessWidget {
-  const _DialogSectionCard({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
+  Future<void> _openFormDialog(
+      BuildContext context, {
+        MBHomeSection? section,
+      }) async {
+    await Get.dialog(
+      AdminHomeSectionFormDialog(section: section),
+      barrierDismissible: false,
+    );
+  }
 
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(MBSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(MBRadius.lg),
-        border: Border.all(
-          color: MBColors.border.withValues(alpha: 0.85),
+  Future<void> _deleteSection(
+      BuildContext context,
+      MBHomeSection section,
+      ) async {
+    final bool? confirmed = await Get.dialog(
+      AlertDialog(
+        title: const Text('Delete Home Section'),
+        content: Text(
+          'Are you sure you want to delete "${section.titleEn.trim().isEmpty ? 'this section' : section.titleEn}"?',
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: MBTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
           ),
-          MBSpacing.h(MBSpacing.xxs),
-          Text(
-            subtitle,
-            style: MBTextStyles.caption.copyWith(
-              color: MBColors.textSecondary,
-            ),
+          FilledButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Delete'),
           ),
-          MBSpacing.h(MBSpacing.md),
-          child,
         ],
       ),
     );
+
+    if (confirmed == true) {
+      await controller.deleteSection(section.id);
+    }
   }
-}
 
-class _StaticBasicFields extends StatelessWidget {
-  const _StaticBasicFields();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        Row(
-          children: [
-            Expanded(
-              child: _DisabledInputField(label: 'Title (English)'),
-            ),
-            SizedBox(width: MBSpacing.md),
-            Expanded(
-              child: _DisabledInputField(label: 'Title (Bangla)'),
-            ),
-          ],
-        ),
-        SizedBox(height: MBSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: _DisabledInputField(
-                label: 'Subtitle (English)',
-                maxLines: 3,
-              ),
-            ),
-            SizedBox(width: MBSpacing.md),
-            Expanded(
-              child: _DisabledInputField(
-                label: 'Subtitle (Bangla)',
-                maxLines: 3,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _StaticLayoutFields extends StatelessWidget {
-  const _StaticLayoutFields();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(
-          child: _DisabledInputField(label: 'Section Type', initialValue: 'product_grid'),
-        ),
-        SizedBox(width: MBSpacing.md),
-        Expanded(
-          child: _DisabledInputField(label: 'Layout Style', initialValue: 'standard'),
-        ),
-      ],
-    );
-  }
-}
-
-class _StaticSourceFields extends StatelessWidget {
-  const _StaticSourceFields();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _DisabledInputField(label: 'Data Source Type', initialValue: 'manual'),
-            ),
-            SizedBox(width: MBSpacing.md),
-            Expanded(
-              child: _DisabledInputField(label: 'Source Category ID'),
-            ),
-            SizedBox(width: MBSpacing.md),
-            Expanded(
-              child: _DisabledInputField(label: 'Source Brand ID'),
-            ),
-          ],
-        ),
-        SizedBox(height: MBSpacing.md),
-        _DisabledInputField(
-          label: 'Product / Banner / Offer / Category / Brand IDs',
-          maxLines: 5,
-        ),
-      ],
-    );
-  }
-}
-
-class _StaticSettingsFields extends StatelessWidget {
-  const _StaticSettingsFields();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: const [
-        Row(
-          children: [
-            Expanded(
-              child: _DisabledInputField(label: 'Item Limit', initialValue: '8'),
-            ),
-            SizedBox(width: MBSpacing.md),
-            Expanded(
-              child: _DisabledInputField(label: 'Sort Order', initialValue: '0'),
-            ),
-          ],
-        ),
-        SizedBox(height: MBSpacing.md),
-        _StaticSwitchRow(label: 'Show View All', value: true),
-        _StaticSwitchRow(label: 'Active', value: true),
-      ],
-    );
-  }
-}
-
-class _DisabledInputField extends StatelessWidget {
-  const _DisabledInputField({
-    required this.label,
-    this.initialValue = '',
-    this.maxLines = 1,
-  });
-
-  final String label;
-  final String initialValue;
-  final int maxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      initialValue: initialValue,
-      enabled: false,
-      minLines: maxLines > 1 ? maxLines : 1,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        alignLabelWithHint: maxLines > 1,
-      ),
-    );
-  }
-}
-
-class _StaticSwitchRow extends StatelessWidget {
-  const _StaticSwitchRow({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final bool value;
-
-  @override
-  Widget build(BuildContext context) {
-    return SwitchListTile.adaptive(
-      value: value,
-      onChanged: null,
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        label,
-        style: MBTextStyles.body,
-      ),
-    );
+  String _labelize(String value) {
+    final parts = value.trim().split('_').where((part) => part.isNotEmpty);
+    return parts
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 }

@@ -42,8 +42,27 @@ class _AdminHomeSectionFormDialogState
   late bool _isActive;
 
   bool _loadingSuggestedSort = false;
+  bool _sortSuggestionFailed = false;
 
   bool get _isEdit => widget.section != null;
+
+  static const List<String> _sectionTypeOptions = [
+    'hero_banner',
+    'category_grid',
+    'product_horizontal',
+    'product_grid',
+    'offer_strip',
+    'promo_banner',
+    'brand_row',
+  ];
+
+  static const List<String> _layoutStyleOptions = [
+    'compact',
+    'standard',
+    'large',
+    'card',
+    'slider',
+  ];
 
   @override
   void initState() {
@@ -96,7 +115,11 @@ class _AdminHomeSectionFormDialogState
     _isActive = section.isActive;
 
     if (!_isEdit) {
-      _loadSuggestedSortOrder();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadSuggestedSortOrder();
+        }
+      });
     }
   }
 
@@ -118,8 +141,34 @@ class _AdminHomeSectionFormDialogState
     super.dispose();
   }
 
+  String _normalizeSectionType(String value) {
+    final String normalized = value.trim().toLowerCase();
+    if (_sectionTypeOptions.contains(normalized)) {
+      return normalized;
+    }
+    return 'product_horizontal';
+  }
+
+  String _normalizeLayoutStyle(String value) {
+    final String normalized = value.trim().toLowerCase();
+    if (_layoutStyleOptions.contains(normalized)) {
+      return normalized;
+    }
+    return 'standard';
+  }
+
+  String _normalizeDataSourceType(String value) {
+    final String normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return 'manual';
+    }
+    return normalized;
+  }
+
   Future<void> _loadSuggestedSortOrder() async {
     final controller = Get.find<AdminHomeSectionController>();
+
+    if (_loadingSuggestedSort) return;
 
     setState(() {
       _loadingSuggestedSort = true;
@@ -129,6 +178,9 @@ class _AdminHomeSectionFormDialogState
       final int sortOrder = await controller.suggestSortOrder();
       if (!mounted) return;
       _sortOrderController.text = sortOrder.toString();
+    } catch (_) {
+      // Keep dialog usable even if sort suggestion fails.
+      // Controller already stores the real error in operationError.
     } finally {
       if (!mounted) return;
       setState(() {
@@ -303,62 +355,69 @@ class _AdminHomeSectionFormDialogState
     return _SectionCard(
       title: 'Section Layout',
       subtitle: 'Choose the type of section and visual layout style.',
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _sectionType,
-                  decoration: const InputDecoration(
-                    labelText: 'Section Type',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _sectionTypeOptions
-                      .map(
-                        (value) => DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(_labelize(value)),
-                    ),
-                  )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _sectionType = value;
-                      if (_sectionType == 'hero_banner' ||
-                          _sectionType == 'promo_banner') {
-                        _dataSourceType = 'manual';
-                      }
-                    });
-                  },
-                ),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              value: _sectionType,
+              decoration: const InputDecoration(
+                labelText: 'Section Type',
+                border: OutlineInputBorder(),
               ),
-              MBSpacing.w(MBSpacing.md),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _layoutStyle,
-                  decoration: const InputDecoration(
-                    labelText: 'Layout Style',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _layoutStyleOptions
-                      .map(
-                        (value) => DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(_labelize(value)),
-                    ),
-                  )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _layoutStyle = value;
-                    });
-                  },
+              items: _sectionTypeOptions
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(_labelize(value)),
                 ),
+              )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _sectionType = value;
+
+                  if (_sectionType == 'hero_banner' ||
+                      _sectionType == 'promo_banner' ||
+                      _sectionType == 'offer_strip' ||
+                      _sectionType == 'category_grid' ||
+                      _sectionType == 'brand_row') {
+                    _dataSourceType = 'manual';
+                  }
+
+                  if (_dataSourceType != 'category') {
+                    _sourceCategoryIdController.clear();
+                  }
+                  if (_dataSourceType != 'brand') {
+                    _sourceBrandIdController.clear();
+                  }
+                });
+              },
+            ),
+          ),
+          MBSpacing.w(MBSpacing.md),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              value: _layoutStyle,
+              decoration: const InputDecoration(
+                labelText: 'Layout Style',
+                border: OutlineInputBorder(),
               ),
-            ],
+              items: _layoutStyleOptions
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(_labelize(value)),
+                ),
+              )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _layoutStyle = value;
+                });
+              },
+            ),
           ),
         ],
       ),
@@ -367,13 +426,9 @@ class _AdminHomeSectionFormDialogState
 
   Widget _buildSourceCard() {
     final bool allowCategorySource =
-        _sectionType == 'product_horizontal' ||
-            _sectionType == 'product_grid' ||
-            _sectionType == 'category_grid';
+        _sectionType == 'product_horizontal' || _sectionType == 'product_grid';
     final bool allowBrandSource =
-        _sectionType == 'product_horizontal' ||
-            _sectionType == 'product_grid' ||
-            _sectionType == 'brand_row';
+        _sectionType == 'product_horizontal' || _sectionType == 'product_grid';
 
     final List<String> sourceOptions = [
       'manual',
@@ -389,83 +444,81 @@ class _AdminHomeSectionFormDialogState
       if (allowBrandSource) 'brand',
     ];
 
+    final String selectedSource =
+    sourceOptions.contains(_dataSourceType) ? _dataSourceType : 'manual';
+
     return _SectionCard(
       title: 'Data Source',
       subtitle: 'Select how this section will resolve its content.',
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue:
-                  sourceOptions.contains(_dataSourceType) ? _dataSourceType : 'manual',
-                  decoration: const InputDecoration(
-                    labelText: 'Data Source Type',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: sourceOptions
-                      .map(
-                        (value) => DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(_labelize(value)),
-                    ),
-                  )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _dataSourceType = value;
-                      if (_dataSourceType != 'category') {
-                        _sourceCategoryIdController.clear();
-                      }
-                      if (_dataSourceType != 'brand') {
-                        _sourceBrandIdController.clear();
-                      }
-                    });
-                  },
-                ),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              value: selectedSource,
+              decoration: const InputDecoration(
+                labelText: 'Data Source Type',
+                border: OutlineInputBorder(),
               ),
-              if (_dataSourceType == 'category') ...[
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
-                  child: TextFormField(
-                    controller: _sourceCategoryIdController,
-                    decoration: const InputDecoration(
-                      labelText: 'Source Category ID',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (_dataSourceType == 'category' &&
-                          (value ?? '').trim().isEmpty) {
-                        return 'Category id is required.';
-                      }
-                      return null;
-                    },
-                  ),
+              items: sourceOptions
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(_labelize(value)),
                 ),
-              ],
-              if (_dataSourceType == 'brand') ...[
-                MBSpacing.w(MBSpacing.md),
-                Expanded(
-                  child: TextFormField(
-                    controller: _sourceBrandIdController,
-                    decoration: const InputDecoration(
-                      labelText: 'Source Brand ID',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (_dataSourceType == 'brand' &&
-                          (value ?? '').trim().isEmpty) {
-                        return 'Brand id is required.';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ],
+              )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _dataSourceType = value;
+                  if (_dataSourceType != 'category') {
+                    _sourceCategoryIdController.clear();
+                  }
+                  if (_dataSourceType != 'brand') {
+                    _sourceBrandIdController.clear();
+                  }
+                });
+              },
+            ),
           ),
+          if (_dataSourceType == 'category') ...[
+            MBSpacing.w(MBSpacing.md),
+            Expanded(
+              child: TextFormField(
+                controller: _sourceCategoryIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Source Category ID',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (_dataSourceType == 'category' &&
+                      (value ?? '').trim().isEmpty) {
+                    return 'Category id is required.';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+          if (_dataSourceType == 'brand') ...[
+            MBSpacing.w(MBSpacing.md),
+            Expanded(
+              child: TextFormField(
+                controller: _sourceBrandIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Source Brand ID',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (_dataSourceType == 'brand' &&
+                      (value ?? '').trim().isEmpty) {
+                    return 'Brand id is required.';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -601,7 +654,11 @@ class _AdminHomeSectionFormDialogState
                         : IconButton(
                       tooltip: 'Suggest next sort order',
                       onPressed: _loadSuggestedSortOrder,
-                      icon: const Icon(Icons.auto_fix_high_rounded),
+                      icon: Icon(
+                        _sortSuggestionFailed
+                            ? Icons.refresh_rounded
+                            : Icons.auto_fix_high_rounded,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -636,7 +693,8 @@ class _AdminHomeSectionFormDialogState
             },
             contentPadding: EdgeInsets.zero,
             title: const Text('Active'),
-            subtitle: const Text('Inactive sections are saved but hidden from home.'),
+            subtitle:
+            const Text('Inactive sections are saved but hidden from home.'),
           ),
         ],
       ),
@@ -675,24 +733,30 @@ class _AdminHomeSectionFormDialogState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          OutlinedButton(
-            onPressed: isSaving ? null : () => Get.back(),
-            child: const Text('Cancel'),
+          SizedBox(
+            width: 120,
+            child: OutlinedButton(
+              onPressed: isSaving ? null : () => Get.back(),
+              child: const Text('Cancel'),
+            ),
           ),
           MBSpacing.w(MBSpacing.sm),
-          ElevatedButton.icon(
-            onPressed: isSaving ? null : _submit,
-            icon: isSaving
-                ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-                : Icon(_isEdit ? Icons.save_outlined : Icons.add_rounded),
-            label: Text(_isEdit ? 'Update Section' : 'Create Section'),
+          SizedBox(
+            width: 190,
+            child: ElevatedButton.icon(
+              onPressed: isSaving ? null : _submit,
+              icon: isSaving
+                  ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+                  : Icon(_isEdit ? Icons.save_outlined : Icons.add_rounded),
+              label: Text(_isEdit ? 'Update Section' : 'Create Section'),
+            ),
           ),
         ],
       ),
@@ -706,55 +770,63 @@ class _AdminHomeSectionFormDialogState
 
     final controller = Get.find<AdminHomeSectionController>();
 
-    final int itemLimit = int.tryParse(_itemLimitController.text.trim()) ?? 10;
-    final int sortOrder = int.tryParse(_sortOrderController.text.trim()) ?? 0;
+    try {
+      final int itemLimit = int.tryParse(_itemLimitController.text.trim()) ?? 10;
+      final int sortOrder = int.tryParse(_sortOrderController.text.trim()) ?? 0;
 
-    final bool sortExists = await controller.sortExists(
-      sortOrder: sortOrder,
-      excludeSectionId: widget.section?.id,
-    );
-
-    if (sortExists) {
-      Get.snackbar(
-        'Duplicate Sort Order',
-        'Another home section already uses sort order $sortOrder.',
-        snackPosition: SnackPosition.BOTTOM,
+      final bool sortExists = await controller.sortExists(
+        sortOrder: sortOrder,
+        excludeSectionId: widget.section?.id,
       );
-      return;
-    }
 
-    final MBHomeSection section = MBHomeSection(
-      id: widget.section?.id ?? '',
-      titleEn: _titleEnController.text.trim(),
-      titleBn: _titleBnController.text.trim(),
-      subtitleEn: _subtitleEnController.text.trim(),
-      subtitleBn: _subtitleBnController.text.trim(),
-      sectionType: _sectionType,
-      layoutStyle: _layoutStyle,
-      bannerIds: _shouldUseBannerIds ? _parseIds(_bannerIdsController.text) : const [],
-      offerIds: _shouldUseOfferIds ? _parseIds(_offerIdsController.text) : const [],
-      productIds: _shouldUseProductIds ? _parseIds(_productIdsController.text) : const [],
-      categoryIds: _shouldUseCategoryIds ? _parseIds(_categoryIdsController.text) : const [],
-      brandIds: _shouldUseBrandIds ? _parseIds(_brandIdsController.text) : const [],
-      dataSourceType: _dataSourceType,
-      sourceCategoryId: _dataSourceType == 'category'
-          ? _normalizedOrNull(_sourceCategoryIdController.text)
-          : null,
-      sourceBrandId: _dataSourceType == 'brand'
-          ? _normalizedOrNull(_sourceBrandIdController.text)
-          : null,
-      itemLimit: itemLimit,
-      showViewAll: _showViewAll,
-      isActive: _isActive,
-      sortOrder: sortOrder,
-    );
+      if (sortExists) {
+        Get.snackbar(
+          'Duplicate Sort Order',
+          'Another home section already uses sort order $sortOrder.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
 
-    final bool success = _isEdit
-        ? await controller.updateSection(section)
-        : (await controller.createSection(section)) != null;
+      final MBHomeSection section = MBHomeSection(
+        id: widget.section?.id ?? '',
+        titleEn: _titleEnController.text.trim(),
+        titleBn: _titleBnController.text.trim(),
+        subtitleEn: _subtitleEnController.text.trim(),
+        subtitleBn: _subtitleBnController.text.trim(),
+        sectionType: _sectionType,
+        layoutStyle: _layoutStyle,
+        bannerIds: _shouldUseBannerIds ? _parseIds(_bannerIdsController.text) : const [],
+        offerIds: _shouldUseOfferIds ? _parseIds(_offerIdsController.text) : const [],
+        productIds: _shouldUseProductIds ? _parseIds(_productIdsController.text) : const [],
+        categoryIds: _shouldUseCategoryIds ? _parseIds(_categoryIdsController.text) : const [],
+        brandIds: _shouldUseBrandIds ? _parseIds(_brandIdsController.text) : const [],
+        dataSourceType: _dataSourceType,
+        sourceCategoryId: _dataSourceType == 'category'
+            ? _normalizedOrNull(_sourceCategoryIdController.text)
+            : null,
+        sourceBrandId: _dataSourceType == 'brand'
+            ? _normalizedOrNull(_sourceBrandIdController.text)
+            : null,
+        itemLimit: itemLimit,
+        showViewAll: _showViewAll,
+        isActive: _isActive,
+        sortOrder: sortOrder,
+      );
 
-    if (success && mounted) {
-      Get.back();
+      final bool success = _isEdit
+          ? await controller.updateSection(section)
+          : (await controller.createSection(section)) != null;
+
+      if (success && mounted) {
+        Get.back();
+      }
+    } catch (_) {
+      MBNotification.error(
+        title: 'Error',
+        message: controller.operationError.value ??
+            'Failed to save home section.',
+      );
     }
   }
 
@@ -764,17 +836,20 @@ class _AdminHomeSectionFormDialogState
   bool get _shouldUseOfferIds => _sectionType == 'offer_strip';
 
   bool get _shouldUseProductIds =>
-      (_sectionType == 'product_horizontal' || _sectionType == 'product_grid') &&
+      (_sectionType == 'product_horizontal' ||
+          _sectionType == 'product_grid') &&
           _dataSourceType == 'manual';
 
   bool get _shouldUseCategoryIds =>
       _sectionType == 'category_grid' ||
-          ((_sectionType == 'product_horizontal' || _sectionType == 'product_grid') &&
+          ((_sectionType == 'product_horizontal' ||
+              _sectionType == 'product_grid') &&
               _dataSourceType == 'manual');
 
   bool get _shouldUseBrandIds =>
       _sectionType == 'brand_row' ||
-          ((_sectionType == 'product_horizontal' || _sectionType == 'product_grid') &&
+          ((_sectionType == 'product_horizontal' ||
+              _sectionType == 'product_grid') &&
               _dataSourceType == 'manual');
 
   List<String> _parseIds(String raw) {
@@ -801,24 +876,6 @@ class _AdminHomeSectionFormDialogState
         .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
   }
-
-  static const List<String> _sectionTypeOptions = [
-    'hero_banner',
-    'category_grid',
-    'product_horizontal',
-    'product_grid',
-    'offer_strip',
-    'promo_banner',
-    'brand_row',
-  ];
-
-  static const List<String> _layoutStyleOptions = [
-    'compact',
-    'standard',
-    'large',
-    'card',
-    'slider',
-  ];
 }
 
 class _SectionCard extends StatelessWidget {
