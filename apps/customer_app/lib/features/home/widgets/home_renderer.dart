@@ -5,20 +5,20 @@ import 'package:customer_app/features/home/widgets/sections/mb_home_product_grid
 import 'package:customer_app/features/home/widgets/sections/mb_home_product_horizontal_section.dart';
 import 'package:customer_app/features/home/widgets/sections/mb_home_unknown_section.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_models/shared_models.dart';
-
+import 'package:shared_ui/shared_ui.dart';
 
 // MB Home Renderer
 // ----------------
 // Section-driven home renderer styled to match the old approved MuthoBazar UI.
 //
-// Improvements:
+// Updated:
 // - keeps dynamic section order from MBHomeConfig
 // - adds centralized section spacing control
 // - filters empty sections safely
 // - keeps data resolving logic clean
-// - preserves old-page style structure while staying CMS-ready
+// - supports variation-level merchandising for variable products
+// - keeps root-level merchandising for simple products
 
 class MBHomeRenderer extends StatelessWidget {
   final MBHomeConfig config;
@@ -53,7 +53,7 @@ class MBHomeRenderer extends StatelessWidget {
     final visibleSections = sections
         .map((section) => _buildSection(context, section))
         .whereType<Widget>()
-        .toList();
+        .toList(growable: false);
 
     if (visibleSections.isEmpty) {
       return const SizedBox.shrink();
@@ -146,27 +146,31 @@ class MBHomeRenderer extends StatelessWidget {
   }
 
   List<MBBanner> _resolveBanners(MBHomeSection section) {
-    final all = config.activeBanners;
+    final all = List<MBBanner>.from(config.activeBanners);
 
     if (section.bannerIds.isNotEmpty) {
       return all
           .where((banner) => section.bannerIds.contains(banner.id))
-          .toList()
+          .toList(growable: false)
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     }
 
-    return all..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    all.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return all;
   }
 
   List<MBOffer> _resolveOffers(MBHomeSection section) {
-    final all = config.activeOffers;
+    final all = List<MBOffer>.from(config.activeOffers);
 
     if (section.offerIds.isNotEmpty) {
-      return all.where((offer) => section.offerIds.contains(offer.id)).toList()
+      return all
+          .where((offer) => section.offerIds.contains(offer.id))
+          .toList(growable: false)
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     }
 
-    return all..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    all.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return all;
   }
 
   List<MBCategory> _resolveCategories(MBHomeSection section) {
@@ -176,66 +180,146 @@ class MBHomeRenderer extends StatelessWidget {
             (category) =>
         category.isActive && section.categoryIds.contains(category.id),
       )
-          .toList()
+          .toList(growable: false)
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     }
 
-    return categories.where((category) => category.isActive).toList()
+    return categories
+        .where((category) => category.isActive)
+        .toList(growable: false)
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
   List<MBProduct> _resolveProducts(MBHomeSection section) {
-    final activeProducts = products.where((product) => product.isEnabled).toList();
+    final List<MBProduct> activeProducts = products
+        .where(
+          (product) => product.isEnabled && _isRenderableForHome(product),
+    )
+        .toList(growable: false);
 
-    switch (section.dataSourceType) {
+    final String sourceType = section.dataSourceType.trim().toLowerCase();
+
+    late final List<MBProduct> resolved;
+
+    switch (sourceType) {
       case 'manual':
-        return activeProducts
+        resolved = activeProducts
             .where((product) => section.productIds.contains(product.id))
-            .take(section.itemLimit)
-            .toList();
+            .toList(growable: false);
+        break;
 
       case 'featured':
-        return activeProducts
-            .where((product) => product.isFeatured)
-            .take(section.itemLimit)
-            .toList();
+        resolved = activeProducts
+            .where(_matchesFeatured)
+            .toList(growable: false);
+        break;
 
       case 'flash_sale':
-        return activeProducts
-            .where((product) => product.isFlashSale)
-            .take(section.itemLimit)
-            .toList();
+        resolved = activeProducts
+            .where(_matchesFlashSale)
+            .toList(growable: false);
+        break;
 
       case 'new_arrival':
-        return activeProducts
-            .where((product) => product.isNewArrival)
-            .take(section.itemLimit)
-            .toList();
+        resolved = activeProducts
+            .where(_matchesNewArrival)
+            .toList(growable: false);
+        break;
 
       case 'best_seller':
-        return activeProducts
-            .where((product) => product.isBestSeller)
-            .take(section.itemLimit)
-            .toList();
+        resolved = activeProducts
+            .where(_matchesBestSeller)
+            .toList(growable: false);
+        break;
 
       case 'recommended':
-        return activeProducts.take(section.itemLimit).toList();
+        resolved = activeProducts
+            .where(_matchesRecommended)
+            .toList(growable: false);
+        break;
 
       case 'category':
-        return activeProducts
+        resolved = activeProducts
             .where((product) => product.categoryId == section.sourceCategoryId)
-            .take(section.itemLimit)
-            .toList();
+            .toList(growable: false);
+        break;
 
       case 'brand':
-        return activeProducts
+        resolved = activeProducts
             .where((product) => product.brandId == section.sourceBrandId)
-            .take(section.itemLimit)
-            .toList();
+            .toList(growable: false);
+        break;
 
       default:
-        return activeProducts.take(section.itemLimit).toList();
+        resolved = activeProducts;
+        break;
     }
+
+    return resolved.take(section.itemLimit).toList(growable: false);
+  }
+
+  bool _matchesFeatured(MBProduct product) {
+    if (product.isFeatured) return true;
+    return _enabledVariations(product).any((variation) => variation.isFeatured);
+  }
+
+  bool _matchesFlashSale(MBProduct product) {
+    if (product.isFlashSale) return true;
+
+    return _enabledVariations(product).any(
+          (variation) => variation.isFlashSale || variation.isSaleActiveNow,
+    );
+  }
+
+  bool _matchesNewArrival(MBProduct product) {
+    if (product.isNewArrival) return true;
+    return _enabledVariations(product).any((variation) => variation.isNewArrival);
+  }
+
+  bool _matchesBestSeller(MBProduct product) {
+    if (product.isBestSeller) return true;
+    return _enabledVariations(product).any((variation) => variation.isBestSeller);
+  }
+
+  bool _matchesRecommended(MBProduct product) {
+    if (product.isFeatured ||
+        product.isFlashSale ||
+        product.isNewArrival ||
+        product.isBestSeller) {
+      return true;
+    }
+
+    return _enabledVariations(product).any(
+          (variation) =>
+      variation.isFeatured ||
+          variation.isFlashSale ||
+          variation.isNewArrival ||
+          variation.isBestSeller ||
+          variation.isSaleActiveNow,
+    );
+  }
+
+  bool _isRenderableForHome(MBProduct product) {
+    final List<MBProductVariation> enabledVariations = _enabledVariations(product);
+
+    // Simple product or legacy product with no variation list.
+    if (enabledVariations.isEmpty) {
+      return true;
+    }
+
+    // Variable product: at least one enabled variation should be sellable
+    // or at minimum kept active for presentation.
+    return enabledVariations.any(
+          (variation) => !variation.trackInventory || variation.inStock || variation.allowBackorder,
+    );
+  }
+
+  List<MBProductVariation> _enabledVariations(MBProduct product) {
+    final List<MBProductVariation> items = product.variations;
+    if (items.isEmpty) {
+      return const <MBProductVariation>[];
+    }
+
+    return items.where((variation) => variation.isEnabled).toList(growable: false);
   }
 }
-

@@ -1842,6 +1842,12 @@ class _VariationDialogState extends State<VariationDialog> {
   late bool _isDefault;
   late bool _isEnabled;
 
+  // Variation-level merchandising flags
+  late bool _isFeatured;
+  late bool _isFlashSale;
+  late bool _isNewArrival;
+  late bool _isBestSeller;
+
   DateTime? _saleStartsAt;
   DateTime? _saleEndsAt;
 
@@ -1958,6 +1964,86 @@ class _VariationDialogState extends State<VariationDialog> {
 
     return result;
   }
+
+
+  String get _variationMerchandisingHelpText {
+    final List<String> selected = <String>[
+      if (_isFeatured) 'Featured',
+      if (_isFlashSale) 'Flash Sale',
+      if (_isNewArrival) 'New Arrival',
+      if (_isBestSeller) 'Best Seller',
+    ];
+
+    if (selected.isEmpty) {
+      return 'No merchandising flag is active for this variation. Dynamic home sections that rely on variation-level merchandising will ignore this variation.';
+    }
+
+    return 'Active flags for this variation: ${selected.join(', ')}';
+  }
+
+  Widget _buildVariationMerchandisingSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Variation Merchandising',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Use these flags for variable-product auto sections. For variable products, merchandising should live in the variation, not only at the product root.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            buildFilterChip(
+              label: 'Featured',
+              selected: _isFeatured,
+              onSelected: (value) => setState(() => _isFeatured = value),
+            ),
+            buildFilterChip(
+              label: 'Flash Sale',
+              selected: _isFlashSale,
+              onSelected: (value) => setState(() => _isFlashSale = value),
+            ),
+            buildFilterChip(
+              label: 'New Arrival',
+              selected: _isNewArrival,
+              onSelected: (value) => setState(() => _isNewArrival = value),
+            ),
+            buildFilterChip(
+              label: 'Best Seller',
+              selected: _isBestSeller,
+              onSelected: (value) => setState(() => _isBestSeller = value),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).dividerColor,
+            ),
+          ),
+          child: Text(
+            _variationMerchandisingHelpText,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ],
+    );
+  }
+
 
   Future<void> _pickResizeAndUploadVariationImage() async {
     setState(() {
@@ -2273,6 +2359,10 @@ class _VariationDialogState extends State<VariationDialog> {
     _isToleranceActive = value.isToleranceActive;
     _isDefault = value.isDefault;
     _isEnabled = value.isEnabled;
+    _isFeatured = value.isFeatured;
+    _isFlashSale = value.isFlashSale;
+    _isNewArrival = value.isNewArrival;
+    _isBestSeller = value.isBestSeller;
 
     _selectedAttributeValues = <String, String?>{};
     for (final attribute in widget.variationAttributes) {
@@ -2343,7 +2433,7 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ),
                   child: Text(
-                    'Each variation now keeps a full image and a thumbnail image. The same shared product portrait resize pipeline is used here.',
+                      'Each variation keeps its own image, pricing, inventory, quantity settings, and now also merchandising flags. For variable products, featured / flash sale / new arrival / best seller should be managed here.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -2571,6 +2661,22 @@ class _VariationDialogState extends State<VariationDialog> {
                     ),
                   ],
                 ),
+
+
+                const SizedBox(height: 20),
+                _buildVariationMerchandisingSection(context),
+
+                  const SizedBox(height: 12),
+                  Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                  buildInfoChip('featured: $_isFeatured'),
+                  buildInfoChip('flash_sale: $_isFlashSale'),
+                  buildInfoChip('new_arrival: $_isNewArrival'),
+                  buildInfoChip('best_seller: $_isBestSeller'),
+                  ],
+                  ),
 
 
                 const SizedBox(height: 20),
@@ -2955,6 +3061,10 @@ class _VariationDialogState extends State<VariationDialog> {
                 sortOrder: parseInt(_sortOrderController.text),
                 isDefault: _isDefault,
                 isEnabled: _isEnabled,
+                isFeatured: _isFeatured,
+                isFlashSale: _isFlashSale,
+                isNewArrival: _isNewArrival,
+                isBestSeller: _isBestSeller,
               ),
             );
           },

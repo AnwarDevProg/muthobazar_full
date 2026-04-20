@@ -292,10 +292,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   String get _productTypeHelpText {
     if (_isVariableProduct) {
-      return 'Variable product: pricing and media should be managed inside variations.';
+      return 'Variable product: pricing, media, and future merchandising flags should be managed inside variations. Root merchandising flags should not be treated as the source of truth.';
     }
 
-    return 'Non-variable product: pricing and media are managed at product level.';
+    return 'Non-variable product: pricing, media, and merchandising are managed at product level.';
   }
 
   String _normalizedDialogKey(String value) => value.trim().toLowerCase();
@@ -723,6 +723,14 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         _buildRelationSection(context),
                         const SizedBox(height: 16),
 
+                        // PERSISTED FIELDS ONLY BELOW
+
+                        _buildVisibilitySection(context),
+                        const SizedBox(height: 16),
+
+                        _buildCardStyleSection(context),
+                        const SizedBox(height: 16),
+
                         if (_showProductLevelMedia) ...[
                           _buildMediaSection(context),
                           const SizedBox(height: 16),
@@ -754,6 +762,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         ],
 
                         _buildPurchaseOptionsSection(context),
+                        const SizedBox(height: 16),
+                        _buildAuditSection(context),
                       ],
                     ),
                   ),
@@ -766,12 +776,14 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildVisibilitySection(context),
+                        _buildEditingModeGuideSection(context),
                         const SizedBox(height: 16),
-                        _buildCardStyleSection(context),
+                        _buildLiveCompositionSummarySection(context),
                         const SizedBox(height: 16),
-                        _buildAuditSection(context),
-                        const SizedBox(height: 16),
+                        if (_isVariableProduct) ...[
+                          _buildVariationMerchandisingSummarySection(context),
+                          const SizedBox(height: 16),
+                        ],
                         _buildPreviewSection(context),
                       ],
                     ),
@@ -785,6 +797,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ],
     );
   }
+
 
   Widget _buildHeader(BuildContext context, bool isCreate) {
     return Container(
@@ -809,8 +822,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 const SizedBox(height: 4),
                 Text(
                   isCreate
-                      ? 'Create a product with type-aware editing. Variable products use attributes and variations, while other products use product-level media and pricing.'
-                      : 'Update product information with type-aware editing for media, pricing, attributes, variations, and purchase options.',
+                      ? 'Create a product with type-aware editing. The left panel contains Firestore-persisted fields only, while the right panel is preview and summary only.'
+                      : 'Update product information with persisted product fields on the left and preview-only helper sections on the right.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -824,6 +837,145 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ),
     );
   }
+
+
+  Widget _buildEditingModeGuideSection(BuildContext context) {
+    return SectionCard(
+      title: 'Editing Mode Guide',
+      subtitle: 'Right panel helper only. This block is not saved to Firestore.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildModeGuideRow(
+            context,
+            icon: Icons.layers_outlined,
+            title: _isVariableProduct ? 'Variable Product Mode' : 'Simple Product Mode',
+            description: _isVariableProduct
+                ? 'Use attributes and variations for sellable combinations. Product-level media, pricing, inventory, and quantity fields are hidden because ownership moves to variations.'
+                : 'Use product-level media, pricing, inventory, quantity, and merchandising flags directly on the root product document.',
+          ),
+          const SizedBox(height: 12),
+          _buildModeGuideRow(
+            context,
+            icon: Icons.save_outlined,
+            title: 'What saves from the left panel',
+            description:
+            'Basic info, category/brand, visibility, card style, product media, pricing, inventory, quantity, attributes, variations, purchase options, and audit fields.',
+          ),
+          const SizedBox(height: 12),
+          _buildModeGuideRow(
+            context,
+            icon: Icons.visibility_outlined,
+            title: 'What does NOT save from the right panel',
+            description:
+            'This guide, the live composition summary, and preview blocks are helper-only. They should not write anything unless a value is explicitly mapped in _buildProductFromForm().',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveCompositionSummarySection(BuildContext context) {
+    final variationCount = _variations.length;
+    final enabledVariationCount = _variations.where((item) => item.isEnabled).length;
+    final defaultVariationCount = _variations.where((item) => item.isDefault).length;
+
+    return SectionCard(
+      title: 'Live Composition Summary',
+      subtitle: 'Right panel helper only. Quick overview of what will be composed.',
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          buildInfoChip('type: $_productType'),
+          buildInfoChip('root media: ${_mediaItems.length}'),
+          buildInfoChip('attributes: ${_attributes.length}'),
+          buildInfoChip('variations: $variationCount'),
+          buildInfoChip('enabled variations: $enabledVariationCount'),
+          buildInfoChip('default variations: $defaultVariationCount'),
+          buildInfoChip('purchase options: ${_purchaseOptions.length}'),
+          buildInfoChip('root featured: $_isFeatured'),
+          buildInfoChip('root flash sale: $_isFlashSale'),
+          buildInfoChip('root new arrival: $_isNewArrival'),
+          buildInfoChip('root best seller: $_isBestSeller'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVariationMerchandisingSummarySection(BuildContext context) {
+    return SectionCard(
+      title: 'Variation Merchandising Summary',
+      subtitle: 'Right panel helper only. Phase 1 note for variable-product merchandising.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Variable products should not rely on root merchandising flags for auto home-section logic.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Phase 1 rule in this dialog: root flags are not persisted for variable products. Variation-level flags must be added in MBProductVariation and VariationDialog next.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          if (_variations.isEmpty)
+            const Text('No variations added yet.')
+          else
+            Column(
+              children: _variations
+                  .map(
+                    (item) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    item.titleEn.trim().isEmpty ? item.sku : item.titleEn,
+                  ),
+                  subtitle: Text(
+                    'enabled: ${item.isEnabled} • default: ${item.isDefault} • sort: ${item.sortOrder}',
+                  ),
+                ),
+              )
+                  .toList(growable: false),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeGuideRow(
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required String description,
+      }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
 
   Widget _buildFooter(BuildContext context) {
     return Container(
@@ -1906,11 +2058,36 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Widget _buildVisibilitySection(BuildContext context) {
+    final bool persistRootMerchandisingFlags = !_isVariableProduct;
+
     return SectionCard(
       title: 'Visibility and Merchandising',
-      subtitle: 'Publishing, status, and merchandising flags.',
+      subtitle: _isVariableProduct
+          ? 'Persisted fields. For variable products, root merchandising flags are display-only in Phase 1 and will not be saved to the root document.'
+          : 'Persisted fields. Root publishing, status, and merchandising flags for simple products.',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isVariableProduct)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor,
+                ),
+              ),
+              child: Text(
+                'Variable product rule: featured / flash sale / new arrival / best seller must move to variations. Root toggles below are shown only as temporary editor state in Phase 1.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           Wrap(
             spacing: 12,
             runSpacing: 8,
@@ -1921,22 +2098,22 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 onSelected: (value) => setState(() => _isEnabled = value),
               ),
               buildFilterChip(
-                label: 'Featured',
+                label: persistRootMerchandisingFlags ? 'Featured' : 'Featured (root off)',
                 selected: _isFeatured,
                 onSelected: (value) => setState(() => _isFeatured = value),
               ),
               buildFilterChip(
-                label: 'Flash Sale',
+                label: persistRootMerchandisingFlags ? 'Flash Sale' : 'Flash Sale (root off)',
                 selected: _isFlashSale,
                 onSelected: (value) => setState(() => _isFlashSale = value),
               ),
               buildFilterChip(
-                label: 'New Arrival',
+                label: persistRootMerchandisingFlags ? 'New Arrival' : 'New Arrival (root off)',
                 selected: _isNewArrival,
                 onSelected: (value) => setState(() => _isNewArrival = value),
               ),
               buildFilterChip(
-                label: 'Best Seller',
+                label: persistRootMerchandisingFlags ? 'Best Seller' : 'Best Seller (root off)',
                 selected: _isBestSeller,
                 onSelected: (value) => setState(() => _isBestSeller = value),
               ),
@@ -1996,6 +2173,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ),
     );
   }
+
 
 
   Widget _buildCardStyleSection(BuildContext context) {
@@ -2401,11 +2579,11 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       purchaseOptions: [..._purchaseOptions]
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       cardLayoutType: MBProductCardLayoutHelper.normalize(_cardLayoutType),
-      isFeatured: _isFeatured,
-      isFlashSale: _isFlashSale,
+      isFeatured: !_isVariableProduct && _isFeatured,
+      isFlashSale: !_isVariableProduct && _isFlashSale,
       isEnabled: _isEnabled,
-      isNewArrival: _isNewArrival,
-      isBestSeller: _isBestSeller,
+      isNewArrival: !_isVariableProduct && _isNewArrival,
+      isBestSeller: !_isVariableProduct && _isBestSeller,
       sortOrder: _sortOrder,
       publishAt: _publishAt,
       clearPublishAt: _publishAt == null,

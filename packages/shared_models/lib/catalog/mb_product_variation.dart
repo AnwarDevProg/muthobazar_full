@@ -5,18 +5,11 @@ import 'dart:convert';
 // --------------------------
 // Defines a concrete sellable variation of a product.
 //
-// Examples:
-// - Size M / Color Red
-// - 500g pack
-// - Boneless cut
-//
-// Upgrade notes:
-// - Keeps legacy `imageUrl` behavior for old data and old UI code.
-// - Adds separate thumbnail/full/original image fields for variation preview.
-// - Adds variation-level sale window fields.
-// - Adds variation-level inventory / availability fields.
-// - Adds variation-level quantity / packaging / tolerance fields.
-// - Safely reads old Firestore documents that only stored a single image URL.
+// Phase 2 update:
+// - Adds variation-level merchandising flags:
+//   isFeatured, isFlashSale, isNewArrival, isBestSeller
+// - Keeps all existing image / pricing / inventory / quantity behavior
+// - Safe for old Firestore docs because new flags default to false
 
 class MBProductVariation {
   final String id;
@@ -93,6 +86,12 @@ class MBProductVariation {
   final bool isDefault;
   final bool isEnabled;
 
+  // Variation-level merchandising flags.
+  final bool isFeatured;
+  final bool isFlashSale;
+  final bool isNewArrival;
+  final bool isBestSeller;
+
   const MBProductVariation({
     required this.id,
     this.sku = '',
@@ -154,6 +153,10 @@ class MBProductVariation {
     this.sortOrder = 0,
     this.isDefault = false,
     this.isEnabled = true,
+    this.isFeatured = false,
+    this.isFlashSale = false,
+    this.isNewArrival = false,
+    this.isBestSeller = false,
   });
 
   static const MBProductVariation empty = MBProductVariation(id: '');
@@ -242,6 +245,10 @@ class MBProductVariation {
     int? sortOrder,
     bool? isDefault,
     bool? isEnabled,
+    bool? isFeatured,
+    bool? isFlashSale,
+    bool? isNewArrival,
+    bool? isBestSeller,
   }) {
     return MBProductVariation(
       id: id ?? this.id,
@@ -296,7 +303,8 @@ class MBProductVariation {
       price: price ?? this.price,
       salePrice: clearSalePrice ? null : (salePrice ?? this.salePrice),
       costPrice: clearCostPrice ? null : (costPrice ?? this.costPrice),
-      saleStartsAt: clearSaleStartsAt ? null : (saleStartsAt ?? this.saleStartsAt),
+      saleStartsAt:
+      clearSaleStartsAt ? null : (saleStartsAt ?? this.saleStartsAt),
       saleEndsAt: clearSaleEndsAt ? null : (saleEndsAt ?? this.saleEndsAt),
       stockQty: stockQty ?? this.stockQty,
       reservedQty: reservedQty ?? this.reservedQty,
@@ -335,12 +343,18 @@ class MBProductVariation {
       sortOrder: sortOrder ?? this.sortOrder,
       isDefault: isDefault ?? this.isDefault,
       isEnabled: isEnabled ?? this.isEnabled,
+      isFeatured: isFeatured ?? this.isFeatured,
+      isFlashSale: isFlashSale ?? this.isFlashSale,
+      isNewArrival: isNewArrival ?? this.isNewArrival,
+      isBestSeller: isBestSeller ?? this.isBestSeller,
     );
   }
 
   bool isSaleActiveAt(DateTime at) {
     final currentSalePrice = salePrice;
-    if (currentSalePrice == null || currentSalePrice <= 0 || currentSalePrice >= price) {
+    if (currentSalePrice == null ||
+        currentSalePrice <= 0 ||
+        currentSalePrice >= price) {
       return false;
     }
 
@@ -466,7 +480,8 @@ class MBProductVariation {
       'imageStoragePath': imageStoragePath.isNotEmpty
           ? imageStoragePath
           : effectiveFullImageStoragePath,
-      'fullImageUrl': fullImageUrl.isNotEmpty ? fullImageUrl : effectiveFullImageUrl,
+      'fullImageUrl':
+      fullImageUrl.isNotEmpty ? fullImageUrl : effectiveFullImageUrl,
       'fullImageStoragePath': fullImageStoragePath.isNotEmpty
           ? fullImageStoragePath
           : effectiveFullImageStoragePath,
@@ -523,6 +538,10 @@ class MBProductVariation {
       'sortOrder': sortOrder,
       'isDefault': isDefault,
       'isEnabled': isEnabled,
+      'isFeatured': isFeatured,
+      'isFlashSale': isFlashSale,
+      'isNewArrival': isNewArrival,
+      'isBestSeller': isBestSeller,
     };
   }
 
@@ -535,7 +554,8 @@ class MBProductVariation {
     final parsedThumbImageUrl = _asString(map['thumbImageUrl']);
     final parsedOriginalImageUrl = _asString(map['originalImageUrl']);
     final parsedFullImageStoragePath = _asString(map['fullImageStoragePath']);
-    final parsedThumbImageStoragePath = _asString(map['thumbImageStoragePath']);
+    final parsedThumbImageStoragePath =
+    _asString(map['thumbImageStoragePath']);
     final parsedOriginalImageStoragePath =
     _asString(map['originalImageStoragePath']);
 
@@ -613,6 +633,10 @@ class MBProductVariation {
       sortOrder: _asInt(map['sortOrder'], fallback: 0),
       isDefault: _asBool(map['isDefault'], fallback: false),
       isEnabled: _asBool(map['isEnabled'], fallback: true),
+      isFeatured: _asBool(map['isFeatured'], fallback: false),
+      isFlashSale: _asBool(map['isFlashSale'], fallback: false),
+      isNewArrival: _asBool(map['isNewArrival'], fallback: false),
+      isBestSeller: _asBool(map['isBestSeller'], fallback: false),
     );
   }
 
@@ -666,6 +690,10 @@ class MBProductVariation {
       sortOrder: 0,
       isDefault: false,
       isEnabled: true,
+      isFeatured: false,
+      isFlashSale: false,
+      isNewArrival: false,
+      isBestSeller: false,
     );
   }
 
