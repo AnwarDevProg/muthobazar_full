@@ -191,67 +191,76 @@ class MBHomeRenderer extends StatelessWidget {
   }
 
   List<MBProduct> _resolveProducts(MBHomeSection section) {
-    final List<MBProduct> activeProducts = products
-        .where(
-          (product) => product.isEnabled && _isRenderableForHome(product),
-    )
-        .toList(growable: false);
-
     final String sourceType = section.dataSourceType.trim().toLowerCase();
+
+    final List<MBProduct> enabledProducts = products
+        .where((product) => product.isEnabled)
+        .toList(growable: false);
 
     late final List<MBProduct> resolved;
 
     switch (sourceType) {
       case 'manual':
-        resolved = activeProducts
+      // Manual must always respect the explicit productIds list and should
+      // not hide variable products just because variation stock is zero.
+        resolved = enabledProducts
             .where((product) => section.productIds.contains(product.id))
             .toList(growable: false);
         break;
 
       case 'featured':
-        resolved = activeProducts
-            .where(_matchesFeatured)
+        resolved = enabledProducts
+            .where((product) => _matchesFeatured(product))
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'flash_sale':
-        resolved = activeProducts
-            .where(_matchesFlashSale)
+        resolved = enabledProducts
+            .where((product) => _matchesFlashSale(product))
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'new_arrival':
-        resolved = activeProducts
-            .where(_matchesNewArrival)
+        resolved = enabledProducts
+            .where((product) => _matchesNewArrival(product))
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'best_seller':
-        resolved = activeProducts
-            .where(_matchesBestSeller)
+        resolved = enabledProducts
+            .where((product) => _matchesBestSeller(product))
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'recommended':
-        resolved = activeProducts
-            .where(_matchesRecommended)
+        resolved = enabledProducts
+            .where((product) => _matchesRecommended(product))
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'category':
-        resolved = activeProducts
+        resolved = enabledProducts
             .where((product) => product.categoryId == section.sourceCategoryId)
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       case 'brand':
-        resolved = activeProducts
+        resolved = enabledProducts
             .where((product) => product.brandId == section.sourceBrandId)
+            .where((product) => _isRenderableForDynamicHome(product))
             .toList(growable: false);
         break;
 
       default:
-        resolved = activeProducts;
+        resolved = enabledProducts
+            .where((product) => _isRenderableForDynamicHome(product))
+            .toList(growable: false);
         break;
     }
 
@@ -312,6 +321,20 @@ class MBHomeRenderer extends StatelessWidget {
     return enabledVariations.any(
           (variation) => !variation.trackInventory || variation.inStock || variation.allowBackorder,
     );
+  }
+
+  bool _isRenderableForDynamicHome(MBProduct product) {
+    final List<MBProductVariation> enabledVariations = _enabledVariations(product);
+
+    // Simple product or legacy product with no variations list.
+    if (enabledVariations.isEmpty) {
+      return true;
+    }
+
+    // Variable product: for home visibility, presence of one enabled variation
+    // is enough. Do not hard-block by stock here, because many variable products
+    // may still be intended for display before stock is finalized.
+    return true;
   }
 
   List<MBProductVariation> _enabledVariations(MBProduct product) {
