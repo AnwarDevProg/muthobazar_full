@@ -1,5 +1,5 @@
 import 'package:customer_app/features/cart/pages/cart_page.dart';
-import 'package:customer_app/features/categories/pages/categories_page.dart';
+import 'package:customer_app/features/store/pages/store_page.dart';
 import 'package:customer_app/features/chat/pages/chat_page.dart';
 import 'package:customer_app/features/home/pages/home_page.dart';
 import 'package:customer_app/features/profile/pages/profile_page.dart';

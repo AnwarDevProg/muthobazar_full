@@ -113,19 +113,14 @@ class MBProductCardRenderer extends StatelessWidget {
       );
     },
     MBProductCardLayout.card03: (context, renderer, product) {
-      return Container(
-        width: 260,
-        height: 560,
-        color: Colors.purple,
-        alignment: Alignment.center,
-        child: const Text(
-          'RENDERER TEST',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      return MBProductCardCard03(
+        product: product,
+        onTap: renderer.onTap,
+        onAddToCart: renderer.onAddToCart,
+        isFavorite: renderer.isFavorite,
+        onFavoriteTap: renderer.onFavoriteTap,
+        showAddToCart: renderer.showAddToCart,
+        showFavorite: renderer.showFavorite,
       );
     },
   };
