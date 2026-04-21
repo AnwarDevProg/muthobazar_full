@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:shared_models/shared_models.dart';
 
-import '../../responsive/mb_spacing.dart';
-import '../../theme/mb_colors.dart';
-import '../../theme/mb_radius.dart';
-import '../../theme/mb_text_styles.dart';
-import 'mb_primary_button.dart';
+import 'product_cards/mb_product_card_renderer.dart';
 
-// Legacy generic product card
-// ---------------------------
-// Keep this file for backward compatibility with older call sites
-// that still pass plain text/image values instead of MBProduct.
-// The new multi-layout product system should use:
-// - MBProductCardRenderer
-// - MBProductCardStandard
-// - MBProductCardCompact
-// - MBProductCardDeal
-// - MBProductCardFeatured
-
+// Legacy generic product card wrapper
+// -----------------------------------
+// This widget exists only to keep older call sites working while the app moves
+// to the centralized MBProduct + MBProductCardRenderer system.
+//
+// The current shared MBProduct model uses fields such as:
+// - titleEn / titleBn
+// - shortDescriptionEn / shortDescriptionBn
+// - descriptionEn / descriptionBn
+// - thumbnailUrl / imageUrls / mediaItems
+// - price / salePrice / costPrice
+// - brandNameEn / brandNameBn
+// - categoryNameEn / categoryNameBn
+// - cardLayoutType
+// - isFeatured / isFlashSale / isNewArrival / isBestSeller
+// - createdAt / updatedAt
+//
+// So this wrapper now maps legacy plain props into the real MBProduct model
+// shape before delegating to MBProductCardRenderer.
 class MBProductCard extends StatelessWidget {
   const MBProductCard({
     super.key,
@@ -25,208 +30,244 @@ class MBProductCard extends StatelessWidget {
     required this.imageUrl,
     this.oldPriceText,
     this.badgeText,
+    this.titleBn,
+    this.shortDescriptionEn,
+    this.shortDescriptionBn,
+    this.descriptionEn,
+    this.descriptionBn,
+    this.categoryNameEn,
+    this.categoryNameBn,
+    this.brandNameEn,
+    this.brandNameBn,
+    this.imageUrls,
+    this.mediaItems = const <MBProductMedia>[],
+    this.tags = const <String>[],
+    this.productCode,
+    this.sku,
+    this.cardLayoutType,
+    this.productType = 'simple',
+    this.stockQty = 999,
+    this.trackInventory = true,
+    this.allowBackorder = false,
+    this.isFeatured,
+    this.isFlashSale,
+    this.isNewArrival,
+    this.isBestSeller,
+    this.saleStartsAt,
+    this.saleEndsAt,
     this.onTap,
     this.onAddToCart,
     this.isFavorite = false,
     this.onFavoriteTap,
     this.showAddToCart = true,
     this.addToCartText = 'Add to Cart',
+    this.contextType = MBProductCardRenderContext.auto,
+    this.showFavorite = true,
+    this.featuredHeight = 320,
   });
 
   final String title;
   final String priceText;
-  final String? oldPriceText;
   final String imageUrl;
+  final String? oldPriceText;
   final String? badgeText;
+
+  final String? titleBn;
+  final String? shortDescriptionEn;
+  final String? shortDescriptionBn;
+  final String? descriptionEn;
+  final String? descriptionBn;
+  final String? categoryNameEn;
+  final String? categoryNameBn;
+  final String? brandNameEn;
+  final String? brandNameBn;
+  final List<String>? imageUrls;
+  final List<MBProductMedia> mediaItems;
+  final List<String> tags;
+  final String? productCode;
+  final String? sku;
+  final String? cardLayoutType;
+  final String productType;
+  final int stockQty;
+  final bool trackInventory;
+  final bool allowBackorder;
+  final bool? isFeatured;
+  final bool? isFlashSale;
+  final bool? isNewArrival;
+  final bool? isBestSeller;
+  final DateTime? saleStartsAt;
+  final DateTime? saleEndsAt;
+
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
   final bool isFavorite;
   final VoidCallback? onFavoriteTap;
   final bool showAddToCart;
   final String addToCartText;
-
-  bool get _hasBadge => badgeText != null && badgeText!.trim().isNotEmpty;
-
-  bool get _hasOldPrice =>
-      oldPriceText != null && oldPriceText!.trim().isNotEmpty;
-
-  bool get _hasImage => imageUrl.trim().isNotEmpty;
+  final MBProductCardRenderContext contextType;
+  final bool showFavorite;
+  final double featuredHeight;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(MBRadius.lg),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: MBColors.card,
-            borderRadius: BorderRadius.circular(MBRadius.lg),
-            boxShadow: const [
-              BoxShadow(
-                color: MBColors.shadow,
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(MBRadius.lg),
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        color: const Color(0xFFFDF1E8),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: _hasImage
-                              ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(
-                                  Icons.image_not_supported_outlined,
-                                  size: 34,
-                                  color: MBColors.textMuted,
-                                ),
-                              );
-                            },
-                            loadingBuilder:
-                                (context, child, progress) {
-                              if (progress == null) return child;
-                              return const Center(
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: MBColors.primaryOrange,
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                              : const Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 34,
-                              color: MBColors.textMuted,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_hasBadge)
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: MBColors.primaryOrange,
-                            borderRadius: BorderRadius.circular(MBRadius.pill),
-                          ),
-                          child: Text(
-                            badgeText!,
-                            style: MBTextStyles.caption.copyWith(
-                              color: MBColors.textOnPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(999),
-                        onTap: onFavoriteTap,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.95),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            size: 18,
-                            color: isFavorite
-                                ? MBColors.error
-                                : MBColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(MBSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: MBTextStyles.bodyMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: MBSpacing.xs),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            priceText,
-                            style: MBTextStyles.price.copyWith(fontSize: 16),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (_hasOldPrice)
-                          Padding(
-                            padding: const EdgeInsets.only(left: MBSpacing.xs),
-                            child: Text(
-                              oldPriceText!,
-                              style: MBTextStyles.caption.copyWith(
-                                decoration: TextDecoration.lineThrough,
-                                color: MBColors.textMuted,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (showAddToCart) ...[
-                      const SizedBox(height: MBSpacing.sm),
-                      MBPrimaryButton(
-                        text: addToCartText,
-                        onPressed: onAddToCart,
-                        height: 40,
-                        textStyle: MBTextStyles.bodyMedium.copyWith(
-                          color: MBColors.textOnPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final product = _buildLegacyProduct();
+
+    return MBProductCardRenderer(
+      product: product,
+      contextType: contextType,
+      onTap: onTap,
+      onAddToCart: onAddToCart,
+      isFavorite: isFavorite,
+      onFavoriteTap: onFavoriteTap,
+      showAddToCart: showAddToCart,
+      showFavorite: showFavorite,
+      featuredHeight: featuredHeight,
     );
   }
+
+  MBProduct _buildLegacyProduct() {
+    final now = DateTime.now();
+    final normalizedLayout = MBProductCardLayoutHelper.normalize(
+      cardLayoutType ?? MBProductCardLayout.standard.value,
+    );
+
+    final currentPrice = _parsePrice(priceText);
+    final comparePrice = _parsePrice(oldPriceText);
+    final pricing = _resolvePricing(
+      currentPrice: currentPrice,
+      comparePrice: comparePrice,
+    );
+
+    final normalizedBadge = badgeText?.trim().toLowerCase() ?? '';
+    final resolvedImageUrls = _resolveImageUrls();
+
+    return MBProduct(
+      id: 'legacy_${title.hashCode}_${imageUrl.hashCode}',
+      slug: _slugify(title),
+      productCode: _cleanNullable(productCode),
+      sku: _cleanNullable(sku),
+      titleEn: title.trim(),
+      titleBn: _clean(titleBn),
+      shortDescriptionEn: _clean(shortDescriptionEn),
+      shortDescriptionBn: _clean(shortDescriptionBn),
+      descriptionEn: _clean(descriptionEn),
+      descriptionBn: _clean(descriptionBn),
+      thumbnailUrl: imageUrl.trim(),
+      imageUrls: resolvedImageUrls,
+      mediaItems: mediaItems,
+      price: pricing.price,
+      salePrice: pricing.salePrice,
+      saleStartsAt: pricing.salePrice == null ? null : saleStartsAt,
+      saleEndsAt: pricing.salePrice == null ? null : saleEndsAt,
+      stockQty: stockQty,
+      regularStockQty: stockQty,
+      trackInventory: trackInventory,
+      allowBackorder: allowBackorder,
+      categoryNameEn: _cleanNullable(categoryNameEn),
+      categoryNameBn: _cleanNullable(categoryNameBn),
+      brandNameEn: _cleanNullable(brandNameEn),
+      brandNameBn: _cleanNullable(brandNameBn),
+      productType: productType.trim().isEmpty ? 'simple' : productType.trim(),
+      tags: tags,
+      cardLayoutType: normalizedLayout,
+      isFeatured: isFeatured ?? _badgeHas(normalizedBadge, const ['featured']),
+      isFlashSale: isFlashSale ??
+          _badgeHas(normalizedBadge, const ['flash', 'flash sale']),
+      isNewArrival:
+      isNewArrival ?? _badgeHas(normalizedBadge, const ['new', 'arrival']),
+      isBestSeller: isBestSeller ??
+          _badgeHas(normalizedBadge, const ['best', 'best seller', 'bestseller']),
+      isEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  List<String> _resolveImageUrls() {
+    final urls = <String>[];
+
+    for (final raw in imageUrls ?? const <String>[]) {
+      final value = raw.trim();
+      if (value.isNotEmpty) {
+        urls.add(value);
+      }
+    }
+
+    final trimmedThumb = imageUrl.trim();
+    if (trimmedThumb.isNotEmpty && !urls.contains(trimmedThumb)) {
+      urls.insert(0, trimmedThumb);
+    }
+
+    return urls;
+  }
+
+  _ResolvedPricing _resolvePricing({
+    required double currentPrice,
+    required double comparePrice,
+  }) {
+    if (comparePrice > 0 && currentPrice > 0 && comparePrice > currentPrice) {
+      return _ResolvedPricing(
+        price: comparePrice,
+        salePrice: currentPrice,
+      );
+    }
+
+    return _ResolvedPricing(
+      price: currentPrice,
+      salePrice: null,
+    );
+  }
+
+  double _parsePrice(String? raw) {
+    if (raw == null) return 0;
+
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9\.]'), '');
+    if (cleaned.isEmpty) return 0;
+
+    return double.tryParse(cleaned) ?? 0;
+  }
+
+  String _clean(String? value) {
+    return value?.trim() ?? '';
+  }
+
+  String? _cleanNullable(String? value) {
+    final cleaned = value?.trim();
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+    return cleaned;
+  }
+
+  bool _badgeHas(String badge, List<String> parts) {
+    if (badge.isEmpty) return false;
+    for (final part in parts) {
+      if (badge.contains(part)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _slugify(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) return '';
+
+    final collapsed = normalized
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'-{2,}'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+
+    return collapsed;
+  }
+}
+
+class _ResolvedPricing {
+  const _ResolvedPricing({
+    required this.price,
+    required this.salePrice,
+  });
+
+  final double price;
+  final double? salePrice;
 }
