@@ -15,7 +15,7 @@ class ProfilePage extends StatelessWidget {
     return MBAppLayout(
       backgroundColor: MBColors.background,
       safeTop: true,
-      safeBottom: true,
+      safeBottom: false,
       scrollable: true,
       padding: EdgeInsets.zero,
       child: Obx(() {
@@ -73,7 +73,9 @@ class ProfilePage extends StatelessWidget {
                       );
                     },
                   ),
-                  MBSpacing.h(MBSpacing.xl),
+                  SizedBox(
+                    height: MediaQuery.of(context).padding.bottom + 90,
+                  ),
                 ],
               ),
             ),

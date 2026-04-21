@@ -9,10 +9,21 @@ class MBBottomNavItem {
   final IconData? selectedIcon;
   final String label;
 
+  // Kept for backward compatibility with your current shell.
+  // Only unselected iconOffsetX is still visually relevant in this version.
+  final double iconOffsetX;
+  final double selectedIconOffsetX;
+  final double bubbleOffsetX;
+  final double innerCircleOffsetX;
+
   const MBBottomNavItem({
     required this.icon,
     this.selectedIcon,
     required this.label,
+    this.iconOffsetX = 0,
+    this.selectedIconOffsetX = 0,
+    this.bubbleOffsetX = 0,
+    this.innerCircleOffsetX = 0,
   });
 }
 
@@ -47,7 +58,7 @@ class _MBBottomNavBarState extends State<MBBottomNavBar>
 
   // 3) Gaps:
   static const double _iconLabelGap = 1;
-  static const double _selectedClusterGap = 3;
+  static const double _selectedClusterGap = 0;
   static const double _selectedLabelBottomPadding = 0;
 
   // 4) Bar layout:
@@ -56,14 +67,28 @@ class _MBBottomNavBarState extends State<MBBottomNavBar>
   static const double _barHorizontalPadding = 6;
   static const double _barTopPadding = 11;
 
-  // 5) Floating animation:
+  // 5) Curved top edge:
+  static const double _topCurveBaseY = 12;
+  static const double _topCurvePeakY = -10;
+  static const double _topCurveHalfWidthRatio = 0.3;
+
+  // 6) Live curve response:
+  static const double _curveResponseFactor = 1.3;
+  static const double _curveBumpSigma = 35.0;
+  static const double _curveRippleAmplitude = 2.0;
+  static const double _curveRippleDecay = 130.0;
+  static const double _curveRippleWavelength = 44.0;
+  static const double _curveRippleSpeed = 7.0;
+  static const double _curveSampleStep = 2.0;
+
+  // 7) Floating animation:
   static const double _selectedFloatAmplitude = 1.8;
 
-  // 6) Bubble inner ratio from bubble size:
+  // 8) Bubble inner ratio from bubble size:
   static const double _innerCircleRatio = 0.76;
   static const double _selectedIconRatio = 0.54;
 
-  // 7) Wave visibility / strength:
+  // 9) Wave visibility / strength:
   static const double _waveAmplitudeFactor = 0.080;
   static const double _wavePrimaryStrokeWidth = 2.6;
   static const double _waveGlowStrokeWidth = 10;
@@ -95,110 +120,121 @@ class _MBBottomNavBarState extends State<MBBottomNavBar>
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final totalHeight = _topFloatingSpace + _barBodyHeight + bottomInset;
-    final slotWidth = MediaQuery.sizeOf(context).width / widget.items.length;
-    final selectedItem = widget.items[widget.currentIndex];
     final innerIconCircleSize = _bubbleSize * _innerCircleRatio;
     final selectedIconSize = _bubbleSize * _selectedIconRatio;
+    final topCurveHalfWidth = _bubbleSize * _topCurveHalfWidthRatio;
 
     return SizedBox(
       width: double.infinity,
       height: totalHeight,
-      child: AnimatedBuilder(
-        animation: _waveController,
-        builder: (context, _) {
-          final progress = _waveController.value;
-          final floatOffset =
-              math.sin(progress * math.pi * 2) * _selectedFloatAmplitude;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final slotWidth = constraints.maxWidth / widget.items.length;
+          final selectedItem = widget.items[widget.currentIndex];
+          final selectedCenterX =
+              (slotWidth * widget.currentIndex) + (slotWidth / 2);
 
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  height: _barBodyHeight + bottomInset,
-                  padding: EdgeInsets.only(
-                    left: _barHorizontalPadding,
-                    right: _barHorizontalPadding,
-                    top: _barTopPadding,
-                    bottom: bottomInset + _barBodyBottomPadding,
-                  ),
-                  decoration: BoxDecoration(
-                    color: MBColors.surface,
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        width: 1,
+          return AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, _) {
+              final progress = _waveController.value;
+              final floatOffset =
+                  math.sin(progress * math.pi * 2) * _selectedFloatAmplitude;
+
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: SizedBox(
+                      height: _barBodyHeight + bottomInset,
+                      child: CustomPaint(
+                        painter: _NavBarBackgroundPainter(
+                          selectedCenterX: selectedCenterX,
+                          topCurveBaseY: _topCurveBaseY,
+                          topCurvePeakY: _topCurvePeakY,
+                          topCurveHalfWidth: topCurveHalfWidth,
+                          progress: progress,
+                          floatOffset: floatOffset,
+                          selectedFloatAmplitude: _selectedFloatAmplitude,
+                          curveResponseFactor: _curveResponseFactor,
+                          curveBumpSigma: _curveBumpSigma,
+                          curveRippleAmplitude: _curveRippleAmplitude,
+                          curveRippleDecay: _curveRippleDecay,
+                          curveRippleWavelength: _curveRippleWavelength,
+                          curveRippleSpeed: _curveRippleSpeed,
+                          curveSampleStep: _curveSampleStep,
+                          backgroundColor: Colors.white,
+                          borderColor: Colors.orange,
+                          shadowColor: Colors.orange.withValues(alpha: 0.18),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: _barHorizontalPadding,
+                            right: _barHorizontalPadding,
+                            top: _barTopPadding,
+                            bottom: bottomInset + _barBodyBottomPadding,
+                          ),
+                          child: Row(
+                            children:
+                            List.generate(widget.items.length, (index) {
+                              final item = widget.items[index];
+                              final selected = index == widget.currentIndex;
+
+                              return Expanded(
+                                child: _NavBarSlot(
+                                  item: item,
+                                  selected: selected,
+                                  iconSize: _iconSize,
+                                  labelFontSize: _labelFontSize,
+                                  labelBoxHeight: _labelBoxHeight,
+                                  iconLabelGap: _iconLabelGap,
+                                  slotBottomPadding: _slotBottomPadding,
+                                  onTap: () => widget.onTap(index),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                       ),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MBColors.shadow.withValues(alpha: 0.10),
-                        blurRadius: 24,
-                        offset: const Offset(0, -2),
-                      ),
-                      BoxShadow(
-                        color: MBColors.shadow.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, -1),
-                      ),
-                    ],
                   ),
-                  child: Row(
-                    children: List.generate(widget.items.length, (index) {
-                      final item = widget.items[index];
-                      final selected = index == widget.currentIndex;
-
-                      return Expanded(
-                        child: _NavBarSlot(
-                          item: item,
-                          selected: selected,
-                          iconSize: _iconSize,
+                  Positioned(
+                    left: slotWidth * widget.currentIndex,
+                    width: slotWidth,
+                    bottom: bottomInset +
+                        _barBodyBottomPadding +
+                        _selectedLabelBottomPadding,
+                    child: Transform.translate(
+                      offset: Offset(0, -floatOffset),
+                      child: Center(
+                        child: _FloatingSelectedItem(
+                          item: selectedItem,
+                          bubbleSize: _bubbleSize,
+                          innerIconCircleSize: innerIconCircleSize,
+                          iconSize: selectedIconSize,
                           labelFontSize: _labelFontSize,
                           labelBoxHeight: _labelBoxHeight,
-                          iconLabelGap: _iconLabelGap,
-                          slotBottomPadding: _slotBottomPadding,
-                          onTap: () => widget.onTap(index),
+                          gap: _selectedClusterGap,
+                          progress: progress,
+                          backgroundColor: theme.scaffoldBackgroundColor,
+                          waveAmplitudeFactor: _waveAmplitudeFactor,
+                          wavePrimaryStrokeWidth: _wavePrimaryStrokeWidth,
+                          waveGlowStrokeWidth: _waveGlowStrokeWidth,
+                          waveSecondaryStrokeWidth: _waveSecondaryStrokeWidth,
+                          wavePrimaryOpacity: _wavePrimaryOpacity,
+                          waveSecondaryOpacity: _waveSecondaryOpacity,
+                          waveGlowOpacity: _waveGlowOpacity,
+                          onTap: () => widget.onTap(widget.currentIndex),
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: slotWidth * widget.currentIndex,
-                width: slotWidth,
-                bottom: bottomInset +
-                    _barBodyBottomPadding +
-                    _selectedLabelBottomPadding,
-                child: Transform.translate(
-                  offset: Offset(0, -floatOffset),
-                  child: Center(
-                    child: _FloatingSelectedItem(
-                      item: selectedItem,
-                      bubbleSize: _bubbleSize,
-                      innerIconCircleSize: innerIconCircleSize,
-                      iconSize: selectedIconSize,
-                      labelFontSize: _labelFontSize,
-                      labelBoxHeight: _labelBoxHeight,
-                      gap: _selectedClusterGap,
-                      progress: progress,
-                      backgroundColor: theme.scaffoldBackgroundColor,
-                      waveAmplitudeFactor: _waveAmplitudeFactor,
-                      wavePrimaryStrokeWidth: _wavePrimaryStrokeWidth,
-                      waveGlowStrokeWidth: _waveGlowStrokeWidth,
-                      waveSecondaryStrokeWidth: _waveSecondaryStrokeWidth,
-                      wavePrimaryOpacity: _wavePrimaryOpacity,
-                      waveSecondaryOpacity: _waveSecondaryOpacity,
-                      waveGlowOpacity: _waveGlowOpacity,
-                      onTap: () => widget.onTap(widget.currentIndex),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
@@ -227,8 +263,6 @@ class _NavBarSlot extends StatelessWidget {
     required this.onTap,
   });
 
-  double get _iconOffsetX => 0.0;
-
   @override
   Widget build(BuildContext context) {
     final inactiveColor = MBColors.textPrimary.withValues(alpha: 0.82);
@@ -253,7 +287,7 @@ class _NavBarSlot extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Transform.translate(
-                    offset: Offset(_iconOffsetX, 0),
+                    offset: Offset(item.iconOffsetX, 0),
                     child: Icon(
                       item.icon,
                       size: iconSize,
@@ -432,6 +466,145 @@ class _FloatingSelectedItem extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _NavBarBackgroundPainter extends CustomPainter {
+  final double selectedCenterX;
+  final double topCurveBaseY;
+  final double topCurvePeakY;
+  final double topCurveHalfWidth;
+  final double progress;
+  final double floatOffset;
+  final double selectedFloatAmplitude;
+  final double curveResponseFactor;
+  final double curveBumpSigma;
+  final double curveRippleAmplitude;
+  final double curveRippleDecay;
+  final double curveRippleWavelength;
+  final double curveRippleSpeed;
+  final double curveSampleStep;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color shadowColor;
+
+  const _NavBarBackgroundPainter({
+    required this.selectedCenterX,
+    required this.topCurveBaseY,
+    required this.topCurvePeakY,
+    required this.topCurveHalfWidth,
+    required this.progress,
+    required this.floatOffset,
+    required this.selectedFloatAmplitude,
+    required this.curveResponseFactor,
+    required this.curveBumpSigma,
+    required this.curveRippleAmplitude,
+    required this.curveRippleDecay,
+    required this.curveRippleWavelength,
+    required this.curveRippleSpeed,
+    required this.curveSampleStep,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.shadowColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fillPath = _buildFillPath(size);
+    final topPath = _buildTopEdgePath(size);
+
+    canvas.drawShadow(fillPath, shadowColor, 14, false);
+
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = backgroundColor;
+    canvas.drawPath(fillPath, fillPaint);
+
+    final topStrokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = borderColor;
+    canvas.drawPath(topPath, topStrokePaint);
+  }
+
+  Path _buildFillPath(Size size) {
+    final topPath = _buildTopEdgePath(size);
+    final path = Path.from(topPath)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    return path;
+  }
+
+  Path _buildTopEdgePath(Size size) {
+    final path = Path();
+
+    path.moveTo(0, _topYAt(0, size));
+
+    for (double x = curveSampleStep; x <= size.width; x += curveSampleStep) {
+      path.lineTo(x, _topYAt(x, size));
+    }
+
+    if ((size.width % curveSampleStep) != 0) {
+      path.lineTo(size.width, _topYAt(size.width, size));
+    }
+
+    return path;
+  }
+
+  double _topYAt(double x, Size size) {
+    final safeHalfWidth =
+    topCurveHalfWidth.clamp(24.0, size.width / 2).toDouble();
+    final baseBumpHeight = (topCurveBaseY - topCurvePeakY).clamp(0.0, 100.0);
+    final responsiveBumpHeight =
+    (baseBumpHeight + (floatOffset * curveResponseFactor)).clamp(0.0, 100.0);
+
+    final dist = (x - selectedCenterX).abs();
+    final normalizedFloat = selectedFloatAmplitude == 0
+        ? 0.0
+        : (floatOffset / selectedFloatAmplitude).clamp(-1.0, 1.0);
+
+    final bumpWindow = math.exp(
+      -((dist * dist) / (2 * curveBumpSigma * curveBumpSigma)),
+    );
+
+    final shoulderWindow = math.exp(
+      -((dist * dist) / (2 * safeHalfWidth * safeHalfWidth)),
+    );
+
+    final rippleEnvelope = math.exp(-dist / curveRippleDecay);
+    final ripplePhase = (dist / curveRippleWavelength) -
+        (progress * math.pi * curveRippleSpeed * 2);
+
+    final ripple = math.sin(ripplePhase) *
+        curveRippleAmplitude *
+        normalizedFloat *
+        rippleEnvelope;
+
+    final bump = responsiveBumpHeight * bumpWindow * shoulderWindow;
+
+    return topCurveBaseY - bump - ripple;
+  }
+
+  @override
+  bool shouldRepaint(covariant _NavBarBackgroundPainter oldDelegate) {
+    return oldDelegate.selectedCenterX != selectedCenterX ||
+        oldDelegate.topCurveBaseY != topCurveBaseY ||
+        oldDelegate.topCurvePeakY != topCurvePeakY ||
+        oldDelegate.topCurveHalfWidth != topCurveHalfWidth ||
+        oldDelegate.progress != progress ||
+        oldDelegate.floatOffset != floatOffset ||
+        oldDelegate.selectedFloatAmplitude != selectedFloatAmplitude ||
+        oldDelegate.curveResponseFactor != curveResponseFactor ||
+        oldDelegate.curveBumpSigma != curveBumpSigma ||
+        oldDelegate.curveRippleAmplitude != curveRippleAmplitude ||
+        oldDelegate.curveRippleDecay != curveRippleDecay ||
+        oldDelegate.curveRippleWavelength != curveRippleWavelength ||
+        oldDelegate.curveRippleSpeed != curveRippleSpeed ||
+        oldDelegate.curveSampleStep != curveSampleStep ||
+        oldDelegate.backgroundColor != backgroundColor ||
+        oldDelegate.borderColor != borderColor ||
+        oldDelegate.shadowColor != shadowColor;
   }
 }
 

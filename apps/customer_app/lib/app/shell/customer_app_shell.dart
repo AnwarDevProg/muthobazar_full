@@ -35,6 +35,7 @@ class _CustomerAppShellState extends State<CustomerAppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
@@ -42,40 +43,41 @@ class _CustomerAppShellState extends State<CustomerAppShell> {
       bottomNavigationBar: kIsWeb
           ? null
           : MBBottomNavBar(
-              currentIndex: _currentIndex,
-              items: const [
-                MBBottomNavItem(
-                  icon: Icons.home_outlined,
-                  label: 'Home',
-                ),
-                MBBottomNavItem(
-                  icon: Icons.storefront_outlined,
-                  label: 'Store',
-                ),
-                MBBottomNavItem(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: 'Chat',
-                ),
-                MBBottomNavItem(
-                  icon: Icons.shopping_cart_outlined,
-                  label: 'Cart',
-                ),
-                MBBottomNavItem(
-                  icon: Icons.person_outline,
-                  label: 'Profile',
-                ),
-              ],
-              onTap: _onTap,
-            ),
+        currentIndex: _currentIndex,
+        items: const [
+          MBBottomNavItem(
+            icon: Icons.home_outlined,
+            selectedIcon: Icons.home_rounded,
+            label: 'Home',
+            iconOffsetX: 1.1,
+          ),
+          MBBottomNavItem(
+            icon: Icons.storefront_outlined,
+            selectedIcon: Icons.storefront_rounded,
+            label: 'Store',
+            iconOffsetX: 0.8,
+          ),
+          MBBottomNavItem(
+            icon: Icons.chat_bubble_outline_rounded,
+            selectedIcon: Icons.chat_bubble_rounded,
+            label: 'Chat',
+            iconOffsetX: 0.0,
+          ),
+          MBBottomNavItem(
+            icon: Icons.shopping_cart_outlined,
+            selectedIcon: Icons.shopping_cart_rounded,
+            label: 'Cart',
+            iconOffsetX: -0.8,
+          ),
+          MBBottomNavItem(
+            icon: Icons.person_outline_rounded,
+            selectedIcon: Icons.person_rounded,
+            label: 'Profile',
+            iconOffsetX: -1.6,
+          ),
+        ],
+        onTap: _onTap,
+      ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
