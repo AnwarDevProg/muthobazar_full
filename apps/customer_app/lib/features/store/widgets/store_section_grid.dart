@@ -51,6 +51,7 @@ class StoreSectionGrid extends StatelessWidget {
                 onRemoveTap: () => onRemoveTap(entry),
                 featuredHeight: featuredHeight,
                 showMetaChips: showMetaChips,
+                itemWidth: itemWidth,
               ),
             );
           }).toList(),
@@ -67,6 +68,7 @@ class _StoreGridPreviewItem extends StatelessWidget {
     required this.onRemoveTap,
     required this.featuredHeight,
     required this.showMetaChips,
+    required this.itemWidth,
   });
 
   final MBStoreCardPreviewEntry entry;
@@ -74,6 +76,7 @@ class _StoreGridPreviewItem extends StatelessWidget {
   final VoidCallback onRemoveTap;
   final double featuredHeight;
   final bool showMetaChips;
+  final double itemWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -86,8 +89,14 @@ class _StoreGridPreviewItem extends StatelessWidget {
 
     final effectiveLayout = _previewFallbackFor(entry.layout);
     final previewProduct = _buildPreviewProduct(product!, entry.layout);
+    final cardHeight = _cardHeightForLayout(
+      width: itemWidth,
+      layout: entry.layout,
+      effectiveLayout: effectiveLayout,
+    );
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (showMetaChips) ...<Widget>[
@@ -115,13 +124,45 @@ class _StoreGridPreviewItem extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        MBProductCardRenderer(
-          product: previewProduct,
-          contextType: MBProductCardRenderContext.auto,
-          featuredHeight: featuredHeight,
+        SizedBox(
+          width: double.infinity,
+          height: cardHeight,
+          child: MBProductCardRenderer(
+            product: previewProduct,
+            contextType: MBProductCardRenderContext.auto,
+            featuredHeight: featuredHeight,
+          ),
         ),
       ],
     );
+  }
+
+  double _cardHeightForLayout({
+    required double width,
+    required MBProductCardLayout layout,
+    required MBProductCardLayout effectiveLayout,
+  }) {
+    switch (layout) {
+      case MBProductCardLayout.compact:
+        return 180;
+      case MBProductCardLayout.featured:
+        return featuredHeight;
+      case MBProductCardLayout.card03:
+        return width * 1.18;
+      default:
+        break;
+    }
+
+    switch (effectiveLayout) {
+      case MBProductCardLayout.compact:
+        return 180;
+      case MBProductCardLayout.featured:
+        return featuredHeight;
+      case MBProductCardLayout.card03:
+        return width * 1.18;
+      default:
+        return width * 1.95;
+    }
   }
 
   MBProduct _buildPreviewProduct(MBProduct product, MBProductCardLayout layout) {
@@ -202,6 +243,7 @@ class _MissingProductCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF59E0B)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
