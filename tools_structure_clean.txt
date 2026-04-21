@@ -16,6 +16,7 @@ C.
     +---deploy_all_functions.ps1
     +---deploy_verify_category_backend.ps1
     +---format_all.sh
+    +---generate_clean_tree.md
     +---generate_clean_tree.ps1
     +---git_push.ps1
     +---run_admin_web_chrome.ps1

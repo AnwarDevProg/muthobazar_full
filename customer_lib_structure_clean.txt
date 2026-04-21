@@ -92,7 +92,6 @@ C.
 |   |   |   +---home_overlay_controller.dart
 |   |   |   \---offer_overlay_manager.dart
 |   |   +---data
-|   |   |   +---dummy_catalog_data.dart
 |   |   |   \---home_dummy_data.dart
 |   |   +---pages
 |   |   |   +---home_page.dart
@@ -123,6 +122,9 @@ C.
 |   |   \---widgets
 |   |       +---order_card.dart
 |   |       \---order_item_tile.dart
+|   +---products
+|   |   \---pages
+|   |       \---product_details_page.dart
 |   +---profile
 |   |   +---controllers
 |   |   |   +---delete_account_verify_controller.dart

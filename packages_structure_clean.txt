@@ -59,6 +59,7 @@ C.
 |   |   +---admin
 |   |   |   +---purchases
 |   |   |   |   \---admin_purchase_model.dart
+|   |   |   +---admin_permission_keys.dart
 |   |   |   +---mb_admin_activity_log.dart
 |   |   |   +---mb_admin_invite.dart
 |   |   |   \---mb_admin_permission.dart
@@ -122,6 +123,7 @@ C.
 |   |   |   +---admin_banner_repository.dart
 |   |   |   +---admin_brand_repository.dart
 |   |   |   +---admin_category_repository.dart
+|   |   |   +---admin_home_section_repository.dart
 |   |   |   +---admin_invite_repository.dart
 |   |   |   +---admin_offer_repository.dart
 |   |   |   +---admin_product_repository.dart

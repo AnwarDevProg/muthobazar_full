@@ -121,6 +121,7 @@ C.
 |   |   |   |   +---bindings
 |   |   |   |   |   +---admin_access_binding.dart
 |   |   |   |   |   +---admin_activity_logs_binding.dart
+|   |   |   |   |   +---admin_home_section_binding.dart
 |   |   |   |   |   +---admin_user_binding.dart
 |   |   |   |   |   +---admin_web_binding.dart
 |   |   |   |   |   +---audit_logs_binding.dart
@@ -246,12 +247,15 @@ C.
 |   |   |   |   +---manual_orders
 |   |   |   |   +---marketing
 |   |   |   |   |   +---controllers
+|   |   |   |   |   |   +---admin_home_section_controller.dart
 |   |   |   |   |   |   +---admin_offer_controller.dart
 |   |   |   |   |   |   \---admin_promo_controller.dart
 |   |   |   |   |   +---pages
+|   |   |   |   |   |   +---admin_home_sections_page.dart
 |   |   |   |   |   |   +---admin_offers_page.dart
 |   |   |   |   |   |   \---admin_promos_page.dart
 |   |   |   |   |   \---widgets
+|   |   |   |   |       +---admin_home_section_form_dialog.dart
 |   |   |   |   |       +---admin_offer_form_dialog.dart
 |   |   |   |   |       \---admin_promo_form_dialog.dart
 |   |   |   |   +---offer
@@ -605,6 +609,8 @@ C.
 |   |   |   |   +---cart
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   \---cart_controller.dart
+|   |   |   |   |   +---helpers
+|   |   |   |   |   |   \---cart_item_builder.dart
 |   |   |   |   |   +---pages
 |   |   |   |   |   |   \---cart_page.dart
 |   |   |   |   |   \---widgets
@@ -631,7 +637,6 @@ C.
 |   |   |   |   |   |   +---home_overlay_controller.dart
 |   |   |   |   |   |   \---offer_overlay_manager.dart
 |   |   |   |   |   +---data
-|   |   |   |   |   |   +---dummy_catalog_data.dart
 |   |   |   |   |   |   \---home_dummy_data.dart
 |   |   |   |   |   +---pages
 |   |   |   |   |   |   +---home_page.dart
@@ -662,6 +667,9 @@ C.
 |   |   |   |   |   \---widgets
 |   |   |   |   |       +---order_card.dart
 |   |   |   |   |       \---order_item_tile.dart
+|   |   |   |   +---products
+|   |   |   |   |   \---pages
+|   |   |   |   |       \---product_details_page.dart
 |   |   |   |   +---profile
 |   |   |   |   |   +---controllers
 |   |   |   |   |   |   +---delete_account_verify_controller.dart
@@ -1269,6 +1277,7 @@ C.
 |   |   |   +---admin
 |   |   |   |   +---purchases
 |   |   |   |   |   \---admin_purchase_model.dart
+|   |   |   |   +---admin_permission_keys.dart
 |   |   |   |   +---mb_admin_activity_log.dart
 |   |   |   |   +---mb_admin_invite.dart
 |   |   |   |   \---mb_admin_permission.dart
@@ -1332,6 +1341,7 @@ C.
 |   |   |   |   +---admin_banner_repository.dart
 |   |   |   |   +---admin_brand_repository.dart
 |   |   |   |   +---admin_category_repository.dart
+|   |   |   |   +---admin_home_section_repository.dart
 |   |   |   |   +---admin_invite_repository.dart
 |   |   |   |   +---admin_offer_repository.dart
 |   |   |   |   +---admin_product_repository.dart
@@ -1502,6 +1512,7 @@ C.
 |       +---deploy_all_functions.ps1
 |       +---deploy_verify_category_backend.ps1
 |       +---format_all.sh
+|       +---generate_clean_tree.md
 |       +---generate_clean_tree.ps1
 |       +---git_push.ps1
 |       +---run_admin_web_chrome.ps1

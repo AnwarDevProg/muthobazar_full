@@ -5,6 +5,7 @@ C.
 |   +---bindings
 |   |   +---admin_access_binding.dart
 |   |   +---admin_activity_logs_binding.dart
+|   |   +---admin_home_section_binding.dart
 |   |   +---admin_user_binding.dart
 |   |   +---admin_web_binding.dart
 |   |   +---audit_logs_binding.dart
@@ -130,12 +131,15 @@ C.
 |   +---manual_orders
 |   +---marketing
 |   |   +---controllers
+|   |   |   +---admin_home_section_controller.dart
 |   |   |   +---admin_offer_controller.dart
 |   |   |   \---admin_promo_controller.dart
 |   |   +---pages
+|   |   |   +---admin_home_sections_page.dart
 |   |   |   +---admin_offers_page.dart
 |   |   |   \---admin_promos_page.dart
 |   |   \---widgets
+|   |       +---admin_home_section_form_dialog.dart
 |   |       +---admin_offer_form_dialog.dart
 |   |       \---admin_promo_form_dialog.dart
 |   +---offer
