@@ -1,36 +1,37 @@
-// MB Product Card - horizontal01
+// MB Product Card - compact02
 //
 // Family:
-// Horizontal
+// Compact
 //
 // Purpose:
-// A fast-scanning full-width row card designed for recommendation strips,
-// mixed-product sections, and compact list-like store layouts.
+// A denser but more structured compact-family variant for 2-column store grids.
+// Compared with compact01, this version adds clearer information grouping while
+// still keeping the same fast browsing behavior and half-width footprint.
 //
 // Footprint:
-// Full-width card.
-// Short horizontal footprint.
-// Must fit comfortably inside section grids where row-style cards break the
-// rhythm of 2-column cards and provide visual variety.
+// Half-width card.
+// Designed for 2 cards per row in normal store grids.
+// Must remain stable inside bounded preview containers and scrollable layouts.
 //
 // Visual Priority:
 // 1. Product image
 // 2. Product title
-// 3. Current price
-// 4. Key supporting info
-// 5. Small badge or status chip
+// 3. Price block
+// 4. Supporting metadata rail
+// 5. Small action and badge cues
 //
 // Best Use Cases:
-// Mixed recommendations, recently viewed style blocks, repeat products,
-// quick-scan shopping sections, cross-category suggestions.
+// Grocery essentials, pharmacy items, packaged foods, household items,
+// and general catalog browsing where a more organized compact card is useful.
 //
 // Behavior Notes:
-// - Uses a left-image, right-content layout.
+// - Keeps the compact family footprint and browsing behavior.
+// - Uses a more structured content stack than compact01.
+// - Badge remains small and controlled.
+// - Metadata is grouped into a lightweight bottom rail.
 // - Title clamps to 2 lines.
-// - Remains compact vertically.
-// - Supporting info stays minimal and never crowds the layout.
-// - Works safely in bounded preview containers and scrollable layouts.
-// - Remains readable even with weaker product images.
+// - Must degrade gracefully when sale price, brand, subtitle, or meta values
+//   are missing.
 // - Avoids relying on unbounded Expanded/Flex behavior.
 
 import 'package:flutter/material.dart';
@@ -38,8 +39,8 @@ import 'package:shared_models/shared_models.dart';
 
 import '../system/mb_card_config_resolver.dart';
 
-class MBProductCardHorizontal01 extends StatelessWidget {
-  const MBProductCardHorizontal01({
+class MBProductCardCompact02 extends StatelessWidget {
+  const MBProductCardCompact02({
     super.key,
     required this.product,
     required this.resolved,
@@ -56,13 +57,14 @@ class MBProductCardHorizontal01 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badge = _buildPrimaryBadge(context);
     final subtitle = _buildSubtitle(context);
-    final meta = _buildBottomMeta(context);
+    final badge = _buildPrimaryBadge(context);
+    final brandChip = _buildBrandChip(context);
+    final metaRail = _buildMetaRail(context);
 
-    final body = Container(
+    final cardBody = Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _backgroundColor(),
         borderRadius: BorderRadius.circular(resolved.surface.borderRadius),
         boxShadow: _buildShadows(),
         border: _buildBorder(),
@@ -73,39 +75,34 @@ class MBProductCardHorizontal01 extends StatelessWidget {
           children: <Widget>[
             Padding(
               padding: _contentPadding(),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _buildImageBlock(context),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        if (badge != null) ...<Widget>[
-                          badge,
-                          const SizedBox(height: 8),
-                        ],
-                        _buildTitle(context),
-                        if (subtitle != null) ...<Widget>[
-                          const SizedBox(height: 4),
-                          subtitle,
-                        ],
-                        const SizedBox(height: 10),
-                        _buildPriceRow(context),
-                        if (meta != null) ...<Widget>[
-                          const SizedBox(height: 8),
-                          meta,
-                        ],
-                        if (resolved.actions.showAddToCart ||
-                            resolved.actions.showViewDetails) ...<Widget>[
-                          const SizedBox(height: 10),
-                          _buildActionRow(context),
-                        ],
-                      ],
-                    ),
+                  _buildImageBlock(
+                    context,
+                    badge: badge,
                   ),
+                  const SizedBox(height: 10),
+                  if (brandChip != null) ...<Widget>[
+                    brandChip,
+                    const SizedBox(height: 8),
+                  ],
+                  _buildTitle(context),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 4),
+                    subtitle,
+                  ],
+                  const SizedBox(height: 10),
+                  _buildPriceBlock(context),
+                  if (metaRail != null) ...<Widget>[
+                    const SizedBox(height: 10),
+                    metaRail,
+                  ],
+                  if (resolved.actions.showAddToCart) ...<Widget>[
+                    const SizedBox(height: 10),
+                    _buildAddButton(context),
+                  ],
                 ],
               ),
             ),
@@ -121,7 +118,7 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     );
 
     if (onTap == null) {
-      return body;
+      return cardBody;
     }
 
     return Material(
@@ -129,29 +126,44 @@ class MBProductCardHorizontal01 extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(resolved.surface.borderRadius),
         onTap: onTap,
-        child: body,
+        child: cardBody,
       ),
     );
   }
 
   EdgeInsets _contentPadding() {
-    final scale =
-    resolved.surface.paddingScale <= 0 ? 1.0 : resolved.surface.paddingScale;
+    final scale = resolved.surface.paddingScale <= 0
+        ? 1.0
+        : resolved.surface.paddingScale;
     final base = 12.0 * scale;
     return EdgeInsets.all(base.clamp(8.0, 20.0));
   }
 
+  Color _backgroundColor() {
+    switch (_normalizeToken(resolved.surface.backgroundColorToken)) {
+      case 'surface_soft_gray':
+        return const Color(0xFFF9FAFB);
+      case 'surface_soft_orange':
+        return const Color(0xFFFFFAF5);
+      default:
+        return Colors.white;
+    }
+  }
+
   List<BoxShadow> _buildShadows() {
-    final elevation = resolved.surface.elevationLevel.clamp(0.0, 6.0);
-    if (elevation <= 0 && !resolved.surface.use3DEffect) {
+    if (resolved.surface.elevationLevel <= 0 && !resolved.surface.use3DEffect) {
       return const <BoxShadow>[];
     }
+
+    final elevation = resolved.surface.elevationLevel.clamp(0.0, 6.0);
+    final blur = 10.0 + (elevation * 2.0);
+    final y = 4.0 + elevation;
 
     return <BoxShadow>[
       BoxShadow(
         color: Colors.black.withValues(alpha: 0.08),
-        blurRadius: 10 + (elevation * 2),
-        offset: Offset(0, 4 + elevation),
+        blurRadius: blur,
+        offset: Offset(0, y),
       ),
       if (resolved.surface.use3DEffect && resolved.surface.threeDDepth > 0)
         BoxShadow(
@@ -164,7 +176,10 @@ class MBProductCardHorizontal01 extends StatelessWidget {
 
   Border? _buildBorder() {
     if (!resolved.borderEffect.showBorder) {
-      return null;
+      return Border.all(
+        color: const Color(0xFFE5E7EB),
+        width: 1,
+      );
     }
 
     return Border.all(
@@ -183,17 +198,21 @@ class MBProductCardHorizontal01 extends StatelessWidget {
         return const Color(0xFFFF7A00);
       case 'soft_glow':
         return const Color(0xFFFFB36B);
+      case 'electric':
+        return const Color(0xFF5B8CFF);
       default:
         return const Color(0xFFE5E7EB);
     }
   }
 
-  Widget _buildImageBlock(BuildContext context) {
+  Widget _buildImageBlock(
+      BuildContext context, {
+        Widget? badge,
+      }) {
     final image = ClipRRect(
       borderRadius: BorderRadius.circular(resolved.media.imageCornerRadius),
-      child: SizedBox(
-        width: 110,
-        height: 110,
+      child: AspectRatio(
+        aspectRatio: 1.02,
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
@@ -208,6 +227,12 @@ class MBProductCardHorizontal01 extends StatelessWidget {
                     alpha: resolved.media.imageOverlayOpacity.clamp(0.0, 0.85),
                   ),
                 ),
+              ),
+            if (badge != null)
+              Positioned(
+                left: 8,
+                top: 8,
+                child: badge,
               ),
           ],
         ),
@@ -232,6 +257,34 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     );
   }
 
+  Widget? _buildBrandChip(BuildContext context) {
+    if (!resolved.meta.showBrand) {
+      return null;
+    }
+
+    final brand = _textValue(product.brandNameEn);
+    if (brand.isEmpty) {
+      return null;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        brand,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: const Color(0xFF4B5563),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTitle(BuildContext context) {
     return Text(
       _titleText(),
@@ -241,7 +294,7 @@ class MBProductCardHorizontal01 extends StatelessWidget {
         color: _titleColor(),
         fontWeight:
         resolved.typography.titleBold ? FontWeight.w700 : FontWeight.w600,
-        height: 1.2,
+        height: 1.22,
       ),
     );
   }
@@ -263,7 +316,7 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceRow(BuildContext context) {
+  Widget _buildPriceBlock(BuildContext context) {
     if (!resolved.price.showsAnyPrice) {
       return const SizedBox.shrink();
     }
@@ -274,116 +327,155 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     final hasDiscount = salePrice != null && salePrice < product.price;
     final currency = resolved.price.showCurrencySymbol ? '৳' : '';
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
-        if (resolved.price.showsFinalPrice)
-          Text(
-            '$currency${finalPrice.toStringAsFixed(0)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: _priceColor(),
-              fontWeight: resolved.price.emphasizeFinalPrice
-                  ? FontWeight.w800
-                  : FontWeight.w700,
-              height: 1.0,
-            ),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                '$currency${finalPrice.toStringAsFixed(0)}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: _priceColor(),
+                  fontWeight: resolved.price.emphasizeFinalPrice
+                      ? FontWeight.w800
+                      : FontWeight.w700,
+                  height: 1.0,
+                ),
+              ),
+              if (resolved.price.showsOriginalPrice && hasDiscount) ...<Widget>[
+                const SizedBox(height: 3),
+                Text(
+                  '$currency${originalPrice.toStringAsFixed(0)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _oldPriceColor(),
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+              ],
+            ],
           ),
-        if (resolved.price.showsOriginalPrice && hasDiscount)
-          Text(
-            '$currency${originalPrice.toStringAsFixed(0)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: _oldPriceColor(),
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
+        ),
         if (resolved.price.showsDiscountInfo && hasDiscount)
-          Text(
-            _discountText(original: originalPrice, finalPrice: finalPrice),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: const Color(0xFFE67E22),
-              fontWeight: FontWeight.w700,
+          Container(
+            margin: const EdgeInsets.only(left: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4E8),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              _discountText(
+                original: originalPrice,
+                finalPrice: finalPrice,
+              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: const Color(0xFFE67E22),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget? _buildBottomMeta(BuildContext context) {
-    final texts = <String>[];
+  Widget? _buildMetaRail(BuildContext context) {
+    final entries = <_MetaEntry>[];
 
-    final unitLabelEn = _textValue(product.unitLabelEn);
-    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
-      texts.add(unitLabelEn);
+    final unitLabel = _textValue(product.unitLabelEn);
+    if (resolved.meta.showUnitLabel && unitLabel.isNotEmpty) {
+      entries.add(
+        _MetaEntry(
+          icon: Icons.straighten,
+          label: unitLabel,
+        ),
+      );
     }
 
-    final brandNameEn = _textValue(product.brandNameEn);
-    if (resolved.meta.showBrand && brandNameEn.isNotEmpty) {
-      texts.add(brandNameEn);
-    }
-
-    final qty = product.stockQty;
-    if (resolved.meta.showStockHint && qty > 0 && qty <= 10) {
-      texts.add('Low stock');
+    if (resolved.meta.showStockHint) {
+      final qty = product.stockQty;
+      if (qty > 0 && qty <= 10) {
+        entries.add(
+          const _MetaEntry(
+            icon: Icons.inventory_2_outlined,
+            label: 'Low stock',
+          ),
+        );
+      }
     }
 
     final deliveryShift = _textValue(product.deliveryShift);
     if (resolved.meta.showDeliveryHint && deliveryShift.isNotEmpty) {
-      texts.add(deliveryShift);
+      entries.add(
+        _MetaEntry(
+          icon: Icons.local_shipping_outlined,
+          label: deliveryShift,
+        ),
+      );
     }
 
     if (resolved.meta.showRating && product.views > 0) {
-      texts.add('Popular');
+      entries.add(
+        const _MetaEntry(
+          icon: Icons.trending_up,
+          label: 'Popular',
+        ),
+      );
     }
 
-    if (texts.isEmpty) {
+    if (entries.isEmpty) {
       return null;
     }
 
-    return Text(
-      texts.join(' • '),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: Colors.grey.shade600,
-        fontWeight: FontWeight.w600,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 8,
+        children: entries.map((entry) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                entry.icon,
+                size: 14,
+                color: const Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                entry.label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        }).toList(growable: false),
       ),
     );
   }
 
-  Widget _buildActionRow(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        if (resolved.actions.showAddToCart)
-          Expanded(
-            child: OutlinedButton(
-              onPressed: onAddToCartTap,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Add'),
-            ),
+  Widget _buildAddButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onAddToCartTap,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        if (resolved.actions.showAddToCart && resolved.actions.showViewDetails)
-          const SizedBox(width: 8),
-        if (resolved.actions.showViewDetails)
-          Expanded(
-            child: FilledButton(
-              onPressed: onTap,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Details'),
-            ),
-          ),
-      ],
+        ),
+        child: const Text('Add to cart'),
+      ),
     );
   }
 
@@ -392,7 +484,7 @@ class MBProductCardHorizontal01 extends StatelessWidget {
       return null;
     }
 
-    final text = _badgeText();
+    final text = _primaryBadgeText();
     if (text == null || text.isEmpty) {
       return null;
     }
@@ -440,30 +532,35 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     }
 
     final brandNameEn = _textValue(product.brandNameEn);
-    if (resolved.meta.showBrand && brandNameEn.isNotEmpty) {
+    if (!resolved.meta.showBrand && brandNameEn.isNotEmpty) {
       return brandNameEn;
-    }
-
-    final unitLabelEn = _textValue(product.unitLabelEn);
-    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
-      return unitLabelEn;
     }
 
     return null;
   }
 
-  String? _badgeText() {
+  String? _primaryBadgeText() {
+    final salePrice = product.salePrice;
+    if (resolved.price.showDiscountBadge &&
+        salePrice != null &&
+        salePrice < product.price) {
+      final percent = (((product.price - salePrice) / product.price) * 100).round();
+      if (percent > 0) {
+        return '-$percent%';
+      }
+    }
+
     if (product.isFlashSale) {
       return 'Flash';
     }
     if (product.isBestSeller) {
-      return 'Best Seller';
+      return 'Best';
     }
     if (product.isNewArrival) {
       return 'New';
     }
     if (product.isFeatured) {
-      return 'Featured';
+      return 'Hot';
     }
     return null;
   }
@@ -473,11 +570,16 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     required double finalPrice,
   }) {
     final saved = (original - finalPrice).clamp(0, double.infinity);
-    final percent = original <= 0 ? 0 : ((saved / original) * 100).round();
+    if (resolved.price.showSavingsText && saved > 0) {
+      return 'Save ৳${saved.toStringAsFixed(0)}';
+    }
+
+    final percent = original > 0 ? ((saved / original) * 100).round() : 0;
     if (percent > 0) {
       return '$percent% off';
     }
-    return 'Discount';
+
+    return 'Deal';
   }
 
   Color _titleColor() {
@@ -512,6 +614,8 @@ class MBProductCardHorizontal01 extends StatelessWidget {
         return const Color(0xFF7C3AED);
       case 'badge_flash_sale':
         return const Color(0xFFE53935);
+      case 'badge_premium_tag':
+        return const Color(0xFFD4A017);
       case 'badge_new_tag':
         return const Color(0xFF2563EB);
       default:
@@ -527,9 +631,11 @@ class MBProductCardHorizontal01 extends StatelessWidget {
     if (raw == null) {
       return '';
     }
+
     if (raw is String) {
       return raw.trim();
     }
+
     return raw.toString().trim();
   }
 }
@@ -581,9 +687,19 @@ class _ProductImage extends StatelessWidget {
       alignment: Alignment.center,
       child: const Icon(
         Icons.image_outlined,
-        size: 30,
+        size: 32,
         color: Color(0xFF9CA3AF),
       ),
     );
   }
+}
+
+class _MetaEntry {
+  const _MetaEntry({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
 }

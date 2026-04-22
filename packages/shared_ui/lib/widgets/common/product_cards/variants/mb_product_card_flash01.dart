@@ -76,7 +76,7 @@ class MBProductCardFlash01 extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                ?urgencyBar,
+                if (urgencyBar != null) urgencyBar,
                 Padding(
                   padding: _contentPadding(),
                   child: Column(
@@ -143,7 +143,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _backgroundColor() {
-    switch ((resolved.surface.backgroundColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.surface.backgroundColorToken)) {
       case 'surface_flash_tint':
         return const Color(0xFFFFFAF7);
       case 'surface_soft_orange':
@@ -191,7 +191,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _borderColor() {
-    switch (resolved.borderEffect.effectPreset.trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.borderEffect.effectPreset)) {
       case 'deal_pulse':
         return const Color(0xFFFF6A00);
       case 'fire':
@@ -254,8 +254,8 @@ class MBProductCardFlash01 extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             _ProductImage(
-              imageUrl: product.thumbnailUrl,
-              fitMode: resolved.media.imageFitMode,
+              imageUrl: _textValue(product.thumbnailUrl),
+              fitMode: _textValue(resolved.media.imageFitMode),
             ),
             if (resolved.media.imageOverlayOpacity > 0)
               DecoratedBox(
@@ -393,9 +393,9 @@ class MBProductCardFlash01 extends StatelessWidget {
   Widget? _buildBottomMeta(BuildContext context) {
     final texts = <String>[];
 
-    final unitLabelEn = product.unitLabelEn;
-    if (resolved.meta.showUnitLabel && (unitLabelEn ?? '').trim().isNotEmpty) {
-      texts.add(unitLabelEn!.trim());
+    final unitLabelEn = _textValue(product.unitLabelEn);
+    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
+      texts.add(unitLabelEn);
     }
 
     if (resolved.meta.showStockHint) {
@@ -407,9 +407,9 @@ class MBProductCardFlash01 extends StatelessWidget {
       }
     }
 
-    final brandNameEn = product.brandNameEn;
-    if (resolved.meta.showBrand && (brandNameEn ?? '').trim().isNotEmpty) {
-      texts.add(brandNameEn!.trim());
+    final brandNameEn = _textValue(product.brandNameEn);
+    if (resolved.meta.showBrand && brandNameEn.isNotEmpty) {
+      texts.add(brandNameEn);
     }
 
     if (texts.isEmpty) {
@@ -491,31 +491,38 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   String _titleText() {
-    if (product.titleEn.trim().isNotEmpty) {
-      return product.titleEn.trim();
+    final titleEn = _textValue(product.titleEn);
+    if (titleEn.isNotEmpty) {
+      return titleEn;
     }
-    if (product.titleBn.trim().isNotEmpty) {
-      return product.titleBn.trim();
+
+    final titleBn = _textValue(product.titleBn);
+    if (titleBn.isNotEmpty) {
+      return titleBn;
     }
-    if (product.slug.trim().isNotEmpty) {
-      return product.slug.trim();
+
+    final slug = _textValue(product.slug);
+    if (slug.isNotEmpty) {
+      return slug;
     }
+
     return 'Untitled product';
   }
 
   String? _subtitleText() {
-    if (resolved.meta.showSubtitle && product.shortDescriptionEn.trim().isNotEmpty) {
-      return product.shortDescriptionEn.trim();
+    final shortDescriptionEn = _textValue(product.shortDescriptionEn);
+    if (resolved.meta.showSubtitle && shortDescriptionEn.isNotEmpty) {
+      return shortDescriptionEn;
     }
 
-    final unitLabelEn = product.unitLabelEn;
-    if (resolved.meta.showUnitLabel && (unitLabelEn ?? '').trim().isNotEmpty) {
-      return unitLabelEn!.trim();
+    final unitLabelEn = _textValue(product.unitLabelEn);
+    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
+      return unitLabelEn;
     }
 
-    final brandNameEn = product.brandNameEn;
-    if (resolved.meta.showBrand && (brandNameEn ?? '').trim().isNotEmpty) {
-      return brandNameEn!.trim();
+    final brandNameEn = _textValue(product.brandNameEn);
+    if (resolved.meta.showBrand && brandNameEn.isNotEmpty) {
+      return brandNameEn;
     }
 
     return null;
@@ -549,7 +556,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _titleColor() {
-    switch ((resolved.typography.titleColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.typography.titleColorToken)) {
       case 'text_title_inverse':
         return Colors.white;
       default:
@@ -558,7 +565,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _subtitleColor() {
-    switch ((resolved.typography.subtitleColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.typography.subtitleColorToken)) {
       case 'text_subtitle_soft':
         return const Color(0xFF6B7280);
       default:
@@ -567,7 +574,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _priceColor() {
-    switch ((resolved.typography.priceColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.typography.priceColorToken)) {
       case 'text_price_inverse':
         return Colors.white;
       default:
@@ -580,7 +587,7 @@ class MBProductCardFlash01 extends StatelessWidget {
   }
 
   Color _badgeBackgroundColor() {
-    switch ((resolved.badges.primaryBadgeStyle ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.badges.primaryBadgeStyle)) {
       case 'badge_hot_deal':
         return const Color(0xFFFF6A00);
       case 'badge_flash_sale':
@@ -588,6 +595,20 @@ class MBProductCardFlash01 extends StatelessWidget {
       default:
         return const Color(0xFFE53935);
     }
+  }
+
+  String _normalizeToken(String? raw) {
+    return _textValue(raw).toLowerCase();
+  }
+
+  String _textValue(Object? raw) {
+    if (raw == null) {
+      return '';
+    }
+    if (raw is String) {
+      return raw.trim();
+    }
+    return raw.toString().trim();
   }
 }
 
@@ -604,7 +625,7 @@ class _ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final fit = _boxFit();
 
-    if (imageUrl.trim().isEmpty) {
+    if (imageUrl.isEmpty) {
       return _placeholder();
     }
 
@@ -622,7 +643,7 @@ class _ProductImage extends StatelessWidget {
   }
 
   BoxFit _boxFit() {
-    switch (fitMode.trim().toLowerCase()) {
+    switch (fitMode.toLowerCase()) {
       case 'contain':
         return BoxFit.contain;
       case 'fill':

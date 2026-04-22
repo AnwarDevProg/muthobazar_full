@@ -3,7 +3,7 @@
 // Location: packages/shared_ui/lib/widgets/common/product_cards/system/mb_card_variant_registry.dart
 //
 // Purpose:
-// Central registry for starter product card variant definitions.
+// Central registry for product card variant definitions.
 //
 // This file provides a single source of truth for:
 // - which variants currently exist
@@ -14,9 +14,8 @@
 //
 // Important:
 // - This is a shared_ui registry file, not a persistence model.
-// - The actual widget builder mapping should be added later in renderer-layer
-//   files. This registry focuses on structural and settings metadata only.
-// - All defaults here should stay aligned with the design documentation.
+// - The actual widget builder mapping belongs in router / renderer files.
+// - Defaults here should stay aligned with the design documentation.
 
 import 'package:shared_models/product_cards/config/product_card_config.dart';
 
@@ -88,6 +87,71 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
+    MBCardVariant.compact02: MBCardVariantDefinition(
+      variant: MBCardVariant.compact02,
+      family: MBCardFamily.compact,
+      footprint: MBCardFootprint.halfWidth,
+      defaults: MBCardSettingsOverride(
+        surface: const MBCardSurfaceSettings(
+          borderRadius: 18,
+          elevationLevel: 1,
+          paddingScale: 1,
+        ),
+        typography: const MBCardTypographySettings(
+          titleMaxLines: 2,
+          subtitleMaxLines: 1,
+          titleBold: true,
+          priceBold: true,
+        ),
+        price: const MBCardPriceSettings(
+          priceMode: MBCardPriceMode.originalAndFinal,
+          showDiscountBadge: true,
+          showSavingsText: false,
+          emphasizeFinalPrice: true,
+          showCurrencySymbol: true,
+        ),
+        actions: const MBCardActionSettings(
+          showAddToCart: false,
+          showQuickAdd: false,
+          showWishlist: false,
+          showViewDetails: false,
+        ),
+        media: const MBCardMediaSettings(
+          imageFitMode: 'cover',
+          imageCornerRadius: 14,
+          imageOverlayOpacity: 0,
+          showImageShadow: false,
+          imageEmphasis: 1,
+        ),
+        badges: const MBCardBadgeSettings(
+          showPrimaryBadge: true,
+          showSecondaryBadge: false,
+          badgePlacement: 'top_left',
+        ),
+        meta: const MBCardMetaSettings(
+          showSubtitle: true,
+          showShortDescription: false,
+          showBrand: true,
+          showUnitLabel: true,
+          showStockHint: true,
+          showDeliveryHint: true,
+          showRating: false,
+        ),
+      ),
+      supportedSettings: const MBCardSupportedSettings(
+        canChangeSurface: true,
+        canChangeTypography: true,
+        canChangeAccent: false,
+        canChangeBorderEffect: true,
+        canChangePrice: true,
+        canChangeActions: true,
+        canChangeMedia: true,
+        canChangeBadges: true,
+        canChangeMeta: true,
+      ),
+    ),
+
     MBCardVariant.price01: MBCardVariantDefinition(
       variant: MBCardVariant.price01,
       family: MBCardFamily.price,
@@ -138,6 +202,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.horizontal01: MBCardVariantDefinition(
       variant: MBCardVariant.horizontal01,
       family: MBCardFamily.horizontal,
@@ -201,6 +266,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.premium01: MBCardVariantDefinition(
       variant: MBCardVariant.premium01,
       family: MBCardFamily.premium,
@@ -260,6 +326,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.wide01: MBCardVariantDefinition(
       variant: MBCardVariant.wide01,
       family: MBCardFamily.wide,
@@ -323,6 +390,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.featured01: MBCardVariantDefinition(
       variant: MBCardVariant.featured01,
       family: MBCardFamily.featured,
@@ -391,6 +459,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.promo01: MBCardVariantDefinition(
       variant: MBCardVariant.promo01,
       family: MBCardFamily.promo,
@@ -460,6 +529,7 @@ class MBCardVariantRegistry {
         canChangeMeta: true,
       ),
     ),
+
     MBCardVariant.flash01: MBCardVariantDefinition(
       variant: MBCardVariant.flash01,
       family: MBCardFamily.flashSale,
@@ -529,14 +599,24 @@ class MBCardVariantRegistry {
     ),
   };
 
+  static const List<MBCardVariant> _starterVariants = <MBCardVariant>[
+    MBCardVariant.compact01,
+    MBCardVariant.compact02,
+    MBCardVariant.price01,
+    MBCardVariant.horizontal01,
+    MBCardVariant.premium01,
+    MBCardVariant.wide01,
+    MBCardVariant.featured01,
+    MBCardVariant.promo01,
+    MBCardVariant.flash01,
+  ];
+
   static List<MBCardVariantDefinition> all() {
     return _definitions.values.toList(growable: false);
   }
 
   static List<MBCardVariantDefinition> starterDefinitions() {
-    return MBCardVariantHelper.starterVariants
-        .map(definitionFor)
-        .toList(growable: false);
+    return _starterVariants.map(definitionFor).toList(growable: false);
   }
 
   static MBCardVariantDefinition definitionFor(MBCardVariant variant) {
@@ -553,7 +633,7 @@ class MBCardVariantRegistry {
       String variantId, {
         MBCardVariant fallback = MBCardVariant.compact01,
       }) {
-    final variant = MBCardVariantHelper.parse(variantId, fallback: fallback);
+    final variant = _parseVariantId(variantId, fallback: fallback);
     return definitionFor(variant);
   }
 
@@ -565,10 +645,8 @@ class MBCardVariantRegistry {
     if (variantId == null || variantId.trim().isEmpty) {
       return false;
     }
-    return MBCardVariantHelper.isValidId(variantId) &&
-        _definitions.containsKey(
-          MBCardVariantHelper.parse(variantId),
-        );
+    final variant = _parseVariantId(variantId, fallback: fallbackVariant);
+    return _definitions.containsKey(variant) && variant.id == variantId.trim();
   }
 
   static List<MBCardVariantDefinition> byFamily(MBCardFamily family) {
@@ -597,7 +675,6 @@ class MBCardVariantRegistry {
 
   static Map<MBCardFamily, List<MBCardVariantDefinition>> groupedByFamily() {
     final map = <MBCardFamily, List<MBCardVariantDefinition>>{};
-
     for (final definition in _definitions.values) {
       map.putIfAbsent(definition.family, () => <MBCardVariantDefinition>[])
           .add(definition);
@@ -609,5 +686,37 @@ class MBCardVariantRegistry {
         List<MBCardVariantDefinition>.unmodifiable(value),
       ),
     );
+  }
+
+  static MBCardVariant get fallbackVariant => MBCardVariant.compact01;
+
+  static MBCardVariant _parseVariantId(
+      String raw, {
+        MBCardVariant fallback = MBCardVariant.compact01,
+      }) {
+    final value = raw.trim().toLowerCase();
+
+    switch (value) {
+      case 'compact01':
+        return MBCardVariant.compact01;
+      case 'compact02':
+        return MBCardVariant.compact02;
+      case 'price01':
+        return MBCardVariant.price01;
+      case 'horizontal01':
+        return MBCardVariant.horizontal01;
+      case 'premium01':
+        return MBCardVariant.premium01;
+      case 'wide01':
+        return MBCardVariant.wide01;
+      case 'featured01':
+        return MBCardVariant.featured01;
+      case 'promo01':
+        return MBCardVariant.promo01;
+      case 'flash01':
+        return MBCardVariant.flash01;
+      default:
+        return fallback;
+    }
   }
 }

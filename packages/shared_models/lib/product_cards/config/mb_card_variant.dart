@@ -1,25 +1,21 @@
-// MuthoBazar Product Card Design System
 // File: mb_card_variant.dart
-// Location: packages/shared_models/lib/product_cards/config/mb_card_variant.dart
 //
-// Purpose:
-// Defines the concrete card variant ids used by the product card system.
+// Stable product-card variant ids used across shared_models, shared_ui,
+// customer preview-lab flows, and later admin configuration.
 //
-// A card variant represents:
-// - a specific visual composition inside a card family
-// - a stable persisted identifier for config and Firestore storage
-// - a registry key for renderer resolution in shared_ui
+// Design rule:
+// - Family defines behavior and layout meaning.
+// - Variant defines the fixed visual composition inside that family.
+// - Persist stable string ids, not display labels.
 //
-// Important:
-// - Persist the stable string id, never the enum index.
-// - Family controls layout behavior; variant controls exact design pattern.
-// - This file intentionally includes starter v1 variants first and can be
-//   extended in future phases.
+// Current starter set includes the original 8 variants, and compact02 is the
+// first extension inside the compact family.
 
 import 'mb_card_family.dart';
 
 enum MBCardVariant {
   compact01,
+  compact02,
   price01,
   horizontal01,
   premium01,
@@ -34,6 +30,8 @@ extension MBCardVariantX on MBCardVariant {
     switch (this) {
       case MBCardVariant.compact01:
         return 'compact01';
+      case MBCardVariant.compact02:
+        return 'compact02';
       case MBCardVariant.price01:
         return 'price01';
       case MBCardVariant.horizontal01:
@@ -54,27 +52,30 @@ extension MBCardVariantX on MBCardVariant {
   String get label {
     switch (this) {
       case MBCardVariant.compact01:
-        return 'Compact 01';
+        return 'compact01';
+      case MBCardVariant.compact02:
+        return 'compact02';
       case MBCardVariant.price01:
-        return 'Price 01';
+        return 'price01';
       case MBCardVariant.horizontal01:
-        return 'Horizontal 01';
+        return 'horizontal01';
       case MBCardVariant.premium01:
-        return 'Premium 01';
+        return 'premium01';
       case MBCardVariant.wide01:
-        return 'Wide 01';
+        return 'wide01';
       case MBCardVariant.featured01:
-        return 'Featured 01';
+        return 'featured01';
       case MBCardVariant.promo01:
-        return 'Promo 01';
+        return 'promo01';
       case MBCardVariant.flash01:
-        return 'Flash 01';
+        return 'flash01';
     }
   }
 
   MBCardFamily get family {
     switch (this) {
       case MBCardVariant.compact01:
+      case MBCardVariant.compact02:
         return MBCardFamily.compact;
       case MBCardVariant.price01:
         return MBCardFamily.price;
@@ -93,102 +94,99 @@ extension MBCardVariantX on MBCardVariant {
     }
   }
 
-  bool get isStarterVariant => true;
+  String get familyId {
+    switch (this) {
+      case MBCardVariant.compact01:
+      case MBCardVariant.compact02:
+        return 'compact';
+      case MBCardVariant.price01:
+        return 'price';
+      case MBCardVariant.horizontal01:
+        return 'horizontal';
+      case MBCardVariant.premium01:
+        return 'premium';
+      case MBCardVariant.wide01:
+        return 'wide';
+      case MBCardVariant.featured01:
+        return 'featured';
+      case MBCardVariant.promo01:
+        return 'promo';
+      case MBCardVariant.flash01:
+        return 'flash_sale';
+    }
+  }
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'id': id,
-      'label': label,
-      'familyId': family.id,
-      'familyLabel': family.label,
-      'isStarterVariant': isStarterVariant,
-    };
+  bool get isFullWidth {
+    switch (this) {
+      case MBCardVariant.horizontal01:
+      case MBCardVariant.wide01:
+      case MBCardVariant.featured01:
+      case MBCardVariant.promo01:
+        return true;
+      case MBCardVariant.compact01:
+      case MBCardVariant.compact02:
+      case MBCardVariant.price01:
+      case MBCardVariant.premium01:
+      case MBCardVariant.flash01:
+        return false;
+    }
   }
 }
 
 class MBCardVariantHelper {
   const MBCardVariantHelper._();
 
-  static const List<MBCardVariant> values = MBCardVariant.values;
+  static const MBCardVariant defaultFallback = MBCardVariant.compact01;
 
-  static const List<MBCardVariant> starterVariants = <MBCardVariant>[
-    MBCardVariant.compact01,
-    MBCardVariant.price01,
-    MBCardVariant.horizontal01,
-    MBCardVariant.premium01,
-    MBCardVariant.wide01,
-    MBCardVariant.featured01,
-    MBCardVariant.promo01,
-    MBCardVariant.flash01,
-  ];
+  static List<MBCardVariant> get values =>
+      List<MBCardVariant>.unmodifiable(MBCardVariant.values);
+
+  static List<String> get allowedIds =>
+      values.map((item) => item.id).toList(growable: false);
 
   static MBCardVariant parse(
-      String? raw, {
-        MBCardVariant fallback = MBCardVariant.compact01,
+      dynamic raw, {
+        MBCardVariant fallback = defaultFallback,
       }) {
-    if (raw == null) {
-      return fallback;
-    }
-
     final normalized = _normalize(raw);
-    if (normalized.isEmpty) {
-      return fallback;
-    }
-
-    for (final variant in MBCardVariant.values) {
-      if (_normalize(variant.id) == normalized) {
-        return variant;
-      }
-      if (_normalize(variant.label) == normalized) {
-        return variant;
-      }
-      if (_normalize(variant.name) == normalized) {
-        return variant;
-      }
-    }
 
     switch (normalized) {
-      case 'flash_01':
-      case 'flash-01':
+      case 'compact01':
+        return MBCardVariant.compact01;
+      case 'compact02':
+        return MBCardVariant.compact02;
+      case 'price01':
+        return MBCardVariant.price01;
+      case 'horizontal01':
+        return MBCardVariant.horizontal01;
+      case 'premium01':
+        return MBCardVariant.premium01;
+      case 'wide01':
+        return MBCardVariant.wide01;
+      case 'featured01':
+        return MBCardVariant.featured01;
+      case 'promo01':
+        return MBCardVariant.promo01;
+      case 'flash01':
         return MBCardVariant.flash01;
       default:
         return fallback;
     }
   }
 
-  static bool isValidId(String? raw) {
-    if (raw == null || raw.trim().isEmpty) {
-      return false;
-    }
+  static String normalize(
+      dynamic raw, {
+        MBCardVariant fallback = defaultFallback,
+      }) {
+    return parse(raw, fallback: fallback).id;
+  }
 
+  static bool isValid(dynamic raw) {
     final normalized = _normalize(raw);
-    for (final variant in MBCardVariant.values) {
-      if (_normalize(variant.id) == normalized) {
-        return true;
-      }
-    }
-    return false;
+    return allowedIds.contains(normalized);
   }
 
-  static List<String> ids() {
-    return MBCardVariant.values
-        .map((variant) => variant.id)
-        .toList(growable: false);
-  }
-
-  static List<String> labels() {
-    return MBCardVariant.values
-        .map((variant) => variant.label)
-        .toList(growable: false);
-  }
-
-  static List<MBCardVariant> byFamily(MBCardFamily family) {
-    return MBCardVariant.values
-        .where((variant) => variant.family == family)
-        .toList(growable: false);
-  }
-
-  static String _normalize(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  static String _normalize(dynamic raw) {
+    return raw?.toString().trim().toLowerCase() ?? '';
   }
 }

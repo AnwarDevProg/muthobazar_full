@@ -53,6 +53,12 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
       footprintLabel: 'Half width',
     ),
     _StoreCardVariantOption(
+      variant: MBCardVariant.compact02,
+      title: 'compact02',
+      description: 'Structured compact grid card',
+      footprintLabel: 'Half width',
+    ),
+    _StoreCardVariantOption(
       variant: MBCardVariant.price01,
       title: 'price01',
       description: 'Deal-first price card',

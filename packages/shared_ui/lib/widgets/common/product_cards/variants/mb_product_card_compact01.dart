@@ -166,7 +166,7 @@ class MBProductCardCompact01 extends StatelessWidget {
   }
 
   Color _borderColor() {
-    switch (resolved.borderEffect.effectPreset.trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.borderEffect.effectPreset)) {
       case 'premium_outline':
         return const Color(0xFFD4A017);
       case 'deal_pulse':
@@ -191,8 +191,8 @@ class MBProductCardCompact01 extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             _ProductImage(
-              imageUrl: product.thumbnailUrl,
-              fitMode: resolved.media.imageFitMode,
+              imageUrl: _textValue(product.thumbnailUrl),
+              fitMode: _textValue(resolved.media.imageFitMode),
             ),
             if (resolved.media.imageOverlayOpacity > 0)
               DecoratedBox(
@@ -314,9 +314,9 @@ class MBProductCardCompact01 extends StatelessWidget {
   Widget? _buildBottomMeta(BuildContext context) {
     final texts = <String>[];
 
-    final unitLabelEn = product.unitLabelEn;
-    if (resolved.meta.showUnitLabel && unitLabelEn!.trim().isNotEmpty) {
-      texts.add(unitLabelEn.trim());
+    final unitLabelEn = _textValue(product.unitLabelEn);
+    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
+      texts.add(unitLabelEn);
     }
 
     final stockQty = product.stockQty;
@@ -324,9 +324,9 @@ class MBProductCardCompact01 extends StatelessWidget {
       texts.add('Low stock');
     }
 
-    final deliveryShift = product.deliveryShift;
-    if (resolved.meta.showDeliveryHint && deliveryShift.trim().isNotEmpty) {
-      texts.add(deliveryShift.trim());
+    final deliveryShift = _textValue(product.deliveryShift);
+    if (resolved.meta.showDeliveryHint && deliveryShift.isNotEmpty) {
+      texts.add(deliveryShift);
     }
 
     if (resolved.meta.showRating && product.views > 0) {
@@ -392,31 +392,38 @@ class MBProductCardCompact01 extends StatelessWidget {
   }
 
   String _titleText() {
-    if (product.titleEn.trim().isNotEmpty) {
-      return product.titleEn.trim();
+    final titleEn = _textValue(product.titleEn);
+    if (titleEn.isNotEmpty) {
+      return titleEn;
     }
-    if (product.titleBn.trim().isNotEmpty) {
-      return product.titleBn.trim();
+
+    final titleBn = _textValue(product.titleBn);
+    if (titleBn.isNotEmpty) {
+      return titleBn;
     }
-    if (product.slug.trim().isNotEmpty) {
-      return product.slug.trim();
+
+    final slug = _textValue(product.slug);
+    if (slug.isNotEmpty) {
+      return slug;
     }
+
     return 'Untitled product';
   }
 
   String? _subtitleText() {
-    final brandNameEn = product.brandNameEn;
-    if (resolved.meta.showBrand && brandNameEn!.trim().isNotEmpty) {
-      return brandNameEn.trim();
+    final brandNameEn = _textValue(product.brandNameEn);
+    if (resolved.meta.showBrand && brandNameEn.isNotEmpty) {
+      return brandNameEn;
     }
 
-    if (resolved.meta.showSubtitle && product.shortDescriptionEn.trim().isNotEmpty) {
-      return product.shortDescriptionEn.trim();
+    final shortDescriptionEn = _textValue(product.shortDescriptionEn);
+    if (resolved.meta.showSubtitle && shortDescriptionEn.isNotEmpty) {
+      return shortDescriptionEn;
     }
 
-    final unitLabelEn = product.unitLabelEn;
-    if (resolved.meta.showUnitLabel && unitLabelEn!.trim().isNotEmpty) {
-      return unitLabelEn.trim();
+    final unitLabelEn = _textValue(product.unitLabelEn);
+    if (resolved.meta.showUnitLabel && unitLabelEn.isNotEmpty) {
+      return unitLabelEn;
     }
 
     return null;
@@ -460,7 +467,7 @@ class MBProductCardCompact01 extends StatelessWidget {
   }
 
   Color _titleColor() {
-    switch ((resolved.typography.titleColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.typography.titleColorToken)) {
       case 'text_title_inverse':
         return Colors.white;
       default:
@@ -473,7 +480,7 @@ class MBProductCardCompact01 extends StatelessWidget {
   }
 
   Color _priceColor() {
-    switch ((resolved.typography.priceColorToken ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.typography.priceColorToken)) {
       case 'text_price_inverse':
         return Colors.white;
       default:
@@ -486,7 +493,7 @@ class MBProductCardCompact01 extends StatelessWidget {
   }
 
   Color _badgeBackgroundColor() {
-    switch ((resolved.badges.primaryBadgeStyle ?? '').trim().toLowerCase()) {
+    switch (_normalizeToken(resolved.badges.primaryBadgeStyle)) {
       case 'badge_best_seller':
         return const Color(0xFF7C3AED);
       case 'badge_flash_sale':
@@ -498,6 +505,20 @@ class MBProductCardCompact01 extends StatelessWidget {
       default:
         return const Color(0xFFFF7A00);
     }
+  }
+
+  String _normalizeToken(String? raw) {
+    return _textValue(raw).toLowerCase();
+  }
+
+  String _textValue(Object? raw) {
+    if (raw == null) {
+      return '';
+    }
+    if (raw is String) {
+      return raw.trim();
+    }
+    return raw.toString().trim();
   }
 }
 
@@ -514,7 +535,7 @@ class _ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final fit = _boxFit();
 
-    if (imageUrl.trim().isEmpty) {
+    if (imageUrl.isEmpty) {
       return _placeholder();
     }
 
@@ -532,7 +553,7 @@ class _ProductImage extends StatelessWidget {
   }
 
   BoxFit _boxFit() {
-    switch (fitMode.trim().toLowerCase()) {
+    switch (fitMode.toLowerCase()) {
       case 'contain':
         return BoxFit.contain;
       case 'fill':

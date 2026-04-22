@@ -1,24 +1,8 @@
-// MuthoBazar Product Card Design System
-// File: mb_product_card_variant_router.dart
-// Location: packages/shared_ui/lib/widgets/common/product_cards/system/mb_product_card_variant_router.dart
-//
-// Purpose:
-// Central router that maps a resolved product card variant to its real widget.
-//
-// This file is the single source of truth for:
-// - variant -> widget mapping
-// - which variants are currently supported by the shared_ui layer
-// - keeping renderer selection centralized instead of scattered across files
-//
-// Important:
-// - All current starter variants are now wired to their real widgets.
-// - Keep this file focused on routing only.
-// - Do not place variant-specific styling or resolver logic here.
-
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
 import '../variants/mb_product_card_compact01.dart';
+import '../variants/mb_product_card_compact02.dart';
 import '../variants/mb_product_card_featured01.dart';
 import '../variants/mb_product_card_flash01.dart';
 import '../variants/mb_product_card_horizontal01.dart';
@@ -57,6 +41,16 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
+      case MBCardVariant.compact02:
+        return MBProductCardCompact02(
+          product: product,
+          resolved: resolved,
+          onTap: onTap,
+          onAddToCartTap: onAddToCartTap,
+          trailingOverlay: trailingOverlay,
+        );
+
       case MBCardVariant.price01:
         return MBProductCardPrice01(
           product: product,
@@ -65,6 +59,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.horizontal01:
         return MBProductCardHorizontal01(
           product: product,
@@ -73,6 +68,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.premium01:
         return MBProductCardPremium01(
           product: product,
@@ -81,6 +77,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.wide01:
         return MBProductCardWide01(
           product: product,
@@ -89,6 +86,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.featured01:
         return MBProductCardFeatured01(
           product: product,
@@ -97,6 +95,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.promo01:
         return MBProductCardPromo01(
           product: product,
@@ -105,6 +104,7 @@ class MBProductCardVariantRouter {
           onAddToCartTap: onAddToCartTap,
           trailingOverlay: trailingOverlay,
         );
+
       case MBCardVariant.flash01:
         return MBProductCardFlash01(
           product: product,
@@ -119,6 +119,7 @@ class MBProductCardVariantRouter {
   static bool supports(MBCardVariant variant) {
     switch (variant) {
       case MBCardVariant.compact01:
+      case MBCardVariant.compact02:
       case MBCardVariant.price01:
       case MBCardVariant.horizontal01:
       case MBCardVariant.premium01:
@@ -133,6 +134,7 @@ class MBProductCardVariantRouter {
   static List<MBCardVariant> supportedVariants() {
     return const <MBCardVariant>[
       MBCardVariant.compact01,
+      MBCardVariant.compact02,
       MBCardVariant.price01,
       MBCardVariant.horizontal01,
       MBCardVariant.premium01,

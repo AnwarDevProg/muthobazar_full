@@ -159,13 +159,16 @@ class MBCardConfigResolver {
         String? presetId,
         MBCardSettingsOverride settings = const MBCardSettingsOverride(),
       }) {
+    final definition = MBCardVariantRegistry.definitionFor(variant);
+
     return resolve(
       MBCardInstanceConfig(
-        family: variant.family,
+        family: definition.family,
         variant: variant,
         presetId: presetId,
         settings: settings,
       ),
+      definitionOverride: definition,
     );
   }
 
@@ -175,7 +178,7 @@ class MBCardConfigResolver {
         MBCardSettingsOverride settings = const MBCardSettingsOverride(),
         MBCardVariant fallback = MBCardVariant.compact01,
       }) {
-    final variant = MBCardVariantHelper.parse(variantId, fallback: fallback);
+    final variant = MBCardVariantHelper.parse(variantId);
     return resolveByVariant(
       variant,
       presetId: presetId,
