@@ -3,25 +3,20 @@ import 'package:shared_models/shared_models.dart';
 
 import 'product_cards/mb_product_card_renderer.dart';
 
-// Legacy generic product card wrapper
-// -----------------------------------
-// This widget exists only to keep older call sites working while the app moves
-// to the centralized MBProduct + MBProductCardRenderer system.
+// Legacy generic product card wrapper.
 //
-// The current shared MBProduct model uses fields such as:
-// - titleEn / titleBn
-// - shortDescriptionEn / shortDescriptionBn
-// - descriptionEn / descriptionBn
-// - thumbnailUrl / imageUrls / mediaItems
-// - price / salePrice / costPrice
-// - brandNameEn / brandNameBn
-// - categoryNameEn / categoryNameBn
-// - cardLayoutType
-// - isFeatured / isFlashSale / isNewArrival / isBestSeller
-// - createdAt / updatedAt
+// Why this file still exists:
+// - Some older call sites still build cards using plain fields like title,
+//   priceText, imageUrl, and badgeText.
+// - The new design system is variant-first and MBProduct-first.
+// - This wrapper exists only to translate older call sites into a real MBProduct
+//   before delegating to MBProductCardRenderer.
 //
-// So this wrapper now maps legacy plain props into the real MBProduct model
-// shape before delegating to MBProductCardRenderer.
+// Cleanup rules for this wrapper:
+// - Prefer variantId over old cardLayoutType.
+// - Keep only the minimum compatibility props that are still useful.
+// - Do not reintroduce old layout decision logic outside the small bridge here.
+// - New code should prefer real MBProduct + new variant-first rendering paths.
 class MBProductCard extends StatelessWidget {
   const MBProductCard({
     super.key,
@@ -44,6 +39,7 @@ class MBProductCard extends StatelessWidget {
     this.tags = const <String>[],
     this.productCode,
     this.sku,
+    this.variantId,
     this.cardLayoutType,
     this.productType = 'simple',
     this.stockQty = 999,
@@ -57,12 +53,7 @@ class MBProductCard extends StatelessWidget {
     this.saleEndsAt,
     this.onTap,
     this.onAddToCart,
-    this.isFavorite = false,
-    this.onFavoriteTap,
-    this.showAddToCart = true,
-    this.addToCartText = 'Add to Cart',
     this.contextType = MBProductCardRenderContext.auto,
-    this.showFavorite = true,
     this.featuredHeight = 320,
   });
 
@@ -71,7 +62,6 @@ class MBProductCard extends StatelessWidget {
   final String imageUrl;
   final String? oldPriceText;
   final String? badgeText;
-
   final String? titleBn;
   final String? shortDescriptionEn;
   final String? shortDescriptionBn;
@@ -86,7 +76,13 @@ class MBProductCard extends StatelessWidget {
   final List<String> tags;
   final String? productCode;
   final String? sku;
+
+  // New preferred input.
+  final String? variantId;
+
+  // Legacy bridge input kept temporarily.
   final String? cardLayoutType;
+
   final String productType;
   final int stockQty;
   final bool trackInventory;
@@ -97,15 +93,9 @@ class MBProductCard extends StatelessWidget {
   final bool? isBestSeller;
   final DateTime? saleStartsAt;
   final DateTime? saleEndsAt;
-
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteTap;
-  final bool showAddToCart;
-  final String addToCartText;
   final MBProductCardRenderContext contextType;
-  final bool showFavorite;
   final double featuredHeight;
 
   @override
@@ -123,19 +113,14 @@ class MBProductCard extends StatelessWidget {
 
   MBProduct _buildLegacyProduct() {
     final now = DateTime.now();
-    final normalizedLayout = MBProductCardLayoutHelper.normalize(
-      cardLayoutType ?? MBProductCardLayout.standard.value,
-    );
-
-    final currentPrice = _parsePrice(priceText);
-    final comparePrice = _parsePrice(oldPriceText);
     final pricing = _resolvePricing(
-      currentPrice: currentPrice,
-      comparePrice: comparePrice,
+      currentPrice: _parsePrice(priceText),
+      comparePrice: _parsePrice(oldPriceText),
     );
 
     final normalizedBadge = badgeText?.trim().toLowerCase() ?? '';
     final resolvedImageUrls = _resolveImageUrls();
+    final resolvedVariantId = _resolveVariantId();
 
     return MBProduct(
       id: 'legacy_${title.hashCode}_${imageUrl.hashCode}',
@@ -165,18 +150,76 @@ class MBProductCard extends StatelessWidget {
       brandNameBn: _cleanNullable(brandNameBn),
       productType: productType.trim().isEmpty ? 'simple' : productType.trim(),
       tags: tags,
-      cardLayoutType: normalizedLayout,
-      isFeatured: isFeatured ?? _badgeHas(normalizedBadge, const ['featured']),
+      cardLayoutType: resolvedVariantId,
+      isFeatured: isFeatured ?? _badgeHas(normalizedBadge, const <String>['featured']),
       isFlashSale: isFlashSale ??
-          _badgeHas(normalizedBadge, const ['flash', 'flash sale']),
-      isNewArrival:
-      isNewArrival ?? _badgeHas(normalizedBadge, const ['new', 'arrival']),
+          _badgeHas(normalizedBadge, const <String>['flash', 'flash sale']),
+      isNewArrival: isNewArrival ??
+          _badgeHas(normalizedBadge, const <String>['new', 'arrival']),
       isBestSeller: isBestSeller ??
-          _badgeHas(normalizedBadge, const ['best', 'best seller', 'bestseller']),
+          _badgeHas(normalizedBadge, const <String>['best', 'best seller', 'bestseller']),
       isEnabled: true,
       createdAt: now,
       updatedAt: now,
     );
+  }
+
+  String _resolveVariantId() {
+    final normalizedVariantId = _cleanNullable(variantId);
+    if (normalizedVariantId != null) {
+      return _normalizeVariantId(normalizedVariantId);
+    }
+
+    final normalizedLegacyLayout = _cleanNullable(cardLayoutType);
+    if (normalizedLegacyLayout != null) {
+      return _legacyLayoutToVariantId(normalizedLegacyLayout);
+    }
+
+    return MBCardVariant.compact01.id;
+  }
+
+  String _normalizeVariantId(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'compact01':
+        return MBCardVariant.compact01.id;
+      case 'price01':
+        return MBCardVariant.price01.id;
+      case 'horizontal01':
+        return MBCardVariant.horizontal01.id;
+      case 'premium01':
+        return MBCardVariant.premium01.id;
+      case 'wide01':
+        return MBCardVariant.wide01.id;
+      case 'featured01':
+        return MBCardVariant.featured01.id;
+      case 'promo01':
+        return MBCardVariant.promo01.id;
+      case 'flash01':
+        return MBCardVariant.flash01.id;
+      default:
+        return MBCardVariant.compact01.id;
+    }
+  }
+
+  String _legacyLayoutToVariantId(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'compact':
+        return MBCardVariant.compact01.id;
+      case 'card01':
+        return MBCardVariant.price01.id;
+      case 'standard':
+        return MBCardVariant.horizontal01.id;
+      case 'card02':
+        return MBCardVariant.premium01.id;
+      case 'featured':
+        return MBCardVariant.wide01.id;
+      case 'card03':
+        return MBCardVariant.featured01.id;
+      case 'deal':
+        return MBCardVariant.flash01.id;
+      default:
+        return MBCardVariant.compact01.id;
+    }
   }
 
   List<String> _resolveImageUrls() {
@@ -184,7 +227,7 @@ class MBProductCard extends StatelessWidget {
 
     for (final raw in imageUrls ?? const <String>[]) {
       final value = raw.trim();
-      if (value.isNotEmpty) {
+      if (value.isNotEmpty && !urls.contains(value)) {
         urls.add(value);
       }
     }
@@ -215,10 +258,14 @@ class MBProductCard extends StatelessWidget {
   }
 
   double _parsePrice(String? raw) {
-    if (raw == null) return 0;
+    if (raw == null) {
+      return 0;
+    }
 
     final cleaned = raw.replaceAll(RegExp(r'[^0-9\.]'), '');
-    if (cleaned.isEmpty) return 0;
+    if (cleaned.isEmpty) {
+      return 0;
+    }
 
     return double.tryParse(cleaned) ?? 0;
   }
@@ -236,7 +283,10 @@ class MBProductCard extends StatelessWidget {
   }
 
   bool _badgeHas(String badge, List<String> parts) {
-    if (badge.isEmpty) return false;
+    if (badge.isEmpty) {
+      return false;
+    }
+
     for (final part in parts) {
       if (badge.contains(part)) {
         return true;
@@ -247,14 +297,14 @@ class MBProductCard extends StatelessWidget {
 
   String _slugify(String raw) {
     final normalized = raw.trim().toLowerCase();
-    if (normalized.isEmpty) return '';
+    if (normalized.isEmpty) {
+      return '';
+    }
 
-    final collapsed = normalized
+    return normalized
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'-{2,}'), '-')
         .replaceAll(RegExp(r'^-|-$'), '');
-
-    return collapsed;
   }
 }
 

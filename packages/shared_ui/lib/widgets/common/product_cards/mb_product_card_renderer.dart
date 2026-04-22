@@ -29,37 +29,9 @@ class MBProductCardRenderer extends StatelessWidget {
   final VoidCallback? onAddToCartTap;
   final Widget? trailingOverlay;
 
-  static const List<MBProductCardLayout> availableLayouts = <MBProductCardLayout>[
-    MBProductCardLayout.standard,
-    MBProductCardLayout.compact,
-    MBProductCardLayout.deal,
-    MBProductCardLayout.featured,
-    MBProductCardLayout.card01,
-    MBProductCardLayout.card02,
-    MBProductCardLayout.card03,
-  ];
-
-  static MBProductCardLayout previewFallbackFor(MBProductCardLayout layout) {
-    switch (layout) {
-      case MBProductCardLayout.standard:
-      case MBProductCardLayout.compact:
-      case MBProductCardLayout.deal:
-      case MBProductCardLayout.featured:
-      case MBProductCardLayout.card01:
-      case MBProductCardLayout.card02:
-      case MBProductCardLayout.card03:
-        return layout;
-    }
-  }
-
-  static String previewFallbackLabelFor(MBProductCardLayout layout) {
-    return previewFallbackFor(layout).label;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final layout = _resolveLayoutFromProduct(product);
-    final variant = _layoutToVariant(layout, contextType: contextType);
+    final variant = _resolveVariantFromProduct(product);
     final resolved = MBCardConfigResolver.resolveByVariant(variant);
 
     Widget child = MBProductCardVariantRouter.build(
@@ -81,50 +53,81 @@ class MBProductCardRenderer extends StatelessWidget {
     return child;
   }
 
-  static MBProductCardLayout _resolveLayoutFromProduct(MBProduct product) {
+  MBCardVariant _resolveVariantFromProduct(MBProduct product) {
+    final rawVariantId = _readVariantCarrier(product);
+    if (rawVariantId != null && rawVariantId.isNotEmpty) {
+      return _parseVariantId(rawVariantId);
+    }
+
+    if (contextType == MBProductCardRenderContext.featured) {
+      return MBCardVariant.featured01;
+    }
+
+    return MBCardVariant.compact01;
+  }
+
+  String? _readVariantCarrier(MBProduct product) {
     final dynamic p = product;
 
-    final rawCandidates = <Object?>[
-      _tryRead(() => p.cardLayoutType),
-      _tryRead(() => p.cardStyle),
-      _tryRead(() => p.cardType),
+    final candidates = <String?>[
+      _tryReadString(() => p.cardLayoutType),
+      _tryReadString(() => p.cardStyle),
+      _tryReadString(() => p.cardType),
     ];
 
-    for (final raw in rawCandidates) {
-      final normalized = raw?.toString().trim();
+    for (final value in candidates) {
+      final normalized = value?.trim();
       if (normalized != null && normalized.isNotEmpty) {
-        return MBProductCardLayoutHelper.parse(normalized);
+        return normalized;
       }
     }
 
-    return MBProductCardLayout.compact;
+    return null;
   }
 
-  static MBCardVariant _layoutToVariant(
-      MBProductCardLayout layout, {
-        required MBProductCardRenderContext contextType,
-      }) {
-    switch (layout) {
-      case MBProductCardLayout.compact:
+  MBCardVariant _parseVariantId(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'compact01':
         return MBCardVariant.compact01;
-      case MBProductCardLayout.card01:
+      case 'price01':
         return MBCardVariant.price01;
-      case MBProductCardLayout.standard:
+      case 'horizontal01':
         return MBCardVariant.horizontal01;
-      case MBProductCardLayout.card02:
+      case 'premium01':
         return MBCardVariant.premium01;
-      case MBProductCardLayout.featured:
+      case 'wide01':
+        return MBCardVariant.wide01;
+      case 'featured01':
+        return MBCardVariant.featured01;
+      case 'promo01':
+        return MBCardVariant.promo01;
+      case 'flash01':
+        return MBCardVariant.flash01;
+
+    // Temporary migration bridge for older stored/layout values.
+      case 'compact':
+        return MBCardVariant.compact01;
+      case 'card01':
+        return MBCardVariant.price01;
+      case 'standard':
+        return MBCardVariant.horizontal01;
+      case 'card02':
+        return MBCardVariant.premium01;
+      case 'featured':
         return contextType == MBProductCardRenderContext.featured
             ? MBCardVariant.featured01
             : MBCardVariant.wide01;
-      case MBProductCardLayout.card03:
+      case 'card03':
         return MBCardVariant.featured01;
-      case MBProductCardLayout.deal:
+      case 'deal':
         return MBCardVariant.flash01;
+
+      default:
+        return MBCardVariant.compact01;
     }
   }
 
-  static Object? _tryRead(Object? Function() reader) {
+  String? _tryReadString(String? Function() reader) {
     try {
       return reader();
     } catch (_) {
