@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
-import 'package:shared_ui/shared_ui.dart';
 
 import '../models/mb_store_card_preview_entry.dart';
 
@@ -45,13 +44,60 @@ class StoreCardAddDialog extends StatefulWidget {
 }
 
 class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
-  int? _selectedProductIndex;
-  MBProductCardLayout? _selectedLayout;
+  static const List<_StoreCardVariantOption> _variantOptions =
+  <_StoreCardVariantOption>[
+    _StoreCardVariantOption(
+      variant: MBCardVariant.compact01,
+      title: 'compact01',
+      description: 'Everyday dense grid card',
+      footprintLabel: 'Half width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.price01,
+      title: 'price01',
+      description: 'Deal-first price card',
+      footprintLabel: 'Half width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.horizontal01,
+      title: 'horizontal01',
+      description: 'Row-style quick scan card',
+      footprintLabel: 'Full width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.premium01,
+      title: 'premium01',
+      description: 'Clean premium product card',
+      footprintLabel: 'Half width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.wide01,
+      title: 'wide01',
+      description: 'Image-led wide anchor card',
+      footprintLabel: 'Full width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.featured01,
+      title: 'featured01',
+      description: 'Hero featured product card',
+      footprintLabel: 'Full width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.promo01,
+      title: 'promo01',
+      description: 'Campaign / promo product card',
+      footprintLabel: 'Full width',
+    ),
+    _StoreCardVariantOption(
+      variant: MBCardVariant.flash01,
+      title: 'flash01',
+      description: 'High-urgency flash sale card',
+      footprintLabel: 'Half width',
+    ),
+  ];
 
-  List<MBProductCardLayout> get _layouts {
-    final layouts = MBProductCardRenderer.availableLayouts;
-    return List<MBProductCardLayout>.from(layouts);
-  }
+  int? _selectedProductIndex;
+  MBCardVariant? _selectedVariant;
 
   MBProduct? get _selectedProduct {
     final index = _selectedProductIndex;
@@ -64,7 +110,21 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
     return widget.products[index];
   }
 
-  bool get _canSubmit => _selectedProduct != null && _selectedLayout != null;
+  _StoreCardVariantOption? get _selectedOption {
+    final variant = _selectedVariant;
+    if (variant == null) {
+      return null;
+    }
+
+    for (final option in _variantOptions) {
+      if (option.variant == variant) {
+        return option;
+      }
+    }
+    return null;
+  }
+
+  bool get _canSubmit => _selectedProduct != null && _selectedOption != null;
 
   @override
   void initState() {
@@ -72,20 +132,20 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
     if (widget.products.isNotEmpty) {
       _selectedProductIndex = 0;
     }
-    if (_layouts.isNotEmpty) {
-      _selectedLayout = _layouts.first;
+    if (_variantOptions.isNotEmpty) {
+      _selectedVariant = _variantOptions.first.variant;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final selectedProduct = _selectedProduct;
-    final selectedLayout = _selectedLayout;
+    final selectedOption = _selectedOption;
 
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
-        width: 440,
+        width: 460,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,26 +176,26 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
               },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<MBProductCardLayout>(
-              initialValue: _selectedLayout,
+            DropdownButtonFormField<MBCardVariant>(
+              initialValue: _selectedVariant,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Card type',
                 border: OutlineInputBorder(),
               ),
-              items: _layouts
+              items: _variantOptions
                   .map(
-                    (layout) => DropdownMenuItem<MBProductCardLayout>(
-                  value: layout,
-                  child: Text(_layoutLabel(layout)),
+                    (option) => DropdownMenuItem<MBCardVariant>(
+                  value: option.variant,
+                  child: Text(option.title),
                 ),
               )
-                  .toList(),
-              onChanged: _layouts.isEmpty
+                  .toList(growable: false),
+              onChanged: _variantOptions.isEmpty
                   ? null
                   : (value) {
                 setState(() {
-                  _selectedLayout = value;
+                  _selectedVariant = value;
                 });
               },
             ),
@@ -144,12 +204,13 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
               productLabel: selectedProduct == null
                   ? 'No product selected'
                   : _productLabel(selectedProduct),
-              layoutLabel: selectedLayout == null
+              variantLabel: selectedOption == null
                   ? 'No card type selected'
-                  : _layoutLabel(selectedLayout),
-              layoutFootprint: selectedLayout == null
+                  : selectedOption.title,
+              footprintLabel: selectedOption == null
                   ? 'Unknown size'
-                  : _footprintLabel(selectedLayout),
+                  : selectedOption.footprintLabel,
+              description: selectedOption?.description,
             ),
             if (widget.products.isEmpty) ...<Widget>[
               const SizedBox(height: 12),
@@ -179,43 +240,32 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
 
   void _submit() {
     final selectedProduct = _selectedProduct;
-    final selectedLayout = _selectedLayout;
-    if (selectedProduct == null || selectedLayout == null) {
+    final selectedOption = _selectedOption;
+    if (selectedProduct == null || selectedOption == null) {
       return;
     }
 
     Navigator.of(context).pop(
       MBStoreCardPreviewEntry.create(
         productId: _productId(selectedProduct),
-        layout: selectedLayout,
+        variantId: selectedOption.variant.id,
         sectionKey: widget.sectionKey,
         sortOrder: widget.nextSortOrder,
       ),
     );
   }
 
-  String _layoutLabel(MBProductCardLayout layout) {
-    return MBProductCardRenderer.previewFallbackLabelFor(layout);
-  }
-
-  String _footprintLabel(MBProductCardLayout layout) {
-    switch (layout) {
-      case MBProductCardLayout.compact:
-      case MBProductCardLayout.featured:
-      case MBProductCardLayout.card03:
-        return 'Full width';
-      default:
-        return 'Half width';
-    }
-  }
-
   String _productId(MBProduct product) {
-    if (product.id.trim().isNotEmpty) {
-      return product.id.trim();
+    final id = product.id.trim();
+    if (id.isNotEmpty) {
+      return id;
     }
-    if (product.slug.trim().isNotEmpty) {
-      return product.slug.trim();
+
+    final slug = product.slug.trim();
+    if (slug.isNotEmpty) {
+      return slug;
     }
+
     return DateTime.now().microsecondsSinceEpoch.toString();
   }
 
@@ -226,18 +276,15 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
     if (product.titleBn.trim().isNotEmpty) {
       return product.titleBn.trim();
     }
-    if ((product.productCode ?? '').trim().isNotEmpty) {
-      return product.productCode!.trim();
-    }
-    if ((product.sku ?? '').trim().isNotEmpty) {
-      return product.sku!.trim();
-    }
     if (product.slug.trim().isNotEmpty) {
       return product.slug.trim();
     }
-    if (product.id.trim().isNotEmpty) {
-      return product.id.trim();
+
+    final id = product.id.trim();
+    if (id.isNotEmpty) {
+      return id;
     }
+
     return 'Unnamed product';
   }
 }
@@ -245,13 +292,15 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
 class _SelectionSummaryCard extends StatelessWidget {
   const _SelectionSummaryCard({
     required this.productLabel,
-    required this.layoutLabel,
-    required this.layoutFootprint,
+    required this.variantLabel,
+    required this.footprintLabel,
+    this.description,
   });
 
   final String productLabel;
-  final String layoutLabel;
-  final String layoutFootprint;
+  final String variantLabel;
+  final String footprintLabel;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
@@ -275,9 +324,13 @@ class _SelectionSummaryCard extends StatelessWidget {
           const SizedBox(height: 10),
           _SummaryRow(label: 'Product', value: productLabel),
           const SizedBox(height: 8),
-          _SummaryRow(label: 'Card type', value: layoutLabel),
+          _SummaryRow(label: 'Variant', value: variantLabel),
           const SizedBox(height: 8),
-          _SummaryRow(label: 'Footprint', value: layoutFootprint),
+          _SummaryRow(label: 'Footprint', value: footprintLabel),
+          if (description != null && description!.trim().isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            _SummaryRow(label: 'Style', value: description!.trim()),
+          ],
         ],
       ),
     );
@@ -320,4 +373,18 @@ class _SummaryRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _StoreCardVariantOption {
+  const _StoreCardVariantOption({
+    required this.variant,
+    required this.title,
+    required this.description,
+    required this.footprintLabel,
+  });
+
+  final MBCardVariant variant;
+  final String title;
+  final String description;
+  final String footprintLabel;
 }

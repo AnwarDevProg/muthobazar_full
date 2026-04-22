@@ -1,249 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
-import 'mb_product_card_card01.dart';
-import 'mb_product_card_card02.dart';
-import 'mb_product_card_card03.dart';
-import 'mb_product_card_compact.dart';
-import 'mb_product_card_deal.dart';
-import 'mb_product_card_featured.dart';
-import 'mb_product_card_standard.dart';
+import 'system/mb_card_config_resolver.dart';
+import 'system/mb_product_card_variant_router.dart';
 
 enum MBProductCardRenderContext {
-  grid,
-  horizontal,
-  featured,
   auto,
+  grid,
+  list,
+  featured,
 }
-
-typedef MBProductCardBuilder = Widget Function(
-    BuildContext context,
-    MBProductCardRenderer renderer,
-    MBProduct product,
-    );
 
 class MBProductCardRenderer extends StatelessWidget {
   const MBProductCardRenderer({
     super.key,
     required this.product,
     this.contextType = MBProductCardRenderContext.auto,
+    this.featuredHeight,
     this.onTap,
-    this.onAddToCart,
-    this.isFavorite = false,
-    this.onFavoriteTap,
-    this.showAddToCart = true,
-    this.showFavorite = true,
-    this.featuredHeight = 320,
+    this.onAddToCartTap,
+    this.trailingOverlay,
   });
 
   final MBProduct product;
   final MBProductCardRenderContext contextType;
+  final double? featuredHeight;
   final VoidCallback? onTap;
-  final VoidCallback? onAddToCart;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteTap;
-  final bool showAddToCart;
-  final bool showFavorite;
-  final double featuredHeight;
+  final VoidCallback? onAddToCartTap;
+  final Widget? trailingOverlay;
 
-  static final Map<MBProductCardLayout, MBProductCardBuilder> _builders =
-  <MBProductCardLayout, MBProductCardBuilder>{
-    MBProductCardLayout.standard: (context, renderer, product) {
-      return MBProductCardStandard(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-      );
-    },
-    MBProductCardLayout.compact: (context, renderer, product) {
-      return MBProductCardCompact(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showFavorite: renderer.showFavorite,
-        showAddButton: renderer.showAddToCart,
-      );
-    },
-    MBProductCardLayout.deal: (context, renderer, product) {
-      return MBProductCardDeal(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-      );
-    },
-    MBProductCardLayout.featured: (context, renderer, product) {
-      return MBProductCardFeatured(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-        height: renderer.featuredHeight,
-      );
-    },
-    MBProductCardLayout.card01: (context, renderer, product) {
-      return MBProductCardCard01(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-        showFavorite: renderer.showFavorite,
-      );
-    },
-    MBProductCardLayout.card02: (context, renderer, product) {
-      return MBProductCardCard02(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-        showFavorite: renderer.showFavorite,
-      );
-    },
-    MBProductCardLayout.card03: (context, renderer, product) {
-      return MBProductCardCard03(
-        product: product,
-        onTap: renderer.onTap,
-        onAddToCart: renderer.onAddToCart,
-        isFavorite: renderer.isFavorite,
-        onFavoriteTap: renderer.onFavoriteTap,
-        showAddToCart: renderer.showAddToCart,
-        showFavorite: renderer.showFavorite,
-      );
-    },
-  };
-
-  static final Map<MBProductCardLayout, MBProductCardLayout>
-  _previewFallbackLayouts = <MBProductCardLayout, MBProductCardLayout>{
-    MBProductCardLayout.card04: MBProductCardLayout.featured,
-    MBProductCardLayout.card05: MBProductCardLayout.standard,
-    MBProductCardLayout.card06: MBProductCardLayout.compact,
-    MBProductCardLayout.card07: MBProductCardLayout.deal,
-    MBProductCardLayout.card08: MBProductCardLayout.standard,
-    MBProductCardLayout.card09: MBProductCardLayout.compact,
-    MBProductCardLayout.card10: MBProductCardLayout.featured,
-    MBProductCardLayout.card11: MBProductCardLayout.standard,
-    MBProductCardLayout.card12: MBProductCardLayout.compact,
-    MBProductCardLayout.card13: MBProductCardLayout.deal,
-    MBProductCardLayout.card14: MBProductCardLayout.standard,
-    MBProductCardLayout.card15: MBProductCardLayout.compact,
-    MBProductCardLayout.card16: MBProductCardLayout.featured,
-    MBProductCardLayout.card17: MBProductCardLayout.standard,
-    MBProductCardLayout.card18: MBProductCardLayout.compact,
-    MBProductCardLayout.card19: MBProductCardLayout.deal,
-    MBProductCardLayout.card20: MBProductCardLayout.standard,
-  };
-
-  static List<MBProductCardLayout> get availableLayouts =>
-      List<MBProductCardLayout>.unmodifiable(
-        MBProductCardLayoutHelper.previewValues,
-      );
-
-  static List<MBProductCardLayout> get builtLayouts =>
-      List<MBProductCardLayout>.unmodifiable(_builders.keys.toList());
-
-  static bool isLayoutBuilt(MBProductCardLayout layout) {
-    return _builders.containsKey(layout);
-  }
+  static const List<MBProductCardLayout> availableLayouts = <MBProductCardLayout>[
+    MBProductCardLayout.standard,
+    MBProductCardLayout.compact,
+    MBProductCardLayout.deal,
+    MBProductCardLayout.featured,
+    MBProductCardLayout.card01,
+    MBProductCardLayout.card02,
+    MBProductCardLayout.card03,
+  ];
 
   static MBProductCardLayout previewFallbackFor(MBProductCardLayout layout) {
-    if (_builders.containsKey(layout)) {
-      return layout;
-    }
-
-    return _previewFallbackLayouts[layout] ?? MBProductCardLayoutHelper.fallback;
-  }
-
-  static String previewFallbackLabelFor(MBProductCardLayout layout) {
-    final fallback = previewFallbackFor(layout);
-    if (fallback == layout) {
-      return layout.label;
-    }
-    return '${layout.label} → ${fallback.label}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rawLayout = MBProductCardLayoutHelper.parse(product.cardLayoutType);
-    final resolvedLayout = _resolveLayout(rawLayout, contextType);
-    final renderLayout = _resolveBuiltLayout(resolvedLayout);
-    final builder =
-        _builders[renderLayout] ?? _builders[MBProductCardLayout.standard]!;
-
-    return builder(context, this, product);
-  }
-
-  MBProductCardLayout _resolveLayout(
-      MBProductCardLayout layout,
-      MBProductCardRenderContext contextType,
-      ) {
-    switch (contextType) {
-      case MBProductCardRenderContext.grid:
-        return MBProductCardLayoutHelper.gridSafeOrFallback(layout.value);
-      case MBProductCardRenderContext.horizontal:
-        return MBProductCardLayoutHelper.horizontalSafeOrFallback(layout.value);
-      case MBProductCardRenderContext.featured:
-        return _featuredSafeLayout(layout);
-      case MBProductCardRenderContext.auto:
-        return layout;
-    }
-  }
-
-  MBProductCardLayout _resolveBuiltLayout(MBProductCardLayout layout) {
-    if (_builders.containsKey(layout)) {
-      return layout;
-    }
-
-    final previewFallback = _previewFallbackLayouts[layout];
-    if (previewFallback != null && _builders.containsKey(previewFallback)) {
-      return previewFallback;
-    }
-
-    return MBProductCardLayout.standard;
-  }
-
-  MBProductCardLayout _featuredSafeLayout(MBProductCardLayout layout) {
     switch (layout) {
-      case MBProductCardLayout.featured:
-        return MBProductCardLayout.featured;
-      case MBProductCardLayout.deal:
-        return MBProductCardLayout.deal;
       case MBProductCardLayout.standard:
       case MBProductCardLayout.compact:
+      case MBProductCardLayout.deal:
+      case MBProductCardLayout.featured:
       case MBProductCardLayout.card01:
       case MBProductCardLayout.card02:
       case MBProductCardLayout.card03:
         return layout;
-      case MBProductCardLayout.card04:
-      case MBProductCardLayout.card05:
-      case MBProductCardLayout.card06:
-      case MBProductCardLayout.card07:
-      case MBProductCardLayout.card08:
-      case MBProductCardLayout.card09:
-      case MBProductCardLayout.card10:
-      case MBProductCardLayout.card11:
-      case MBProductCardLayout.card12:
-      case MBProductCardLayout.card13:
-      case MBProductCardLayout.card14:
-      case MBProductCardLayout.card15:
-      case MBProductCardLayout.card16:
-      case MBProductCardLayout.card17:
-      case MBProductCardLayout.card18:
-      case MBProductCardLayout.card19:
-      case MBProductCardLayout.card20:
-        return previewFallbackFor(layout);
+    }
+  }
+
+  static String previewFallbackLabelFor(MBProductCardLayout layout) {
+    return previewFallbackFor(layout).label;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = _resolveLayoutFromProduct(product);
+    final variant = _layoutToVariant(layout, contextType: contextType);
+    final resolved = MBCardConfigResolver.resolveByVariant(variant);
+
+    Widget child = MBProductCardVariantRouter.build(
+      context: context,
+      resolved: resolved,
+      product: product,
+      onTap: onTap,
+      onAddToCartTap: onAddToCartTap,
+      trailingOverlay: trailingOverlay,
+    );
+
+    if (featuredHeight != null && resolved.footprint.isFullWidth) {
+      child = SizedBox(
+        height: featuredHeight,
+        child: child,
+      );
+    }
+
+    return child;
+  }
+
+  static MBProductCardLayout _resolveLayoutFromProduct(MBProduct product) {
+    final dynamic p = product;
+
+    final rawCandidates = <Object?>[
+      _tryRead(() => p.cardLayoutType),
+      _tryRead(() => p.cardStyle),
+      _tryRead(() => p.cardType),
+    ];
+
+    for (final raw in rawCandidates) {
+      final normalized = raw?.toString().trim();
+      if (normalized != null && normalized.isNotEmpty) {
+        return MBProductCardLayoutHelper.parse(normalized);
+      }
+    }
+
+    return MBProductCardLayout.compact;
+  }
+
+  static MBCardVariant _layoutToVariant(
+      MBProductCardLayout layout, {
+        required MBProductCardRenderContext contextType,
+      }) {
+    switch (layout) {
+      case MBProductCardLayout.compact:
+        return MBCardVariant.compact01;
+      case MBProductCardLayout.card01:
+        return MBCardVariant.price01;
+      case MBProductCardLayout.standard:
+        return MBCardVariant.horizontal01;
+      case MBProductCardLayout.card02:
+        return MBCardVariant.premium01;
+      case MBProductCardLayout.featured:
+        return contextType == MBProductCardRenderContext.featured
+            ? MBCardVariant.featured01
+            : MBCardVariant.wide01;
+      case MBProductCardLayout.card03:
+        return MBCardVariant.featured01;
+      case MBProductCardLayout.deal:
+        return MBCardVariant.flash01;
+    }
+  }
+
+  static Object? _tryRead(Object? Function() reader) {
+    try {
+      return reader();
+    } catch (_) {
+      return null;
     }
   }
 }

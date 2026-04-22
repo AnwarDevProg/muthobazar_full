@@ -116,11 +116,7 @@ class MBProductCard extends StatelessWidget {
       product: product,
       contextType: contextType,
       onTap: onTap,
-      onAddToCart: onAddToCart,
-      isFavorite: isFavorite,
-      onFavoriteTap: onFavoriteTap,
-      showAddToCart: showAddToCart,
-      showFavorite: showFavorite,
+      onAddToCartTap: onAddToCart,
       featuredHeight: featuredHeight,
     );
   }

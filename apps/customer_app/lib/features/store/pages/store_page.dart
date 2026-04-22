@@ -61,7 +61,7 @@ class _StorePageState extends State<StorePage> {
                     onAddTap: () => _onAddTap(section),
                     onRemoveTap: (entry) => _removeEntry(
                       sectionKey: section.sectionKey,
-                      entryId: entry.entryId,
+                      entryId: entry.id,
                     ),
                   ),
                 );
@@ -121,7 +121,7 @@ class _StorePageState extends State<StorePage> {
       final currentEntries =
           _sectionEntriesByKey[sectionKey] ?? <MBStoreCardPreviewEntry>[];
       final updated = List<MBStoreCardPreviewEntry>.from(currentEntries)
-        ..removeWhere((entry) => entry.entryId == entryId);
+        ..removeWhere((entry) => entry.id == entryId);
       _sectionEntriesByKey[sectionKey] = updated;
     });
   }
@@ -178,7 +178,7 @@ class _StorePageState extends State<StorePage> {
 
     var maxSort = -1;
     for (final entry in entries) {
-      final sort = entry.sortOrder ?? -1;
+      final sort = entry.sortOrder;
       if (sort > maxSort) {
         maxSort = sort;
       }

@@ -12,6 +12,7 @@ class StoreSectionGrid extends StatelessWidget {
     required this.productsById,
     required this.onRemoveTap,
     this.spacing = 16,
+    this.featuredHeight = 320,
     this.showMetaChips = true,
   });
 
@@ -19,6 +20,7 @@ class StoreSectionGrid extends StatelessWidget {
   final Map<String, MBProduct> productsById;
   final ValueChanged<MBStoreCardPreviewEntry> onRemoveTap;
   final double spacing;
+  final double featuredHeight;
   final bool showMetaChips;
 
   @override
@@ -39,8 +41,7 @@ class StoreSectionGrid extends StatelessWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: sortedEntries.map((entry) {
-            final variant = _legacyLayoutToVariant(entry);
-            final resolved = MBCardConfigResolver.resolveByVariant(variant);
+            final resolved = MBCardConfigResolver.resolveByVariant(entry.variant);
             final itemWidth =
             resolved.footprint.isFullWidth ? maxWidth : halfWidth;
 
@@ -58,52 +59,6 @@ class StoreSectionGrid extends StatelessWidget {
         );
       },
     );
-  }
-
-  MBCardVariant _legacyLayoutToVariant(MBStoreCardPreviewEntry entry) {
-    final raw = _normalize('${entry.layoutLabel} ${_safeLayoutValue(entry)}');
-
-    if (raw.contains('flash')) {
-      return MBCardVariant.flash01;
-    }
-    if (raw.contains('promo')) {
-      return MBCardVariant.promo01;
-    }
-    if (raw.contains('featured') || raw.contains('card03')) {
-      return MBCardVariant.featured01;
-    }
-    if (raw.contains('wide')) {
-      return MBCardVariant.wide01;
-    }
-    if (raw.contains('premium') || raw.contains('card02')) {
-      return MBCardVariant.premium01;
-    }
-    if (raw.contains('horizontal') ||
-        raw.contains('standard') ||
-        raw.contains('list')) {
-      return MBCardVariant.horizontal01;
-    }
-    if (raw.contains('price') || raw.contains('deal') || raw.contains('card01')) {
-      return MBCardVariant.price01;
-    }
-    return MBCardVariant.compact01;
-  }
-
-  String _safeLayoutValue(MBStoreCardPreviewEntry entry) {
-    try {
-      final dynamic layout = entry.layout;
-      final dynamic value = layout.value;
-      if (value is String) {
-        return value;
-      }
-      return value?.toString() ?? '';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  String _normalize(String value) {
-    return value.trim().toLowerCase();
   }
 }
 
@@ -145,9 +100,8 @@ class _StoreGridPreviewItem extends StatelessWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     _MetaChip(label: _productLabel(product!)),
-                    _MetaChip(label: resolved.variant.label),
+                    _MetaChip(label: entry.variantLabel),
                     _MetaChip(label: resolved.footprint.label),
-                    _MetaChip(label: 'Legacy: ${entry.layoutLabel}'),
                   ],
                 ),
               ),
@@ -181,6 +135,12 @@ class _StoreGridPreviewItem extends StatelessWidget {
     if (product.slug.trim().isNotEmpty) {
       return product.slug.trim();
     }
+
+    final id = product.id.trim();
+    if (id.isNotEmpty) {
+      return id;
+    }
+
     return 'Unnamed product';
   }
 }
@@ -215,7 +175,7 @@ class _MissingProductCard extends StatelessWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     _MetaChip(label: entry.productId),
-                    _MetaChip(label: entry.layoutLabel),
+                    _MetaChip(label: entry.variantLabel),
                     const _MetaChip(label: 'Product missing'),
                   ],
                 ),
