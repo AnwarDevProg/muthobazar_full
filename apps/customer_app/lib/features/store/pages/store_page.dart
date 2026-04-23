@@ -1,9 +1,9 @@
 import 'package:customer_app/features/store/data/product_card_preview_dummy_data.dart';
+import 'package:customer_app/features/store/models/mb_store_card_preview_entry.dart';
+import 'package:customer_app/features/store/widgets/store_card_add_dialog.dart';
+import 'package:customer_app/features/store/widgets/store_section_card.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
-import '../models/mb_store_card_preview_entry.dart';
-import '../widgets/store_card_add_dialog.dart';
-import '../widgets/store_section_card.dart';
 
 class StorePage extends StatefulWidget {
   const StorePage({super.key});
@@ -19,10 +19,19 @@ class _StorePageState extends State<StorePage> {
   List<MBProduct> get _allProducts => MBProductCardPreviewDummyData.allProducts;
 
   @override
+  void initState() {
+    super.initState();
+    _initializeEmptySections();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final categories = MBProductCardPreviewDummyData.categories;
-    final productsById = _buildProductsById(_allProducts);
     final sections = _buildSections();
+    final productsById = _buildProductsById(_allProducts);
+    final totalEntries = _sectionEntriesByKey.values.fold<int>(
+      0,
+          (previousValue, entries) => previousValue + entries.length,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
@@ -36,8 +45,8 @@ class _StorePageState extends State<StorePage> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: _StoreStatusCard(
                 totalProducts: _allProducts.length,
-                totalCategories: categories.length,
                 totalSections: sections.length,
+                totalPlacedCards: totalEntries,
               ),
             ),
             if (_allProducts.isEmpty)
@@ -46,41 +55,56 @@ class _StorePageState extends State<StorePage> {
                 child: _StoreEmptyCard(),
               )
             else
-              ...List<Widget>.generate(sections.length, (index) {
-                final section = sections[index];
-                final entries = _sectionEntriesByKey[section.sectionKey] ??
-                    <MBStoreCardPreviewEntry>[];
+              ...List<Widget>.generate(
+                sections.length,
+                    (index) {
+                  final section = sections[index];
+                  final entries =
+                      _sectionEntriesByKey[section.sectionKey] ??
+                          const <MBStoreCardPreviewEntry>[];
 
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: StoreSectionCard(
-                    sectionIndex: index,
-                    title: section.title,
-                    entries: entries,
-                    productsById: productsById,
-                    onAddTap: () => _onAddTap(section),
-                    onRemoveTap: (entry) => _removeEntry(
-                      sectionKey: section.sectionKey,
-                      entryId: entry.id,
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: StoreSectionCard(
+                      sectionIndex: index,
+                      title: section.title,
+                      entries: entries,
+                      productsById: productsById,
+                      onAddTap: () => _onAddTap(section),
+                      onRemoveTap: (entry) {
+                        _removeEntry(
+                          sectionKey: section.sectionKey,
+                          entryId: entry.id,
+                        );
+                      },
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
           ],
         ),
       ),
     );
   }
 
+  void _initializeEmptySections() {
+    final sections = _buildSections();
+
+    for (final section in sections) {
+      _sectionEntriesByKey[section.sectionKey] = <MBStoreCardPreviewEntry>[];
+    }
+  }
+
   Future<void> _onAddTap(_StoreSection section) async {
-    final sectionProducts = MBProductCardPreviewDummyData.productsForCategory(
-      section.categoryId,
+    final sectionProducts = MBProductCardPreviewDummyData.productsForSection(
+      section.sectionKey,
     );
 
     if (sectionProducts.isEmpty) {
       if (!mounted) {
         return;
       }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No dummy products available for ${section.title}.'),
@@ -90,7 +114,8 @@ class _StorePageState extends State<StorePage> {
     }
 
     final currentEntries =
-        _sectionEntriesByKey[section.sectionKey] ?? <MBStoreCardPreviewEntry>[];
+        _sectionEntriesByKey[section.sectionKey] ??
+            const <MBStoreCardPreviewEntry>[];
 
     final entry = await StoreCardAddDialog.show(
       context,
@@ -106,9 +131,11 @@ class _StorePageState extends State<StorePage> {
     }
 
     setState(() {
-      final updated = List<MBStoreCardPreviewEntry>.from(currentEntries)
-        ..add(entry)
-        ..sort(MBStoreCardPreviewEntry.sortComparator);
+      final updated = <MBStoreCardPreviewEntry>[
+        ...currentEntries,
+        entry,
+      ]..sort(_sortEntries);
+
       _sectionEntriesByKey[section.sectionKey] = updated;
     });
   }
@@ -119,27 +146,26 @@ class _StorePageState extends State<StorePage> {
   }) {
     setState(() {
       final currentEntries =
-          _sectionEntriesByKey[sectionKey] ?? <MBStoreCardPreviewEntry>[];
-      final updated = List<MBStoreCardPreviewEntry>.from(currentEntries)
-        ..removeWhere((entry) => entry.id == entryId);
+          _sectionEntriesByKey[sectionKey] ??
+              const <MBStoreCardPreviewEntry>[];
+
+      final updated = <MBStoreCardPreviewEntry>[
+        ...currentEntries.where((entry) => entry.id != entryId),
+      ]..sort(_sortEntries);
+
       _sectionEntriesByKey[sectionKey] = updated;
     });
   }
 
   List<_StoreSection> _buildSections() {
-    final source = MBProductCardPreviewDummyData.categories;
+    final keys = MBProductCardPreviewDummyData.sectionKeys;
     final sections = <_StoreSection>[];
 
-    for (final category in source.take(6)) {
-      final title = category.nameEn.trim().isNotEmpty
-          ? category.nameEn.trim()
-          : category.nameBn.trim();
-
+    for (final key in keys.take(6)) {
       sections.add(
         _StoreSection(
-          sectionKey: 'category_${category.id}',
-          categoryId: category.id,
-          title: title,
+          sectionKey: key,
+          title: MBProductCardPreviewDummyData.titleForSection(key),
         ),
       );
     }
@@ -149,7 +175,6 @@ class _StorePageState extends State<StorePage> {
       sections.add(
         _StoreSection(
           sectionKey: 'placeholder_$number',
-          categoryId: 'placeholder_$number',
           title: 'Category ${number.toString().padLeft(2, '0')}',
         ),
       );
@@ -162,10 +187,11 @@ class _StorePageState extends State<StorePage> {
     final map = <String, MBProduct>{};
 
     for (final product in products) {
-      if (product.id.trim().isEmpty) {
+      final id = product.id.trim();
+      if (id.isEmpty) {
         continue;
       }
-      map[product.id.trim()] = product;
+      map[id] = product;
     }
 
     return map;
@@ -178,25 +204,32 @@ class _StorePageState extends State<StorePage> {
 
     var maxSort = -1;
     for (final entry in entries) {
-      final sort = entry.sortOrder;
-      if (sort > maxSort) {
-        maxSort = sort;
+      if (entry.sortOrder > maxSort) {
+        maxSort = entry.sortOrder;
       }
     }
-
     return maxSort + 1;
+  }
+
+  int _sortEntries(
+      MBStoreCardPreviewEntry a,
+      MBStoreCardPreviewEntry b,
+      ) {
+    final sortCompare = a.sortOrder.compareTo(b.sortOrder);
+    if (sortCompare != 0) {
+      return sortCompare;
+    }
+    return a.id.compareTo(b.id);
   }
 }
 
 class _StoreSection {
   const _StoreSection({
     required this.sectionKey,
-    required this.categoryId,
     required this.title,
   });
 
   final String sectionKey;
-  final String categoryId;
   final String title;
 }
 
@@ -235,7 +268,7 @@ class _StorePageHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Using preview dummy categories and products for now. Add products with different card layouts and test the mixed grid directly on the store page.',
+            'Sections start empty now. Use Add to place products with different card variants.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.92),
               fontWeight: FontWeight.w500,
@@ -250,13 +283,13 @@ class _StorePageHeader extends StatelessWidget {
 class _StoreStatusCard extends StatelessWidget {
   const _StoreStatusCard({
     required this.totalProducts,
-    required this.totalCategories,
     required this.totalSections,
+    required this.totalPlacedCards,
   });
 
   final int totalProducts;
-  final int totalCategories;
   final int totalSections;
+  final int totalPlacedCards;
 
   @override
   Widget build(BuildContext context) {
@@ -279,8 +312,8 @@ class _StoreStatusCard extends StatelessWidget {
         runSpacing: 12,
         children: <Widget>[
           _StoreInfoChip(label: 'Products', value: '$totalProducts'),
-          _StoreInfoChip(label: 'Categories', value: '$totalCategories'),
           _StoreInfoChip(label: 'Sections', value: '$totalSections'),
+          _StoreInfoChip(label: 'Placed Cards', value: '$totalPlacedCards'),
           const _StoreInfoChip(label: 'Source', value: 'Dummy data'),
         ],
       ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 import '../controllers/admin_product_controller.dart';
-import 'admin_product_card_style_selector.dart';
+import 'admin_product_card_picker_dialog.dart';
 import 'admin_product_form_support.dart';
+import 'admin_product_card_settings_dialog.dart';
 
 // File: admin_product_form_dialog.dart
 
@@ -193,6 +195,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   String? _selectedBrandId;
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
+  AdminProductCardSettingsResult? _cardSettingsDraft;
+
   MBProductVariation? get _primaryVariationForOwnership {
     for (final item in _variations) {
       if (item.isEnabled && item.isDefault) {
@@ -331,6 +335,28 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ],
       ),
     );
+  }
+
+  Future<void> _openSelectedCardSettingsDialog(BuildContext context) async {
+    final variant = _selectedAdminCardVariant;
+
+    final result = await AdminProductCardSettingsDialog.show(
+      context,
+      previewProduct: _buildProductFromForm(),
+      variant: variant,
+      initialValue: _cardSettingsDraft?.variantId == variant.id
+          ? _cardSettingsDraft
+          : null,
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _cardSettingsDraft = result;
+      _cardLayoutType = result.variantId;
+    });
   }
 
   String? _findDuplicateAttributeMessage(
@@ -589,9 +615,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     _deliveryShift = _source.deliveryShift.isEmpty
         ? 'any'
         : _source.deliveryShift;
-    _cardLayoutType = MBProductCardLayoutHelper.normalize(
-      _source.cardLayoutType,
-    );
+    _cardLayoutType = _normalizeAdminCardVariantId(_source.cardLayoutType);
 
     _trackInventory = _source.trackInventory;
     _supportsInstantOrder = _source.supportsInstantOrder;
@@ -2176,16 +2200,236 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
 
 
+
+
+  String _normalizeAdminCardVariantId(String raw) {
+    final normalized = raw.trim().toLowerCase();
+
+    switch (normalized) {
+      case '':
+        return MBCardVariant.compact01.id;
+
+    // Current family ids stored instead of exact variant ids.
+      case 'compact':
+        return MBCardVariant.compact01.id;
+      case 'price':
+        return MBCardVariant.price01.id;
+      case 'horizontal':
+        return MBCardVariant.horizontal01.id;
+      case 'premium':
+        return MBCardVariant.premium01.id;
+      case 'wide':
+        return MBCardVariant.wide01.id;
+      case 'promo':
+        return MBCardVariant.promo01.id;
+      case 'flash':
+      case 'flashsale':
+      case 'flash_sale':
+        return MBCardVariant.flash01.id;
+
+    // Older layout bridge.
+      case 'standard':
+        return MBCardVariant.horizontal01.id;
+      case 'deal':
+        return MBCardVariant.flash01.id;
+      case 'card01':
+        return MBCardVariant.price01.id;
+      case 'card02':
+        return MBCardVariant.premium01.id;
+      case 'card03':
+        return MBCardVariant.featured01.id;
+      case 'featured':
+        return MBCardVariant.featured01.id;
+
+      default:
+        return normalized;
+    }
+  }
+
+  MBCardVariant get _selectedAdminCardVariant {
+    return MBCardVariantHelper.parse(
+      _normalizeAdminCardVariantId(_cardLayoutType),
+      fallback: MBCardVariant.compact01,
+    );
+  }
+
+  Future<void> _openCardPickerDialog(BuildContext context) async {
+    final previewProduct = _buildProductFromForm();
+    final previousVariantId = _selectedAdminCardVariant.id;
+
+    final result = await AdminProductCardPickerDialog.show(
+      context,
+      previewProduct: previewProduct,
+      initialVariantId: previousVariantId,
+      onEditCard: (context, variant) async {
+        final settingsResult = await AdminProductCardSettingsDialog.show(
+          context,
+          previewProduct: _buildProductFromForm(),
+          variant: variant,
+          initialValue: _cardSettingsDraft?.variantId == variant.id
+              ? _cardSettingsDraft
+              : null,
+        );
+
+        if (!mounted || settingsResult == null) {
+          return;
+        }
+
+        setState(() {
+          _cardSettingsDraft = settingsResult;
+          _cardLayoutType = settingsResult.variantId;
+        });
+      },
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _cardLayoutType = result.variantId;
+
+      if (_cardSettingsDraft?.variantId != result.variantId) {
+        _cardSettingsDraft = null;
+      }
+    });
+  }
+
+  MBCardSettingsOverride _buildCardSettingsOverride() {
+    final draft = _cardSettingsDraft;
+    final selectedVariant = _selectedAdminCardVariant;
+
+    if (draft == null || draft.variantId != selectedVariant.id) {
+      return const MBCardSettingsOverride();
+    }
+
+    return MBCardSettingsOverride(
+      price: MBCardPriceSettings(
+        showDiscountBadge: draft.showDiscountBadge,
+        showSavingsText: draft.showSavingsText,
+        emphasizeFinalPrice: draft.emphasizeFinalPrice,
+      ),
+      actions: MBCardActionSettings(
+        showAddToCart: draft.showAddToCart,
+        showViewDetails: draft.showViewDetails,
+      ),
+      meta: MBCardMetaSettings(
+        showSubtitle: draft.showSubtitle,
+        showBrand: draft.showBrand,
+        showUnitLabel: draft.showUnitLabel,
+        showStockHint: draft.showStockHint,
+        showDeliveryHint: draft.showDeliveryHint,
+      ),
+      borderEffect: MBCardBorderEffectSettings(
+        showBorder: draft.showBorder,
+      ),
+      accent: MBCardAccentSettings(
+        showPromoStrip: draft.showPromoStrip,
+      ),
+    );
+  }
+
+
+  Widget _buildSelectedCardPreview(BuildContext context) {
+    final previewProduct = _buildProductFromForm();
+    final variant = _selectedAdminCardVariant;
+    final resolved = MBCardConfigResolver.resolveByVariant(
+      variant,
+      settings: _buildCardSettingsOverride(),
+    );
+
+    Widget preview = MBProductCardVariantRouter.build(
+      context: context,
+      resolved: resolved,
+      product: previewProduct,
+      onTap: () {},
+      onAddToCartTap: () {},
+    );
+
+    if (resolved.footprint.isFullWidth) {
+      preview = SizedBox(
+        height: 320,
+        child: preview,
+      );
+    }
+
+    return AbsorbPointer(
+      absorbing: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: preview,
+      ),
+    );
+  }
+
+
+
   Widget _buildCardStyleSection(BuildContext context) {
+    final selectedVariant = _selectedAdminCardVariant;
+
     return SectionCard(
       title: 'Customer App Card Style',
       subtitle:
-      'Choose how this product should appear in the customer app. Unsupported sections can still fall back safely.',
-      child: AdminProductCardStyleSelector(
-        value: _cardLayoutType,
-        onChanged: (value) {
-          setState(() => _cardLayoutType = value);
-        },
+      'Pick a card from the showcase gallery, compare all families together, then optionally open card settings.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+              ),
+            ),
+            child: Text(
+              'The picker uses the current form data as the live preview source. Fill the product information needed for the card, then open the gallery and compare cards visually.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              buildInfoChip('family: ${selectedVariant.family.label}'),
+              buildInfoChip('variant: ${selectedVariant.id}'),
+              buildInfoChip(
+                selectedVariant.isFullWidth ? 'footprint: full' : 'footprint: half',
+              ),
+              if (_cardSettingsDraft != null &&
+                  _cardSettingsDraft!.variantId == selectedVariant.id)
+                buildInfoChip('custom settings: on'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildSelectedCardPreview(context),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _openCardPickerDialog(context),
+                  icon: const Icon(Icons.grid_view_rounded),
+                  label: const Text('Pick a card'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _openSelectedCardSettingsDialog(context),
+                  icon: const Icon(Icons.tune_rounded),
+                  label: const Text('Edit card'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -2578,7 +2822,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       purchaseOptions: [..._purchaseOptions]
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
-      cardLayoutType: MBProductCardLayoutHelper.normalize(_cardLayoutType),
+      cardLayoutType: _normalizeAdminCardVariantId(_cardLayoutType),
       isFeatured: !_isVariableProduct && _isFeatured,
       isFlashSale: !_isVariableProduct && _isFlashSale,
       isEnabled: _isEnabled,

@@ -1,7 +1,7 @@
+import 'package:customer_app/features/store/models/mb_store_card_preview_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
-import '../models/mb_store_card_preview_entry.dart';
 import 'store_section_grid.dart';
 
 class StoreSectionCard extends StatelessWidget {

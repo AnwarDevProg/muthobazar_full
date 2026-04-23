@@ -1,7 +1,6 @@
+import 'package:customer_app/features/store/models/mb_store_card_preview_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
-
-import '../models/mb_store_card_preview_entry.dart';
 
 class StoreCardAddDialog extends StatefulWidget {
   const StoreCardAddDialog({
@@ -44,85 +43,45 @@ class StoreCardAddDialog extends StatefulWidget {
 }
 
 class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
-  static const List<_StoreCardVariantOption> _variantOptions =
-  <_StoreCardVariantOption>[
-    _StoreCardVariantOption(
-      variant: MBCardVariant.compact01,
-      title: 'compact01',
-      description: 'Everyday dense grid card',
-      footprintLabel: 'Half width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.compact02,
-      title: 'compact02',
-      description: 'Structured compact grid card',
-      footprintLabel: 'Half width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.price01,
-      title: 'price01',
-      description: 'Deal-first price card',
-      footprintLabel: 'Half width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.horizontal01,
-      title: 'horizontal01',
-      description: 'Row-style quick scan card',
-      footprintLabel: 'Full width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.premium01,
-      title: 'premium01',
-      description: 'Clean premium product card',
-      footprintLabel: 'Half width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.wide01,
-      title: 'wide01',
-      description: 'Image-led wide anchor card',
-      footprintLabel: 'Full width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.featured01,
-      title: 'featured01',
-      description: 'Hero featured product card',
-      footprintLabel: 'Full width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.promo01,
-      title: 'promo01',
-      description: 'Campaign / promo product card',
-      footprintLabel: 'Full width',
-    ),
-    _StoreCardVariantOption(
-      variant: MBCardVariant.flash01,
-      title: 'flash01',
-      description: 'High-urgency flash sale card',
-      footprintLabel: 'Half width',
-    ),
-  ];
+  late final List<_StoreCardFamilyOption> _familyOptions;
 
   int? _selectedProductIndex;
+  MBCardFamily? _selectedFamily;
   MBCardVariant? _selectedVariant;
 
   MBProduct? get _selectedProduct {
     final index = _selectedProductIndex;
-    if (index == null) {
-      return null;
-    }
-    if (index < 0 || index >= widget.products.length) {
+    if (index == null || index < 0 || index >= widget.products.length) {
       return null;
     }
     return widget.products[index];
   }
 
-  _StoreCardVariantOption? get _selectedOption {
+  _StoreCardFamilyOption? get _selectedFamilyOption {
+    final family = _selectedFamily;
+    if (family == null) {
+      return null;
+    }
+
+    for (final option in _familyOptions) {
+      if (option.family == family) {
+        return option;
+      }
+    }
+    return null;
+  }
+
+  List<_StoreCardVariantOption> get _visibleVariants {
+    return _selectedFamilyOption?.variants ?? const <_StoreCardVariantOption>[];
+  }
+
+  _StoreCardVariantOption? get _selectedVariantOption {
     final variant = _selectedVariant;
     if (variant == null) {
       return null;
     }
 
-    for (final option in _variantOptions) {
+    for (final option in _visibleVariants) {
       if (option.variant == variant) {
         return option;
       }
@@ -130,135 +89,327 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
     return null;
   }
 
-  bool get _canSubmit => _selectedProduct != null && _selectedOption != null;
+  bool get _canSubmit => _selectedProduct != null && _selectedVariantOption != null;
 
   @override
   void initState() {
     super.initState();
+
+    _familyOptions = _buildFamilyOptions();
+
     if (widget.products.isNotEmpty) {
       _selectedProductIndex = 0;
     }
-    if (_variantOptions.isNotEmpty) {
-      _selectedVariant = _variantOptions.first.variant;
+
+    if (_familyOptions.isNotEmpty) {
+      _selectedFamily = _familyOptions.first.family;
+      if (_familyOptions.first.variants.isNotEmpty) {
+        _selectedVariant = _familyOptions.first.variants.first.variant;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedProduct = _selectedProduct;
-    final selectedOption = _selectedOption;
+    final media = MediaQuery.sizeOf(context);
+    final insets = MediaQuery.viewInsetsOf(context);
 
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SizedBox(
-        width: 460,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            DropdownButtonFormField<int>(
-              initialValue: _selectedProductIndex,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Product',
-                border: OutlineInputBorder(),
-              ),
-              items: List<DropdownMenuItem<int>>.generate(
-                widget.products.length,
-                    (index) {
-                  final product = widget.products[index];
-                  return DropdownMenuItem<int>(
-                    value: index,
-                    child: Text(_productLabel(product)),
-                  );
-                },
-              ),
-              onChanged: widget.products.isEmpty
-                  ? null
-                  : (value) {
-                setState(() {
-                  _selectedProductIndex = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<MBCardVariant>(
-              initialValue: _selectedVariant,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Card type',
-                border: OutlineInputBorder(),
-              ),
-              items: _variantOptions
-                  .map(
-                    (option) => DropdownMenuItem<MBCardVariant>(
-                  value: option.variant,
-                  child: Text(option.title),
+    final selectedProduct = _selectedProduct;
+    final selectedFamily = _selectedFamilyOption;
+    final selectedVariant = _selectedVariantOption;
+
+    final maxDialogWidth = media.width < 560 ? media.width - 24 : 520.0;
+    final maxDialogHeight = media.height * 0.82;
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: insets.bottom),
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxDialogWidth,
+            maxHeight: maxDialogHeight,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          widget.title,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          initialValue: _selectedProductIndex,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Product',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: List<DropdownMenuItem<int>>.generate(
+                            widget.products.length,
+                                (index) {
+                              final product = widget.products[index];
+                              return DropdownMenuItem<int>(
+                                value: index,
+                                child: Text(
+                                  _productLabel(product),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            },
+                          ),
+                          onChanged: widget.products.isEmpty
+                              ? null
+                              : (value) {
+                            setState(() {
+                              _selectedProductIndex = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Choose family',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 10,
+                          children: _familyOptions
+                              .map(
+                                (option) => ChoiceChip(
+                              label: Text(option.title),
+                              selected: _selectedFamily == option.family,
+                              onSelected: (_) => _selectFamily(option.family),
+                            ),
+                          )
+                              .toList(growable: false),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          selectedFamily == null
+                              ? 'Choose variant'
+                              : 'Choose variant in ${selectedFamily.title}',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<MBCardVariant>(
+                          initialValue: _selectedVariant,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Variant',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _visibleVariants
+                              .map(
+                                (option) => DropdownMenuItem<MBCardVariant>(
+                              value: option.variant,
+                              child: Text(
+                                '${option.title} • ${option.footprintLabel}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                              .toList(growable: false),
+                          onChanged: _visibleVariants.isEmpty
+                              ? null
+                              : (value) {
+                            setState(() {
+                              _selectedVariant = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _SelectionSummaryCard(
+                          productLabel: selectedProduct == null
+                              ? 'No product selected'
+                              : _productLabel(selectedProduct),
+                          familyLabel: selectedFamily?.title ?? 'No family selected',
+                          variantLabel:
+                          selectedVariant?.title ?? 'No variant selected',
+                          footprintLabel:
+                          selectedVariant?.footprintLabel ?? 'Unknown size',
+                          description: selectedVariant?.description,
+                        ),
+                        if (widget.products.isEmpty) ...<Widget>[
+                          const SizedBox(height: 12),
+                          Text(
+                            'No products available yet.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              )
-                  .toList(growable: false),
-              onChanged: _variantOptions.isEmpty
-                  ? null
-                  : (value) {
-                setState(() {
-                  _selectedVariant = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            _SelectionSummaryCard(
-              productLabel: selectedProduct == null
-                  ? 'No product selected'
-                  : _productLabel(selectedProduct),
-              variantLabel: selectedOption == null
-                  ? 'No card type selected'
-                  : selectedOption.title,
-              footprintLabel: selectedOption == null
-                  ? 'Unknown size'
-                  : selectedOption.footprintLabel,
-              description: selectedOption?.description,
-            ),
-            if (widget.products.isEmpty) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                'No products available yet.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _canSubmit ? _submit : null,
+                        child: Text(widget.confirmText),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ],
+              ],
+            ),
+          ),
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _canSubmit ? _submit : null,
-          child: Text(widget.confirmText),
-        ),
-      ],
     );
+  }
+
+  List<_StoreCardFamilyOption> _buildFamilyOptions() {
+    const familyTitles = <MBCardFamily, String>{
+      MBCardFamily.compact: 'Compact',
+      MBCardFamily.price: 'Price',
+      MBCardFamily.horizontal: 'Horizontal',
+      MBCardFamily.premium: 'Premium',
+      MBCardFamily.wide: 'Wide',
+      MBCardFamily.featured: 'Featured',
+      MBCardFamily.promo: 'Promo',
+      MBCardFamily.flashSale: 'FlashSale',
+    };
+
+    const familyOrder = <MBCardFamily>[
+      MBCardFamily.compact,
+      MBCardFamily.price,
+      MBCardFamily.horizontal,
+      MBCardFamily.premium,
+      MBCardFamily.wide,
+      MBCardFamily.featured,
+      MBCardFamily.promo,
+      MBCardFamily.flashSale,
+    ];
+
+    final grouped = <MBCardFamily, List<_StoreCardVariantOption>>{};
+
+    for (final variant in MBCardVariant.values) {
+      grouped.putIfAbsent(variant.family, () => <_StoreCardVariantOption>[]).add(
+        _StoreCardVariantOption(
+          variant: variant,
+          title: variant.id,
+          description: _variantDescription(variant),
+          footprintLabel: variant.isFullWidth ? 'Full width' : 'Half width',
+        ),
+      );
+    }
+
+    final result = <_StoreCardFamilyOption>[];
+
+    for (final family in familyOrder) {
+      final variants = grouped[family] ?? <_StoreCardVariantOption>[];
+      variants.sort(
+            (a, b) => a.variant.id.compareTo(b.variant.id),
+      );
+
+      result.add(
+        _StoreCardFamilyOption(
+          family: family,
+          title: familyTitles[family] ?? family.id,
+          variants: List<_StoreCardVariantOption>.unmodifiable(variants),
+        ),
+      );
+    }
+
+    return List<_StoreCardFamilyOption>.unmodifiable(result);
+  }
+
+  void _selectFamily(MBCardFamily family) {
+    final familyOption = _familyOptions.firstWhere(
+          (option) => option.family == family,
+    );
+
+    setState(() {
+      _selectedFamily = family;
+
+      final currentVariant = _selectedVariant;
+      final stillValid = familyOption.variants.any(
+            (option) => option.variant == currentVariant,
+      );
+
+      if (!stillValid) {
+        _selectedVariant = familyOption.variants.isEmpty
+            ? null
+            : familyOption.variants.first.variant;
+      }
+    });
   }
 
   void _submit() {
     final selectedProduct = _selectedProduct;
-    final selectedOption = _selectedOption;
-    if (selectedProduct == null || selectedOption == null) {
+    final selectedVariant = _selectedVariantOption;
+
+    if (selectedProduct == null || selectedVariant == null) {
       return;
     }
 
     Navigator.of(context).pop(
       MBStoreCardPreviewEntry.create(
         productId: _productId(selectedProduct),
-        variantId: selectedOption.variant.id,
+        variantId: selectedVariant.variant.id,
         sectionKey: widget.sectionKey,
         sortOrder: widget.nextSortOrder,
       ),
     );
+  }
+
+  String _variantDescription(MBCardVariant variant) {
+    switch (variant.family) {
+      case MBCardFamily.compact:
+        return 'Compact family product card';
+      case MBCardFamily.price:
+        return 'Price-focused family product card';
+      case MBCardFamily.horizontal:
+        return 'Horizontal row product card';
+      case MBCardFamily.premium:
+        return 'Premium family product card';
+      case MBCardFamily.wide:
+        return 'Wide image-led product card';
+      case MBCardFamily.featured:
+        return 'Featured hero-style product card';
+      case MBCardFamily.promo:
+        return 'Promo campaign product card';
+      case MBCardFamily.flashSale:
+        return 'Flash-sale urgency product card';
+      case MBCardFamily.combo:
+        return 'Combo bundle product card';
+      case MBCardFamily.variant:
+        return 'Variant-focused product card';
+      case MBCardFamily.minimal:
+        return 'Minimal lightweight product card';
+      case MBCardFamily.infoRich:
+        return 'Info-rich detailed product card';
+    }
   }
 
   String _productId(MBProduct product) {
@@ -276,14 +427,19 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
   }
 
   String _productLabel(MBProduct product) {
-    if (product.titleEn.trim().isNotEmpty) {
-      return product.titleEn.trim();
+    final titleEn = product.titleEn.trim();
+    if (titleEn.isNotEmpty) {
+      return titleEn;
     }
-    if (product.titleBn.trim().isNotEmpty) {
-      return product.titleBn.trim();
+
+    final titleBn = product.titleBn.trim();
+    if (titleBn.isNotEmpty) {
+      return titleBn;
     }
-    if (product.slug.trim().isNotEmpty) {
-      return product.slug.trim();
+
+    final slug = product.slug.trim();
+    if (slug.isNotEmpty) {
+      return slug;
     }
 
     final id = product.id.trim();
@@ -298,12 +454,14 @@ class _StoreCardAddDialogState extends State<StoreCardAddDialog> {
 class _SelectionSummaryCard extends StatelessWidget {
   const _SelectionSummaryCard({
     required this.productLabel,
+    required this.familyLabel,
     required this.variantLabel,
     required this.footprintLabel,
     this.description,
   });
 
   final String productLabel;
+  final String familyLabel;
   final String variantLabel;
   final String footprintLabel;
   final String? description;
@@ -329,6 +487,8 @@ class _SelectionSummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _SummaryRow(label: 'Product', value: productLabel),
+          const SizedBox(height: 8),
+          _SummaryRow(label: 'Family', value: familyLabel),
           const SizedBox(height: 8),
           _SummaryRow(label: 'Variant', value: variantLabel),
           const SizedBox(height: 8),
@@ -379,6 +539,18 @@ class _SummaryRow extends StatelessWidget {
       ],
     );
   }
+}
+
+class _StoreCardFamilyOption {
+  const _StoreCardFamilyOption({
+    required this.family,
+    required this.title,
+    required this.variants,
+  });
+
+  final MBCardFamily family;
+  final String title;
+  final List<_StoreCardVariantOption> variants;
 }
 
 class _StoreCardVariantOption {

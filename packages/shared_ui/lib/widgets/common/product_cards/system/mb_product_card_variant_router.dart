@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
+
 import '../variants/mb_product_card_compact01.dart';
 import '../variants/mb_product_card_compact02.dart';
 import '../variants/mb_product_card_compact03.dart';

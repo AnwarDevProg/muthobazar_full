@@ -23,11 +23,73 @@ export 'widgets/common/mb_section_header.dart';
 export 'widgets/common/mb_section_title.dart';
 export 'widgets/common/mb_text_field.dart';
 
+// Legacy product card exports kept for compatibility.
 export 'widgets/common/product_cards/mb_product_card_standard.dart';
 export 'widgets/common/product_cards/mb_product_card_compact.dart';
 export 'widgets/common/product_cards/mb_product_card_deal.dart';
 export 'widgets/common/product_cards/mb_product_card_featured.dart';
 export 'widgets/common/product_cards/mb_product_card_renderer.dart';
+
+// Product card system exports.
+export 'widgets/common/product_cards/system/mb_card_variant_registry.dart';
+export 'widgets/common/product_cards/system/mb_card_config_resolver.dart';
+export 'widgets/common/product_cards/system/mb_product_card_variant_router.dart';
+
+// Compact family.
+export 'widgets/common/product_cards/variants/mb_product_card_compact01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_compact02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_compact03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_compact04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_compact05.dart';
+
+// Price family.
+export 'widgets/common/product_cards/variants/mb_product_card_price01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_price02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_price03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_price04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_price05.dart';
+
+// Horizontal family.
+export 'widgets/common/product_cards/variants/mb_product_card_horizontal01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_horizontal02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_horizontal03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_horizontal04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_horizontal05.dart';
+
+// Premium family.
+export 'widgets/common/product_cards/variants/mb_product_card_premium01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_premium02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_premium03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_premium04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_premium05.dart';
+
+// Wide family.
+export 'widgets/common/product_cards/variants/mb_product_card_wide01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_wide02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_wide03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_wide04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_wide05.dart';
+
+// Featured family.
+export 'widgets/common/product_cards/variants/mb_product_card_featured01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_featured02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_featured03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_featured04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_featured05.dart';
+
+// Promo family.
+export 'widgets/common/product_cards/variants/mb_product_card_promo01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_promo02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_promo03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_promo04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_promo05.dart';
+
+// FlashSale family.
+export 'widgets/common/product_cards/variants/mb_product_card_flash01.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_flash02.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_flash03.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_flash04.dart';
+export 'widgets/common/product_cards/variants/mb_product_card_flash05.dart';
 
 export 'widgets/dialogs/mb_dialogs.dart';
 export 'widgets/feedback/mb_notification.dart';

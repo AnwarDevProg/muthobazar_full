@@ -5,66 +5,92 @@ class MBStoreCardPreviewEntry {
     required this.id,
     required this.productId,
     required this.variantId,
-    required this.sortOrder,
     this.sectionKey,
-    this.createdAt,
-    this.updatedAt,
+    this.sortOrder = 0,
   });
 
   final String id;
   final String productId;
   final String variantId;
-  final int sortOrder;
   final String? sectionKey;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final int sortOrder;
 
-  static MBStoreCardPreviewEntry create({
-    required String productId,
-    required String variantId,
-    String? sectionKey,
-    int? sortOrder,
-  }) {
-    final now = DateTime.now();
-    final stamp = now.microsecondsSinceEpoch.toString();
+  MBCardVariant get variant => MBCardVariantHelper.parse(
+    _normalizeVariantId(variantId),
+    fallback: MBCardVariant.compact01,
+  );
 
-    return MBStoreCardPreviewEntry(
-      id: 'store_card_$stamp',
-      productId: _cleanText(productId),
-      variantId: MBCardVariantHelper.normalize(variantId),
-      sortOrder: sortOrder ?? 0,
-      sectionKey: _cleanNullable(sectionKey),
-      createdAt: now,
-      updatedAt: now,
-    );
-  }
-
-  MBCardVariant get variant => MBCardVariantHelper.parse(variantId);
-
+  String get normalizedVariantId => variant.id;
   String get variantLabel => variant.label;
-
+  String get familyId => variant.familyId;
   bool get isFullWidth => variant.isFullWidth;
+  bool get isHalfWidth => !variant.isFullWidth;
+
+  // Temporary compatibility bridge for older preview/store files.
+  MBProductCardLayout get layout => _variantToLegacyLayout(variant);
+
+  // Temporary compatibility bridge for older preview/store files.
+  String get layoutLabel => variant.label;
 
   MBStoreCardPreviewEntry copyWith({
     String? id,
     String? productId,
     String? variantId,
-    int? sortOrder,
     String? sectionKey,
-    DateTime? createdAt,
-    DateTime? updatedAt,
     bool clearSectionKey = false,
+    int? sortOrder,
   }) {
     return MBStoreCardPreviewEntry(
       id: id ?? this.id,
       productId: productId ?? this.productId,
-      variantId: variantId == null
-          ? this.variantId
-          : MBCardVariantHelper.normalize(variantId),
-      sortOrder: sortOrder ?? this.sortOrder,
+      variantId: variantId ?? this.variantId,
       sectionKey: clearSectionKey ? null : (sectionKey ?? this.sectionKey),
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
+  factory MBStoreCardPreviewEntry.create({
+    required String productId,
+    required String variantId,
+    String? id,
+    String? sectionKey,
+    int? sortOrder,
+  }) {
+    return MBStoreCardPreviewEntry(
+      id: _clean(id).isEmpty ? _generateId() : _clean(id),
+      productId: _clean(productId),
+      variantId: _normalizeVariantId(variantId),
+      sectionKey: _cleanNullable(sectionKey),
+      sortOrder: sortOrder ?? 0,
+    );
+  }
+
+  factory MBStoreCardPreviewEntry.fromMap(Map<String, dynamic> map) {
+    final rawId =
+        map['id'] ?? map['entryId'] ?? map['previewEntryId'] ?? map['cardId'];
+
+    final rawProductId =
+        map['productId'] ?? map['productDocId'] ?? map['itemId'] ?? '';
+
+    final rawVariantId = map['variantId'] ??
+        map['cardVariantId'] ??
+        map['cardVariant'] ??
+        map['cardLayoutType'] ??
+        map['cardStyle'] ??
+        map['cardType'] ??
+        map['layout'];
+
+    final rawSectionKey =
+        map['sectionKey'] ?? map['sectionId'] ?? map['section'];
+
+    final rawSortOrder = map['sortOrder'] ?? map['order'] ?? map['index'];
+
+    return MBStoreCardPreviewEntry(
+      id: _clean(rawId).isEmpty ? _generateId() : _clean(rawId),
+      productId: _clean(rawProductId),
+      variantId: _normalizeVariantId(rawVariantId),
+      sectionKey: _cleanNullable(rawSectionKey),
+      sortOrder: _readInt(rawSortOrder),
     );
   }
 
@@ -72,73 +98,24 @@ class MBStoreCardPreviewEntry {
     return <String, dynamic>{
       'id': id,
       'productId': productId,
-      'variantId': variantId,
-      'sortOrder': sortOrder,
+      'variantId': normalizedVariantId,
       'sectionKey': sectionKey,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'sortOrder': sortOrder,
+      // Temporary legacy bridge
+      'layout': layout.value,
+      'layoutValue': layout.value,
     };
   }
 
-  factory MBStoreCardPreviewEntry.fromMap(Map<String, dynamic> map) {
-    final now = DateTime.now();
-
-    final rawVariantId = _readFirstText(
-      map,
-      const <String>[
-        'variantId',
-        'variant_id',
-      ],
-    );
-
-    final legacyLayout = _readFirstText(
-      map,
-      const <String>[
-        'layout',
-        'layoutValue',
-        'layout_value',
-      ],
-    );
-
-    final resolvedVariantId = rawVariantId != null && rawVariantId.isNotEmpty
-        ? MBCardVariantHelper.normalize(rawVariantId)
-        : _legacyLayoutToVariantId(legacyLayout);
-
-    return MBStoreCardPreviewEntry(
-      id: _readFirstText(
-        map,
-        const <String>[
-          'id',
-          'entryId',
-          'entry_id',
-        ],
-      ) ??
-          'store_card_${now.microsecondsSinceEpoch}',
-      productId: _readFirstText(
-        map,
-        const <String>[
-          'productId',
-          'product_id',
-        ],
-      ) ??
-          '',
-      variantId: resolvedVariantId,
-      sortOrder: _readInt(
-        map['sortOrder'] ?? map['sort_order'],
-        fallback: 0,
+  static List<MBStoreCardPreviewEntry> fromMapList(List<dynamic> items) {
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => MBStoreCardPreviewEntry.fromMap(
+        Map<String, dynamic>.from(item),
       ),
-      sectionKey: _cleanNullable(
-        _readFirstText(
-          map,
-          const <String>[
-            'sectionKey',
-            'section_key',
-          ],
-        ),
-      ),
-      createdAt: _readDateTime(map['createdAt'] ?? map['created_at']),
-      updatedAt: _readDateTime(map['updatedAt'] ?? map['updated_at']),
-    );
+    )
+        .toList(growable: false);
   }
 
   static int sortComparator(
@@ -150,101 +127,136 @@ class MBStoreCardPreviewEntry {
       return bySort;
     }
 
-    final aTime = a.createdAt?.microsecondsSinceEpoch ?? 0;
-    final bTime = b.createdAt?.microsecondsSinceEpoch ?? 0;
-    final byTime = aTime.compareTo(bTime);
-    if (byTime != 0) {
-      return byTime;
-    }
-
     return a.id.compareTo(b.id);
   }
 
-  static String _legacyLayoutToVariantId(String? raw) {
-    switch ((raw ?? '').trim().toLowerCase()) {
+  static String _normalizeVariantId(dynamic raw) {
+    final normalized = _clean(raw).toLowerCase();
+
+    switch (normalized) {
+    // Family ids accidentally stored instead of exact variant ids.
       case 'compact':
         return MBCardVariant.compact01.id;
-      case 'card01':
+      case 'price':
         return MBCardVariant.price01.id;
+      case 'horizontal':
+        return MBCardVariant.horizontal01.id;
+      case 'premium':
+        return MBCardVariant.premium01.id;
+      case 'wide':
+        return MBCardVariant.wide01.id;
+      case 'featured':
+        return MBCardVariant.featured01.id;
+      case 'promo':
+        return MBCardVariant.promo01.id;
+      case 'flash':
+      case 'flashsale':
+      case 'flash_sale':
+        return MBCardVariant.flash01.id;
+
+    // Old layout bridge.
       case 'standard':
         return MBCardVariant.horizontal01.id;
-      case 'card02':
-        return MBCardVariant.premium01.id;
-      case 'featured':
-        return MBCardVariant.wide01.id;
-      case 'card03':
-        return MBCardVariant.featured01.id;
       case 'deal':
         return MBCardVariant.flash01.id;
+      case 'card01':
+        return MBCardVariant.price01.id;
+      case 'card02':
+        return MBCardVariant.premium01.id;
+      case 'card03':
+        return MBCardVariant.featured01.id;
+
       default:
-        return MBCardVariant.compact01.id;
+        return normalized.isEmpty ? MBCardVariant.compact01.id : normalized;
     }
   }
 
-  static String? _readFirstText(
-      Map<String, dynamic> map,
-      List<String> keys,
-      ) {
-    for (final key in keys) {
-      final value = map[key];
-      final text = _cleanNullable(value?.toString());
-      if (text != null) {
-        return text;
-      }
+  static MBProductCardLayout _variantToLegacyLayout(MBCardVariant variant) {
+    switch (variant) {
+      case MBCardVariant.compact01:
+      case MBCardVariant.compact02:
+      case MBCardVariant.compact03:
+      case MBCardVariant.compact04:
+      case MBCardVariant.compact05:
+        return MBProductCardLayout.compact;
+
+      case MBCardVariant.price01:
+      case MBCardVariant.price02:
+      case MBCardVariant.price03:
+      case MBCardVariant.price04:
+      case MBCardVariant.price05:
+        return MBProductCardLayout.card01;
+
+      case MBCardVariant.horizontal01:
+      case MBCardVariant.horizontal02:
+      case MBCardVariant.horizontal03:
+      case MBCardVariant.horizontal04:
+      case MBCardVariant.horizontal05:
+        return MBProductCardLayout.standard;
+
+      case MBCardVariant.premium01:
+      case MBCardVariant.premium02:
+      case MBCardVariant.premium03:
+      case MBCardVariant.premium04:
+      case MBCardVariant.premium05:
+        return MBProductCardLayout.card02;
+
+      case MBCardVariant.wide01:
+      case MBCardVariant.wide02:
+      case MBCardVariant.wide03:
+      case MBCardVariant.wide04:
+      case MBCardVariant.wide05:
+        return MBProductCardLayout.featured;
+
+      case MBCardVariant.featured01:
+      case MBCardVariant.featured02:
+      case MBCardVariant.featured03:
+      case MBCardVariant.featured04:
+      case MBCardVariant.featured05:
+        return MBProductCardLayout.card03;
+
+      case MBCardVariant.promo01:
+      case MBCardVariant.promo02:
+      case MBCardVariant.promo03:
+      case MBCardVariant.promo04:
+      case MBCardVariant.promo05:
+        return MBProductCardLayout.featured;
+
+      case MBCardVariant.flash01:
+      case MBCardVariant.flash02:
+      case MBCardVariant.flash03:
+      case MBCardVariant.flash04:
+      case MBCardVariant.flash05:
+        return MBProductCardLayout.deal;
     }
-    return null;
   }
 
-  static int _readInt(dynamic raw, {required int fallback}) {
-    if (raw == null) {
-      return fallback;
-    }
+  static int _readInt(dynamic raw) {
     if (raw is int) {
       return raw;
     }
-    if (raw is num) {
-      return raw.toInt();
+    if (raw is double) {
+      return raw.round();
     }
-    return int.tryParse(raw.toString()) ?? fallback;
+    return int.tryParse(_clean(raw)) ?? 0;
   }
 
-  static DateTime? _readDateTime(dynamic raw) {
+  static String _clean(dynamic raw) {
     if (raw == null) {
-      return null;
-    }
-    if (raw is DateTime) {
-      return raw;
+      return '';
     }
     if (raw is String) {
-      return DateTime.tryParse(raw);
+      return raw.trim();
     }
-    if (raw is int) {
-      return DateTime.fromMillisecondsSinceEpoch(raw);
-    }
-    if (raw is num) {
-      return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
-    }
-
-    try {
-      final dynamic value = raw;
-      final date = value.toDate();
-      if (date is DateTime) {
-        return date;
-      }
-    } catch (_) {}
-
-    return null;
+    return raw.toString().trim();
   }
 
-  static String _cleanText(String raw) {
-    return raw.trim();
+  static String? _cleanNullable(dynamic raw) {
+    final value = _clean(raw);
+    return value.isEmpty ? null : value;
   }
 
-  static String? _cleanNullable(String? raw) {
-    final value = raw?.trim();
-    if (value == null || value.isEmpty) {
-      return null;
-    }
-    return value;
+  static String _generateId() {
+    return 'preview_${DateTime.now().microsecondsSinceEpoch}';
   }
 }
