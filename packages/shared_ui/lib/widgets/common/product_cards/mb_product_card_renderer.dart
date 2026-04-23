@@ -55,21 +55,20 @@ class MBProductCardRenderer extends StatelessWidget {
 
   MBCardVariant _resolveVariantFromProduct(MBProduct product) {
     final rawVariantId = _readVariantCarrier(product);
+
     if (rawVariantId != null && rawVariantId.isNotEmpty) {
       return _parseVariantId(rawVariantId);
     }
 
-    if (contextType == MBProductCardRenderContext.featured) {
-      return MBCardVariant.featured01;
-    }
-
-    return MBCardVariant.compact01;
+    return _fallbackVariantForContext();
   }
 
   String? _readVariantCarrier(MBProduct product) {
     final dynamic p = product;
 
     final candidates = <String?>[
+      _tryReadString(() => p.cardVariantId),
+      _tryReadString(() => p.cardVariant),
       _tryReadString(() => p.cardLayoutType),
       _tryReadString(() => p.cardStyle),
       _tryReadString(() => p.cardType),
@@ -86,43 +85,66 @@ class MBProductCardRenderer extends StatelessWidget {
   }
 
   MBCardVariant _parseVariantId(String raw) {
-    switch (raw.trim().toLowerCase()) {
-      case 'compact01':
-        return MBCardVariant.compact01;
-      case 'price01':
-        return MBCardVariant.price01;
-      case 'horizontal01':
-        return MBCardVariant.horizontal01;
-      case 'premium01':
-        return MBCardVariant.premium01;
-      case 'wide01':
-        return MBCardVariant.wide01;
-      case 'featured01':
-        return MBCardVariant.featured01;
-      case 'promo01':
-        return MBCardVariant.promo01;
-      case 'flash01':
-        return MBCardVariant.flash01;
+    final normalized = raw.trim().toLowerCase();
+    final bridged = _bridgeLegacyVariantId(normalized);
 
-    // Temporary migration bridge for older stored/layout values.
+    return MBCardVariantHelper.parse(
+      bridged,
+      fallback: _fallbackVariantForContext(),
+    );
+  }
+
+  String _bridgeLegacyVariantId(String raw) {
+    switch (raw) {
+    // Current family ids accidentally stored instead of full variant ids.
       case 'compact':
-        return MBCardVariant.compact01;
-      case 'card01':
-        return MBCardVariant.price01;
+        return 'compact01';
+      case 'price':
+        return 'price01';
+      case 'horizontal':
+        return 'horizontal01';
+      case 'premium':
+        return 'premium01';
+      case 'wide':
+        return 'wide01';
+      case 'promo':
+        return 'promo01';
+      case 'flash':
+      case 'flashsale':
+      case 'flash_sale':
+        return 'flash01';
+
+    // Old layout model bridge.
       case 'standard':
-        return MBCardVariant.horizontal01;
+        return 'horizontal01';
+      case 'deal':
+        return 'flash01';
+      case 'card01':
+        return 'price01';
       case 'card02':
-        return MBCardVariant.premium01;
+        return 'premium01';
+      case 'card03':
+        return 'featured01';
+
+    // Old "featured" used to route differently by context.
       case 'featured':
         return contextType == MBProductCardRenderContext.featured
-            ? MBCardVariant.featured01
-            : MBCardVariant.wide01;
-      case 'card03':
-        return MBCardVariant.featured01;
-      case 'deal':
-        return MBCardVariant.flash01;
+            ? 'featured01'
+            : 'wide01';
 
       default:
+        return raw;
+    }
+  }
+
+  MBCardVariant _fallbackVariantForContext() {
+    switch (contextType) {
+      case MBProductCardRenderContext.featured:
+        return MBCardVariant.featured01;
+      case MBProductCardRenderContext.list:
+        return MBCardVariant.horizontal01;
+      case MBProductCardRenderContext.grid:
+      case MBProductCardRenderContext.auto:
         return MBCardVariant.compact01;
     }
   }
