@@ -146,13 +146,13 @@ class MBProductCardRenderer extends StatelessWidget {
 
   String _bridgeLegacyVariantId(String raw) {
     switch (raw) {
-    // Empty/default values.
+      // Empty/default values.
       case '':
       case 'standard':
       case 'default':
         return 'compact01';
 
-    // Current family ids accidentally stored instead of full variant ids.
+      // Current family ids accidentally stored instead of full variant ids.
       case 'compact':
         return 'compact01';
       case 'price':
@@ -171,7 +171,7 @@ class MBProductCardRenderer extends StatelessWidget {
       case 'flash-sale':
         return 'flash01';
 
-    // Old layout model bridge.
+      // Old layout model bridge.
       case 'deal':
         return 'promo01';
       case 'card01':

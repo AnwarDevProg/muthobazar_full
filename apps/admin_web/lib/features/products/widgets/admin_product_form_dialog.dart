@@ -1377,12 +1377,12 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         children: _mediaItems
             .map(
               (item) => EditableTile(
-            title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
-            subtitle:
-            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
-            leading: item.effectiveThumbUrl.trim().isEmpty
-                ? const Icon(Icons.image_not_supported_outlined)
-                : PreviewImage(url: item.effectiveThumbUrl),
+                title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
+                subtitle:
+                'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
+                leading: item.effectiveThumbUrl.trim().isEmpty
+                    ? const Icon(Icons.image_not_supported_outlined)
+                    : PreviewImage(url: item.effectiveThumbUrl),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -2348,8 +2348,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
 
   AdminProductCardSettingsResult? _cardSettingsDraftFromConfig(
-      MBCardInstanceConfig config,
-      ) {
+    MBCardInstanceConfig config,
+  ) {
     final normalizedConfig = config.normalized();
     final settings = normalizedConfig.settings;
 
