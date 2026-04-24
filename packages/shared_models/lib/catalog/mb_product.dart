@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import '../product_cards/config/mb_card_family.dart';
+import '../product_cards/config/mb_card_instance_config.dart';
+import '../product_cards/config/mb_card_variant.dart';
 import 'mb_product_attribute.dart';
 import 'mb_product_media.dart';
 import 'mb_product_purchase_option.dart';
@@ -9,6 +12,17 @@ import 'mb_product_variation.dart';
 // MB Product Model
 // ----------------
 // Root product aggregate used by admin, customer, and backend logic.
+//
+// Card persistence upgrade:
+// - cardLayoutType is kept for backward compatibility.
+// - cardConfig is the new source for exact product-card variant and settings.
+// - Existing legacy values are migrated safely in memory:
+//   standard -> compact01
+//   compact  -> compact01
+//   deal     -> promo01
+//   featured -> featured01
+// - New variant ids like compact01, price01, wide01, promo01, flash01, etc.
+//   are preserved instead of being normalized back to standard.
 
 class MBProduct {
   final String id;
@@ -18,16 +32,14 @@ class MBProduct {
 
   final String titleEn;
   final String titleBn;
-
   final String shortDescriptionEn;
   final String shortDescriptionBn;
-
   final String descriptionEn;
   final String descriptionBn;
 
   final String thumbnailUrl;
-  final List<String> imageUrls;
-  final List<MBProductMedia> mediaItems;
+  final List imageUrls;
+  final List mediaItems;
 
   final double price;
   final double? salePrice;
@@ -36,24 +48,17 @@ class MBProduct {
   final DateTime? saleEndsAt;
 
   final int stockQty;
-
   final String inventoryMode;
   final bool trackInventory;
-
   final bool supportsInstantOrder;
   final bool supportsScheduledOrder;
-
   final int regularStockQty;
   final int reservedInstantQty;
-
   final int todayInstantCap;
   final int todayInstantSold;
-
   final int maxScheduleQtyPerDay;
-
   final String schedulePriceType;
   final double? estimatedSchedulePrice;
-
   final String? instantCutoffTime;
   final int minScheduleNoticeHours;
   final int reorderLevel;
@@ -70,15 +75,23 @@ class MBProduct {
   final String? brandSlug;
 
   final String productType;
+  final List tags;
+  final List keywords;
+  final List attributes;
+  final List variations;
+  final List purchaseOptions;
 
-  final List<String> tags;
-  final List<String> keywords;
-
-  final List<MBProductAttribute> attributes;
-  final List<MBProductVariation> variations;
-  final List<MBProductPurchaseOption> purchaseOptions;
-
+  /// Legacy card field.
+  ///
+  /// New saves should store the exact variant id, for example compact01,
+  /// price01, wide01, promo01, or flash01. Old values are still accepted.
   final String cardLayoutType;
+
+  /// New persisted card configuration.
+  ///
+  /// This stores the card family, exact variant, optional preset, and all
+  /// per-product card setting overrides.
+  final MBCardInstanceConfig cardConfig;
 
   final bool isFeatured;
   final bool isFlashSale;
@@ -109,6 +122,7 @@ class MBProduct {
   final DateTime? deletedAt;
   final String? deletedBy;
   final String? deleteReason;
+
   final String? createdBy;
   final String? updatedBy;
   final DateTime createdAt;
@@ -163,7 +177,8 @@ class MBProduct {
     this.attributes = const [],
     this.variations = const [],
     this.purchaseOptions = const [],
-    this.cardLayoutType = 'standard',
+    this.cardLayoutType = 'compact01',
+    this.cardConfig = _defaultCardConfig,
     this.isFeatured = false,
     this.isFlashSale = false,
     this.isEnabled = true,
@@ -200,7 +215,8 @@ class MBProduct {
     id: '',
     titleEn: '',
     titleBn: '',
-    cardLayoutType: 'standard',
+    cardLayoutType: _defaultCardConfig.variantId,
+    cardConfig: _defaultCardConfig,
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
@@ -214,6 +230,7 @@ class MBProduct {
     final now = DateTime.now();
     if (saleStartsAt != null && now.isBefore(saleStartsAt!)) return false;
     if (saleEndsAt != null && now.isAfter(saleEndsAt!)) return false;
+
     return true;
   }
 
@@ -225,31 +242,46 @@ class MBProduct {
   }
 
   bool get hasAttributes => attributes.isNotEmpty;
-
   bool get hasVariations => variations.isNotEmpty;
-
   bool get hasPurchaseOptions => purchaseOptions.isNotEmpty;
-
   bool get hasMedia =>
       mediaItems.isNotEmpty || thumbnailUrl.isNotEmpty || imageUrls.isNotEmpty;
 
   bool get isVariableProduct => productType == 'variable';
-
   bool get canInstantOrder => isEnabled && !isDeleted && supportsInstantOrder;
-
-  bool get canScheduledOrder =>
-      isEnabled && !isDeleted && supportsScheduledOrder;
-
+  bool get canScheduledOrder => isEnabled && !isDeleted && supportsScheduledOrder;
   bool get usesEstimatedSchedulePrice =>
       schedulePriceType == 'estimated' || schedulePriceType == 'market';
 
-  String get normalizedCardLayoutType => _normalizeCardLayoutType(cardLayoutType);
+  MBCardInstanceConfig get effectiveCardConfig {
+    final normalizedConfig = cardConfig.normalized();
+    final normalizedLayoutType = _normalizeCardLayoutType(cardLayoutType);
 
-  bool get usesCompactCardLayout => normalizedCardLayoutType == 'compact';
+    final bool hasExplicitConfig = normalizedConfig.hasPreset ||
+        normalizedConfig.hasOverrides ||
+        normalizedConfig.variantId != _defaultCardConfig.variantId;
 
-  bool get usesDealCardLayout => normalizedCardLayoutType == 'deal';
+    if (!hasExplicitConfig &&
+        normalizedLayoutType != normalizedConfig.variantId) {
+      return _cardConfigFromLayoutType(normalizedLayoutType);
+    }
 
-  bool get usesFeaturedCardLayout => normalizedCardLayoutType == 'featured';
+    return normalizedConfig;
+  }
+
+  String get normalizedCardLayoutType => effectiveCardConfig.variantId;
+  String get effectiveCardVariantId => effectiveCardConfig.variantId;
+  String get effectiveCardFamilyId => effectiveCardConfig.familyId;
+
+  bool get usesCompactCardLayout =>
+      effectiveCardConfig.family == MBCardFamily.compact;
+
+  bool get usesDealCardLayout =>
+      _isLegacyDealLayout(cardLayoutType) ||
+          effectiveCardConfig.family == MBCardFamily.promo;
+
+  bool get usesFeaturedCardLayout =>
+      effectiveCardConfig.family == MBCardFamily.featured;
 
   int get instantAvailableFromStock {
     final value = regularStockQty - reservedInstantQty;
@@ -277,9 +309,13 @@ class MBProduct {
 
   bool get inStock {
     if (allowBackorder) return true;
+
     if (isVariableProduct) {
-      return variations.any((variation) => variation.inStock && variation.isEnabled);
+      return variations.any(
+            (variation) => variation.inStock && variation.isEnabled,
+      );
     }
+
     return instantAvailableToday > 0;
   }
 
@@ -293,9 +329,8 @@ class MBProduct {
     return true;
   }
 
-  List<MBProductMedia> get enabledMediaItems =>
-      mediaItems.where((item) => item.isEnabled).toList()
-        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  List get enabledMediaItems => mediaItems.where((item) => item.isEnabled).toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
   String get resolvedThumbnailUrl {
     if (thumbnailUrl.trim().isNotEmpty) return thumbnailUrl;
@@ -310,11 +345,11 @@ class MBProduct {
       if (item.url.trim().isNotEmpty) return item.url;
     }
 
-    if (imageUrls.isNotEmpty) return imageUrls.first;
+    if (imageUrls.isNotEmpty) return imageUrls.first.toString();
     return '';
   }
 
-  List<String> get resolvedImageUrls {
+  List get resolvedImageUrls {
     if (imageUrls.isNotEmpty) return imageUrls;
 
     final urls = <String>[];
@@ -323,6 +358,7 @@ class MBProduct {
         urls.add(item.url);
       }
     }
+
     return urls;
   }
 
@@ -340,8 +376,8 @@ class MBProduct {
     String? descriptionEn,
     String? descriptionBn,
     String? thumbnailUrl,
-    List<String>? imageUrls,
-    List<MBProductMedia>? mediaItems,
+    List? imageUrls,
+    List? mediaItems,
     double? price,
     double? salePrice,
     bool clearSalePrice = false,
@@ -386,12 +422,13 @@ class MBProduct {
     String? brandSlug,
     bool clearBrandSlug = false,
     String? productType,
-    List<String>? tags,
-    List<String>? keywords,
-    List<MBProductAttribute>? attributes,
-    List<MBProductVariation>? variations,
-    List<MBProductPurchaseOption>? purchaseOptions,
+    List? tags,
+    List? keywords,
+    List? attributes,
+    List? variations,
+    List? purchaseOptions,
     String? cardLayoutType,
+    MBCardInstanceConfig? cardConfig,
     bool? isFeatured,
     bool? isFlashSale,
     bool? isEnabled,
@@ -435,6 +472,15 @@ class MBProduct {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
+    final nextCardLayoutType = _normalizeCardLayoutType(
+      cardLayoutType ?? this.cardLayoutType,
+    );
+
+    final nextCardConfig = cardConfig ??
+        (cardLayoutType == null
+            ? this.cardConfig
+            : _cardConfigFromLayoutType(nextCardLayoutType));
+
     return MBProduct(
       id: id ?? this.id,
       slug: slug ?? this.slug,
@@ -452,7 +498,8 @@ class MBProduct {
       price: price ?? this.price,
       salePrice: clearSalePrice ? null : (salePrice ?? this.salePrice),
       costPrice: clearCostPrice ? null : (costPrice ?? this.costPrice),
-      saleStartsAt: clearSaleStartsAt ? null : (saleStartsAt ?? this.saleStartsAt),
+      saleStartsAt:
+      clearSaleStartsAt ? null : (saleStartsAt ?? this.saleStartsAt),
       saleEndsAt: clearSaleEndsAt ? null : (saleEndsAt ?? this.saleEndsAt),
       stockQty: stockQty ?? this.stockQty,
       inventoryMode: inventoryMode ?? this.inventoryMode,
@@ -470,24 +517,24 @@ class MBProduct {
       estimatedSchedulePrice: clearEstimatedSchedulePrice
           ? null
           : (estimatedSchedulePrice ?? this.estimatedSchedulePrice),
-      instantCutoffTime: clearInstantCutoffTime
-          ? null
-          : (instantCutoffTime ?? this.instantCutoffTime),
+      instantCutoffTime:
+      clearInstantCutoffTime ? null : (instantCutoffTime ?? this.instantCutoffTime),
       minScheduleNoticeHours:
       minScheduleNoticeHours ?? this.minScheduleNoticeHours,
       reorderLevel: reorderLevel ?? this.reorderLevel,
       allowBackorder: allowBackorder ?? this.allowBackorder,
       categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
-      categoryNameEn: clearCategoryNameEn
-          ? null
-          : (categoryNameEn ?? this.categoryNameEn),
-      categoryNameBn: clearCategoryNameBn
-          ? null
-          : (categoryNameBn ?? this.categoryNameBn),
-      categorySlug: clearCategorySlug ? null : (categorySlug ?? this.categorySlug),
+      categoryNameEn:
+      clearCategoryNameEn ? null : (categoryNameEn ?? this.categoryNameEn),
+      categoryNameBn:
+      clearCategoryNameBn ? null : (categoryNameBn ?? this.categoryNameBn),
+      categorySlug:
+      clearCategorySlug ? null : (categorySlug ?? this.categorySlug),
       brandId: clearBrandId ? null : (brandId ?? this.brandId),
-      brandNameEn: clearBrandNameEn ? null : (brandNameEn ?? this.brandNameEn),
-      brandNameBn: clearBrandNameBn ? null : (brandNameBn ?? this.brandNameBn),
+      brandNameEn:
+      clearBrandNameEn ? null : (brandNameEn ?? this.brandNameEn),
+      brandNameBn:
+      clearBrandNameBn ? null : (brandNameBn ?? this.brandNameBn),
       brandSlug: clearBrandSlug ? null : (brandSlug ?? this.brandSlug),
       productType: productType ?? this.productType,
       tags: tags ?? this.tags,
@@ -495,9 +542,8 @@ class MBProduct {
       attributes: attributes ?? this.attributes,
       variations: variations ?? this.variations,
       purchaseOptions: purchaseOptions ?? this.purchaseOptions,
-      cardLayoutType: _normalizeCardLayoutType(
-        cardLayoutType ?? this.cardLayoutType,
-      ),
+      cardLayoutType: nextCardConfig.normalized().variantId,
+      cardConfig: nextCardConfig.normalized(),
       isFeatured: isFeatured ?? this.isFeatured,
       isFlashSale: isFlashSale ?? this.isFlashSale,
       isEnabled: isEnabled ?? this.isEnabled,
@@ -523,7 +569,8 @@ class MBProduct {
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
       deletedBy: clearDeletedBy ? null : (deletedBy ?? this.deletedBy),
-      deleteReason: clearDeleteReason ? null : (deleteReason ?? this.deleteReason),
+      deleteReason:
+      clearDeleteReason ? null : (deleteReason ?? this.deleteReason),
       createdBy: clearCreatedBy ? null : (createdBy ?? this.createdBy),
       updatedBy: clearUpdatedBy ? null : (updatedBy ?? this.updatedBy),
       createdAt: createdAt ?? this.createdAt,
@@ -532,6 +579,8 @@ class MBProduct {
   }
 
   Map<String, dynamic> toMap() {
+    final normalizedConfig = effectiveCardConfig.normalized();
+
     return {
       'id': id,
       'slug': slug,
@@ -581,7 +630,8 @@ class MBProduct {
       'attributes': attributes.map((e) => e.toMap()).toList(),
       'variations': variations.map((e) => e.toMap()).toList(),
       'purchaseOptions': purchaseOptions.map((e) => e.toMap()).toList(),
-      'cardLayoutType': normalizedCardLayoutType,
+      'cardLayoutType': normalizedConfig.variantId,
+      'cardConfig': normalizedConfig.toMap(),
       'isFeatured': isFeatured,
       'isFlashSale': isFlashSale,
       'isEnabled': isEnabled,
@@ -615,17 +665,21 @@ class MBProduct {
     };
   }
 
-  factory MBProduct.fromMap(Map<String, dynamic>? map) {
+  factory MBProduct.fromMap(Map? map) {
     if (map == null) return MBProduct.empty();
 
+    final thumbnailUrl = (map['thumbnailUrl'] ?? '').toString();
+    final imageUrls = List.from(map['imageUrls'] ?? const []);
     final mediaItems = _parseMediaItems(
       map['mediaItems'],
-      thumbnailUrl: (map['thumbnailUrl'] ?? '').toString(),
-      imageUrls: List<String>.from(map['imageUrls'] ?? const []),
+      thumbnailUrl: thumbnailUrl,
+      imageUrls: imageUrls,
     );
 
-    final thumbnailUrl = (map['thumbnailUrl'] ?? '').toString();
-    final imageUrls = List<String>.from(map['imageUrls'] ?? const []);
+    final cardConfig = _parseCardConfig(
+      map['cardConfig'],
+      fallbackLayoutType: map['cardLayoutType'],
+    ).normalized();
 
     return MBProduct(
       id: (map['id'] ?? '').toString(),
@@ -668,7 +722,8 @@ class MBProduct {
       schedulePriceType: (map['schedulePriceType'] ?? 'fixed').toString(),
       estimatedSchedulePrice: _asNullableDouble(map['estimatedSchedulePrice']),
       instantCutoffTime: map['instantCutoffTime']?.toString(),
-      minScheduleNoticeHours: _asInt(map['minScheduleNoticeHours'], fallback: 0),
+      minScheduleNoticeHours:
+      _asInt(map['minScheduleNoticeHours'], fallback: 0),
       reorderLevel: _asInt(map['reorderLevel'], fallback: 0),
       allowBackorder: _asBool(map['allowBackorder'], fallback: false),
       categoryId: map['categoryId']?.toString(),
@@ -680,12 +735,13 @@ class MBProduct {
       brandNameBn: map['brandNameBn']?.toString(),
       brandSlug: map['brandSlug']?.toString(),
       productType: (map['productType'] ?? 'simple').toString(),
-      tags: List<String>.from(map['tags'] ?? const []),
-      keywords: List<String>.from(map['keywords'] ?? const []),
+      tags: List.from(map['tags'] ?? const []),
+      keywords: List.from(map['keywords'] ?? const []),
       attributes: _parseAttributes(map['attributes']),
       variations: _parseVariations(map['variations']),
       purchaseOptions: _parsePurchaseOptions(map['purchaseOptions']),
-      cardLayoutType: _normalizeCardLayoutType(map['cardLayoutType']),
+      cardLayoutType: cardConfig.variantId,
+      cardConfig: cardConfig,
       isFeatured: _asBool(map['isFeatured'], fallback: false),
       isFlashSale: _asBool(map['isFlashSale'], fallback: false),
       isEnabled: _asBool(map['isEnabled'], fallback: true),
@@ -719,25 +775,31 @@ class MBProduct {
     );
   }
 
-  factory MBProduct.fromJson(String source) =>
-      MBProduct.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory MBProduct.fromJson(String source) {
+    final decoded = json.decode(source);
+    if (decoded is Map) {
+      return MBProduct.fromMap(Map<String, dynamic>.from(decoded));
+    }
+    return MBProduct.empty();
+  }
 
   String toJson() => json.encode(toMap());
 }
 
-List<MBProductMedia> _parseMediaItems(
+const MBCardInstanceConfig _defaultCardConfig = MBCardInstanceConfig(
+  family: MBCardFamily.compact,
+  variant: MBCardVariant.compact01,
+);
+
+List _parseMediaItems(
     dynamic rawMedia, {
       required String thumbnailUrl,
-      required List<String> imageUrls,
+      required List imageUrls,
     }) {
   final items = <MBProductMedia>[];
 
   if (rawMedia is List) {
     for (final item in rawMedia) {
-      if (item is Map<String, dynamic>) {
-        items.add(MBProductMedia.fromMap(item));
-        continue;
-      }
       if (item is Map) {
         items.add(MBProductMedia.fromMap(Map<String, dynamic>.from(item)));
       }
@@ -747,10 +809,12 @@ List<MBProductMedia> _parseMediaItems(
   if (items.isNotEmpty) return items;
 
   final fallback = <MBProductMedia>[];
-  if (thumbnailUrl.trim().isNotEmpty) {
+  final cleanThumbnailUrl = thumbnailUrl.trim();
+
+  if (cleanThumbnailUrl.isNotEmpty) {
     fallback.add(
       MBProductMedia.fromLegacyUrl(
-        thumbnailUrl,
+        cleanThumbnailUrl,
         id: 'thumbnail',
         role: 'thumbnail',
         sortOrder: 0,
@@ -760,9 +824,9 @@ List<MBProductMedia> _parseMediaItems(
   }
 
   for (var index = 0; index < imageUrls.length; index++) {
-    final url = imageUrls[index].trim();
+    final url = imageUrls[index].toString().trim();
     if (url.isEmpty) continue;
-    if (url == thumbnailUrl.trim()) continue;
+    if (url == cleanThumbnailUrl) continue;
 
     fallback.add(
       MBProductMedia.fromLegacyUrl(
@@ -777,54 +841,112 @@ List<MBProductMedia> _parseMediaItems(
   return fallback;
 }
 
-List<MBProductAttribute> _parseAttributes(dynamic rawAttributes) {
+List _parseAttributes(dynamic rawAttributes) {
   if (rawAttributes is! List) return const [];
 
   final items = <MBProductAttribute>[];
   for (final item in rawAttributes) {
-    if (item is Map<String, dynamic>) {
-      items.add(MBProductAttribute.fromMap(item));
-      continue;
-    }
     if (item is Map) {
       items.add(MBProductAttribute.fromMap(Map<String, dynamic>.from(item)));
     }
   }
+
   return items;
 }
 
-List<MBProductVariation> _parseVariations(dynamic rawVariations) {
+List _parseVariations(dynamic rawVariations) {
   if (rawVariations is! List) return const [];
 
   final items = <MBProductVariation>[];
   for (final item in rawVariations) {
-    if (item is Map<String, dynamic>) {
-      items.add(MBProductVariation.fromMap(item));
-      continue;
-    }
     if (item is Map) {
       items.add(MBProductVariation.fromMap(Map<String, dynamic>.from(item)));
     }
   }
+
   return items;
 }
 
-List<MBProductPurchaseOption> _parsePurchaseOptions(dynamic rawOptions) {
+List _parsePurchaseOptions(dynamic rawOptions) {
   if (rawOptions is! List) return const [];
 
   final items = <MBProductPurchaseOption>[];
   for (final item in rawOptions) {
-    if (item is Map<String, dynamic>) {
-      items.add(MBProductPurchaseOption.fromMap(item));
-      continue;
-    }
     if (item is Map) {
       items.add(
         MBProductPurchaseOption.fromMap(Map<String, dynamic>.from(item)),
       );
     }
   }
+
   return items;
+}
+
+MBCardInstanceConfig _parseCardConfig(
+    dynamic rawConfig, {
+      required dynamic fallbackLayoutType,
+    }) {
+  if (rawConfig is Map) {
+    final parsed = MBCardInstanceConfig.fromMap(
+      Map<String, dynamic>.from(rawConfig),
+    ).normalized();
+
+    return parsed;
+  }
+
+  return _cardConfigFromLayoutType(fallbackLayoutType);
+}
+
+MBCardInstanceConfig _cardConfigFromLayoutType(dynamic value) {
+  final variant = MBCardVariantHelper.parse(
+    _normalizeCardLayoutType(value),
+    fallback: MBCardVariant.compact01,
+  );
+
+  return MBCardInstanceConfig(
+    family: variant.family,
+    variant: variant,
+  );
+}
+
+String _normalizeCardLayoutType(dynamic value) {
+  final normalized = value?.toString().trim().toLowerCase() ?? '';
+
+  switch (normalized) {
+    case '':
+    case 'standard':
+    case 'default':
+    case 'compact':
+      return MBCardVariant.compact01.id;
+    case 'deal':
+      return MBCardVariant.promo01.id;
+    case 'featured':
+      return MBCardVariant.featured01.id;
+    case 'flash':
+    case 'flash_sale':
+    case 'flash-sale':
+      return MBCardVariant.flash01.id;
+    case 'price':
+      return MBCardVariant.price01.id;
+    case 'horizontal':
+      return MBCardVariant.horizontal01.id;
+    case 'premium':
+      return MBCardVariant.premium01.id;
+    case 'wide':
+      return MBCardVariant.wide01.id;
+    case 'promo':
+      return MBCardVariant.promo01.id;
+    default:
+      return MBCardVariantHelper.normalize(
+        normalized,
+        fallback: MBCardVariant.compact01,
+      );
+  }
+}
+
+bool _isLegacyDealLayout(dynamic value) {
+  final normalized = value?.toString().trim().toLowerCase() ?? '';
+  return normalized == 'deal';
 }
 
 double _asDouble(dynamic value, {double fallback = 0.0}) {
@@ -837,7 +959,11 @@ double? _asNullableDouble(dynamic value) {
   if (value == null) return null;
   if (value is double) return value;
   if (value is num) return value.toDouble();
-  return double.tryParse(value.toString());
+
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+
+  return double.tryParse(text);
 }
 
 int _asInt(dynamic value, {int fallback = 0}) {
@@ -848,28 +974,30 @@ int _asInt(dynamic value, {int fallback = 0}) {
 
 bool _asBool(dynamic value, {bool fallback = false}) {
   if (value is bool) return value;
+
   if (value is String) {
     final normalized = value.trim().toLowerCase();
     if (normalized == 'true') return true;
     if (normalized == 'false') return false;
   }
+
   return fallback;
 }
 
 DateTime? _asNullableDateTime(dynamic value) {
   if (value == null) return null;
-  return DateTime.tryParse(value.toString());
-}
+  if (value is DateTime) return value;
 
-String _normalizeCardLayoutType(dynamic value) {
-  final normalized = value?.toString().trim().toLowerCase() ?? '';
-  switch (normalized) {
-    case 'compact':
-    case 'deal':
-    case 'featured':
-    case 'standard':
-      return normalized;
-    default:
-      return 'standard';
+  try {
+    final dynamic dynamicValue = value;
+    final dynamic converted = dynamicValue.toDate();
+    if (converted is DateTime) return converted;
+  } catch (_) {
+    // Ignore non-Firestore timestamp-like values.
   }
+
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+
+  return DateTime.tryParse(text);
 }

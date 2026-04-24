@@ -22,20 +22,16 @@ class AdminProductCardSettingsResult {
   });
 
   final String variantId;
-
   final bool showDiscountBadge;
   final bool showSavingsText;
   final bool emphasizeFinalPrice;
-
   final bool showAddToCart;
   final bool showViewDetails;
-
   final bool showSubtitle;
   final bool showBrand;
   final bool showUnitLabel;
   final bool showStockHint;
   final bool showDeliveryHint;
-
   final bool showBorder;
   final bool showPromoStrip;
 
@@ -181,7 +177,12 @@ class AdminProductCardSettingsDialog extends StatefulWidget {
 
 class _AdminProductCardSettingsDialogState
     extends State<AdminProductCardSettingsDialog> {
+  static const double _kPreviewCanvasWidth = 320.0;
+  static const double _kPreviewCanvasPadding = 12.0;
+  static const double _kPreviewCanvasGap = 12.0;
+
   late final AdminProductCardSettingsResult _initialResult;
+
   late bool _showDiscountBadge;
   late bool _showSavingsText;
   late bool _emphasizeFinalPrice;
@@ -202,6 +203,13 @@ class _AdminProductCardSettingsDialogState
       MBCardVariantRegistry.definitionFor(widget.variant);
 
   MBCardSupportedSettings get _supported => _definition.supportedSettings;
+
+  double get _halfCardWidth =>
+      (_kPreviewCanvasWidth - (_kPreviewCanvasPadding * 2) - _kPreviewCanvasGap) /
+          2;
+
+  double get _fullCardWidth =>
+      _kPreviewCanvasWidth - (_kPreviewCanvasPadding * 2);
 
   @override
   void initState() {
@@ -227,14 +235,73 @@ class _AdminProductCardSettingsDialogState
     _showPromoStrip = _initialResult.showPromoStrip;
   }
 
+  AdminProductCardSettingsResult get _currentResult {
+    return AdminProductCardSettingsResult(
+      variantId: widget.variant.id,
+      showDiscountBadge: _showDiscountBadge,
+      showSavingsText: _showSavingsText,
+      emphasizeFinalPrice: _emphasizeFinalPrice,
+      showAddToCart: _showAddToCart,
+      showViewDetails: _showViewDetails,
+      showSubtitle: _showSubtitle,
+      showBrand: _showBrand,
+      showUnitLabel: _showUnitLabel,
+      showStockHint: _showStockHint,
+      showDeliveryHint: _showDeliveryHint,
+      showBorder: _showBorder,
+      showPromoStrip: _showPromoStrip,
+    );
+  }
+
+  MBCardVariant _peerVariantFor(MBCardVariant currentVariant) {
+    final siblings = MBCardVariant.values
+        .where((item) => item.family == currentVariant.family)
+        .toList(growable: false);
+
+    for (final sibling in siblings) {
+      if (sibling != currentVariant) {
+        return sibling;
+      }
+    }
+
+    return currentVariant;
+  }
+
+  MBCardSettingsOverride _buildSettingsOverride() {
+    return MBCardSettingsOverride(
+      price: MBCardPriceSettings(
+        showDiscountBadge: _showDiscountBadge,
+        showSavingsText: _showSavingsText,
+        emphasizeFinalPrice: _emphasizeFinalPrice,
+      ),
+      actions: MBCardActionSettings(
+        showAddToCart: _showAddToCart,
+        showViewDetails: _showViewDetails,
+      ),
+      meta: MBCardMetaSettings(
+        showSubtitle: _showSubtitle,
+        showBrand: _showBrand,
+        showUnitLabel: _showUnitLabel,
+        showStockHint: _showStockHint,
+        showDeliveryHint: _showDeliveryHint,
+      ),
+      borderEffect: MBCardBorderEffectSettings(
+        showBorder: _showBorder,
+      ),
+      accent: MBCardAccentSettings(
+        showPromoStrip: _showPromoStrip,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.sizeOf(context);
-    final maxWidth = media.width < 1200 ? media.width - 24 : 1120.0;
-    final maxHeight = media.height < 900 ? media.height - 32 : 860.0;
+    final maxWidth = media.width < 1360 ? media.width - 24 : 1260.0;
+    final maxHeight = media.height < 920 ? media.height - 28 : 860.0;
 
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
       ),
@@ -248,45 +315,7 @@ class _AdminProductCardSettingsDialogState
             _buildHeader(context),
             const Divider(height: 1),
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isNarrow = constraints.maxWidth < 900;
-
-                  if (isNarrow) {
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          _buildPreviewPanel(context),
-                          const SizedBox(height: 18),
-                          _buildControlsPanel(context),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return Row(
-                    children: <Widget>[
-                      Expanded(
-                        flex: 11,
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(18),
-                          child: _buildPreviewPanel(context),
-                        ),
-                      ),
-                      const VerticalDivider(width: 1),
-                      Expanded(
-                        flex: 10,
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(18),
-                          child: _buildControlsPanel(context),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              child: _buildBody(context),
             ),
             const Divider(height: 1),
             _buildBottomBar(context),
@@ -313,9 +342,10 @@ class _AdminProductCardSettingsDialogState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Adjust controlled per-card settings for this selected variant. Only supported groups are exposed here.',
+                  'Adjust the supported settings for this card, while keeping a larger live preview visible.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade700,
+                    color: const Color(0xFF6B7280),
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -331,106 +361,230 @@ class _AdminProductCardSettingsDialogState
     );
   }
 
-  Widget _buildPreviewPanel(BuildContext context) {
-    final resolved = MBCardConfigResolver.resolveByVariant(widget.variant);
+  Widget _buildBody(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 960;
 
-    Widget preview = MBProductCardVariantRouter.build(
-      context: context,
-      resolved: resolved,
-      product: widget.previewProduct,
-      onTap: () {},
-      onAddToCartTap: () {},
+        if (isNarrow) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _buildPreviewPanel(context),
+                const SizedBox(height: 18),
+                _buildControlsPanel(context),
+              ],
+            ),
+          );
+        }
+
+        return Row(
+          children: <Widget>[
+            SizedBox(
+              width: 430,
+              child: _buildPreviewRail(context),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: _buildControlsPane(context),
+            ),
+          ],
+        );
+      },
     );
+  }
 
-    if (resolved.footprint.isFullWidth) {
-      preview = SizedBox(
-        height: 330,
-        child: preview,
-      );
-    }
+  Widget _buildPreviewRail(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: _buildPreviewPanel(context),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildControlsPane(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      child: Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(18),
+          child: _buildControlsPanel(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewPanel(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Current preview',
+          'Live preview',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'This preview shows the currently selected card variant with the current product form data.',
+          'This preview updates immediately with the current settings and uses a readable mobile-style canvas.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey.shade700,
+            color: const Color(0xFF6B7280),
             height: 1.35,
           ),
         ),
         const SizedBox(height: 14),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: _showBorder
-                  ? const Color(0xFFFF8A00)
-                  : const Color(0xFFE5E7EB),
-            ),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x12000000),
-                blurRadius: 16,
-                offset: Offset(0, 6),
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (_showPromoStrip)
-                Container(
-                  width: double.infinity,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4E8),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    'Promo strip enabled',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFE67E22),
-                    ),
-                  ),
-                ),
-              if (_showPromoStrip) const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: AbsorbPointer(
-                  absorbing: true,
-                  child: preview,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            _InfoChip(label: 'family', value: widget.variant.family.label),
-            _InfoChip(label: 'variant', value: widget.variant.id),
-            _InfoChip(
-              label: 'footprint',
-              value: widget.variant.isFullWidth ? 'full' : 'half',
             ),
-          ],
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      _InfoChip(
+                        label: 'family',
+                        value: _familyLabel(widget.variant.family),
+                      ),
+                      _InfoChip(
+                        label: 'variant',
+                        value: widget.variant.id,
+                      ),
+                      _InfoChip(
+                        label: 'footprint',
+                        value: widget.variant.isFullWidth ? 'full' : 'half',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildLargePreviewCanvas(widget.variant),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLargePreviewCanvas(MBCardVariant variant) {
+    final peer = _peerVariantFor(variant);
+
+    return Container(
+      width: _kPreviewCanvasWidth,
+      padding: const EdgeInsets.all(_kPreviewCanvasPadding),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: _showBorder
+              ? const Color(0xFFFF8A00)
+              : const Color(0xFFE5E7EB),
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (_showPromoStrip)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4E8),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text(
+                'Promo strip enabled',
+                style: TextStyle(
+                  color: Color(0xFFE67E22),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          if (_showPromoStrip) const SizedBox(height: 12),
+          if (variant.isFullWidth)
+            Column(
+              children: <Widget>[
+                SizedBox(
+                  width: _fullCardWidth,
+                  child: _buildRenderedPreviewCard(variant),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: _fullCardWidth,
+                  child: Opacity(
+                    opacity: 0.82,
+                    child: _buildRenderedPreviewCard(peer),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(
+                  width: _halfCardWidth,
+                  child: _buildRenderedPreviewCard(variant),
+                ),
+                const SizedBox(width: _kPreviewCanvasGap),
+                SizedBox(
+                  width: _halfCardWidth,
+                  child: Opacity(
+                    opacity: 0.82,
+                    child: _buildRenderedPreviewCard(peer),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRenderedPreviewCard(MBCardVariant variant) {
+    final resolved = MBCardConfigResolver.resolveByVariant(
+      variant,
+      settings: _buildSettingsOverride(),
+    );
+
+    return AbsorbPointer(
+      absorbing: true,
+      child: MBProductCardVariantRouter.build(
+        context: context,
+        resolved: resolved,
+        product: widget.previewProduct,
+        onTap: () {},
+        onAddToCartTap: () {},
+      ),
     );
   }
 
@@ -448,6 +602,7 @@ class _AdminProductCardSettingsDialogState
         if (_supported.canChangePrice) ...<Widget>[
           _SettingsGroup(
             title: 'Price',
+            subtitle: 'Control pricing emphasis and savings visibility.',
             child: Column(
               children: <Widget>[
                 _switchTile(
@@ -482,6 +637,7 @@ class _AdminProductCardSettingsDialogState
         if (_supported.canChangeActions) ...<Widget>[
           _SettingsGroup(
             title: 'Actions',
+            subtitle: 'Show or hide action buttons on the card.',
             child: Column(
               children: <Widget>[
                 _switchTile(
@@ -508,6 +664,7 @@ class _AdminProductCardSettingsDialogState
         if (_supported.canChangeMeta) ...<Widget>[
           _SettingsGroup(
             title: 'Meta',
+            subtitle: 'Control supportive information under the main content.',
             child: Column(
               children: <Widget>[
                 _switchTile(
@@ -559,6 +716,7 @@ class _AdminProductCardSettingsDialogState
             Widget>[
           _SettingsGroup(
             title: 'Style',
+            subtitle: 'Control decorative presentation.',
             child: Column(
               children: <Widget>[
                 if (_supported.canChangeBorderEffect)
@@ -592,60 +750,16 @@ class _AdminProductCardSettingsDialogState
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
-          child: Text(
-            'This dialog collects controlled card overrides for the selected variant. The next integration step is mapping this saved result into your per-product card settings field.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey.shade700,
+          child: const Text(
+            'Only supported settings for the selected variant are exposed here. Save to return the settings draft to the product form.',
+            style: TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 13,
               height: 1.4,
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBottomBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              'Variant: ${widget.variant.id}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 10),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop(
-                AdminProductCardSettingsResult(
-                  variantId: widget.variant.id,
-                  showDiscountBadge: _showDiscountBadge,
-                  showSavingsText: _showSavingsText,
-                  emphasizeFinalPrice: _emphasizeFinalPrice,
-                  showAddToCart: _showAddToCart,
-                  showViewDetails: _showViewDetails,
-                  showSubtitle: _showSubtitle,
-                  showBrand: _showBrand,
-                  showUnitLabel: _showUnitLabel,
-                  showStockHint: _showStockHint,
-                  showDeliveryHint: _showDeliveryHint,
-                  showBorder: _showBorder,
-                  showPromoStrip: _showPromoStrip,
-                ),
-              );
-            },
-            child: const Text('Save settings'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -668,22 +782,102 @@ class _AdminProductCardSettingsDialogState
       onChanged: onChanged,
     );
   }
+
+  Widget _buildBottomBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              'Variant: ${widget.variant.id}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 10),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _showDiscountBadge = _initialResult.showDiscountBadge;
+                _showSavingsText = _initialResult.showSavingsText;
+                _emphasizeFinalPrice = _initialResult.emphasizeFinalPrice;
+                _showAddToCart = _initialResult.showAddToCart;
+                _showViewDetails = _initialResult.showViewDetails;
+                _showSubtitle = _initialResult.showSubtitle;
+                _showBrand = _initialResult.showBrand;
+                _showUnitLabel = _initialResult.showUnitLabel;
+                _showStockHint = _initialResult.showStockHint;
+                _showDeliveryHint = _initialResult.showDeliveryHint;
+                _showBorder = _initialResult.showBorder;
+                _showPromoStrip = _initialResult.showPromoStrip;
+              });
+            },
+            child: const Text('Reset'),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop(_currentResult);
+            },
+            child: const Text('Save settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _familyLabel(MBCardFamily family) {
+    switch (family) {
+      case MBCardFamily.compact:
+        return 'Compact';
+      case MBCardFamily.price:
+        return 'Price';
+      case MBCardFamily.horizontal:
+        return 'Horizontal';
+      case MBCardFamily.premium:
+        return 'Premium';
+      case MBCardFamily.wide:
+        return 'Wide';
+      case MBCardFamily.featured:
+        return 'Featured';
+      case MBCardFamily.promo:
+        return 'Promo';
+      case MBCardFamily.flashSale:
+        return 'Flash Sale';
+      case MBCardFamily.combo:
+        return 'Combo';
+      case MBCardFamily.variant:
+        return 'Variant';
+      case MBCardFamily.minimal:
+        return 'Minimal';
+      case MBCardFamily.infoRich:
+        return 'Info Rich';
+    }
+  }
 }
 
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({
     required this.title,
+    required this.subtitle,
     required this.child,
   });
 
   final String title;
+  final String subtitle;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -703,6 +897,14 @@ class _SettingsGroup extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF6B7280),
+              height: 1.35,
             ),
           ),
           const SizedBox(height: 8),

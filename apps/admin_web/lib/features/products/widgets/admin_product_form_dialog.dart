@@ -750,9 +750,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         // PERSISTED FIELDS ONLY BELOW
 
                         _buildVisibilitySection(context),
-                        const SizedBox(height: 16),
 
-                        _buildCardStyleSection(context),
                         const SizedBox(height: 16),
 
                         if (_showProductLevelMedia) ...[
@@ -786,6 +784,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                         ],
 
                         _buildPurchaseOptionsSection(context),
+                        const SizedBox(height: 16),
+
+                        _buildCardStyleSection(context),
                         const SizedBox(height: 16),
                         _buildAuditSection(context),
                       ],
