@@ -921,8 +921,19 @@ MBCardInstanceConfig _cardConfigFromLayoutType(dynamic value) {
 String _normalizeCardLayoutType(dynamic value) {
   final normalized = value?.toString().trim().toLowerCase() ?? '';
 
+  if (normalized.isEmpty) {
+    return MBCardVariant.compact01.id;
+  }
+
+  // Preserve exact new variant ids such as horizontal03, compact04,
+  // promo05, etc. This must happen before legacy/family alias mapping.
+  for (final variant in MBCardVariant.values) {
+    if (variant.id.toLowerCase() == normalized) {
+      return variant.id;
+    }
+  }
+
   switch (normalized) {
-    case '':
     case 'standard':
     case 'default':
     case 'compact':
@@ -932,6 +943,7 @@ String _normalizeCardLayoutType(dynamic value) {
     case 'featured':
       return MBCardVariant.featured01.id;
     case 'flash':
+    case 'flashsale':
     case 'flash_sale':
     case 'flash-sale':
       return MBCardVariant.flash01.id;
@@ -945,11 +957,14 @@ String _normalizeCardLayoutType(dynamic value) {
       return MBCardVariant.wide01.id;
     case 'promo':
       return MBCardVariant.promo01.id;
+    case 'card01':
+      return MBCardVariant.price01.id;
+    case 'card02':
+      return MBCardVariant.premium01.id;
+    case 'card03':
+      return MBCardVariant.featured01.id;
     default:
-      return MBCardVariantHelper.normalize(
-        normalized,
-        fallback: MBCardVariant.compact01,
-      );
+      return MBCardVariant.compact01.id;
   }
 }
 

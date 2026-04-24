@@ -1377,12 +1377,12 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         children: _mediaItems
             .map(
               (item) => EditableTile(
-                title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
-                subtitle:
-                'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
-                leading: item.effectiveThumbUrl.trim().isEmpty
-                    ? const Icon(Icons.image_not_supported_outlined)
-                    : PreviewImage(url: item.effectiveThumbUrl),
+            title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
+            subtitle:
+            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
+            leading: item.effectiveThumbUrl.trim().isEmpty
+                ? const Icon(Icons.image_not_supported_outlined)
+                : PreviewImage(url: item.effectiveThumbUrl),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -2208,8 +2208,19 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   String _normalizeAdminCardVariantId(String raw) {
     final normalized = raw.trim().toLowerCase();
 
+    if (normalized.isEmpty) {
+      return MBCardVariant.compact01.id;
+    }
+
+    // Preserve exact new variant ids such as horizontal03, compact04,
+    // promo05, etc. This must happen before legacy/family alias mapping.
+    for (final variant in MBCardVariant.values) {
+      if (variant.id.toLowerCase() == normalized) {
+        return variant.id;
+      }
+    }
+
     switch (normalized) {
-      case '':
       case 'standard':
       case 'default':
       case 'compact':
@@ -2246,10 +2257,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         return MBCardVariant.featured01.id;
 
       default:
-        return MBCardVariantHelper.normalize(
-          normalized,
-          fallback: MBCardVariant.compact01,
-        );
+        return MBCardVariant.compact01.id;
     }
   }
 
@@ -2348,8 +2356,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
 
   AdminProductCardSettingsResult? _cardSettingsDraftFromConfig(
-    MBCardInstanceConfig config,
-  ) {
+      MBCardInstanceConfig config,
+      ) {
     final normalizedConfig = config.normalized();
     final settings = normalizedConfig.settings;
 

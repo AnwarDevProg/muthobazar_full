@@ -102,13 +102,45 @@ function asStringArray(value: unknown): string[] {
 
 const cardVariantFamilyById: Record<string, string> = {
   compact01: "compact",
+  compact02: "compact",
+  compact03: "compact",
+  compact04: "compact",
+  compact05: "compact",
   price01: "price",
+  price02: "price",
+  price03: "price",
+  price04: "price",
+  price05: "price",
   horizontal01: "horizontal",
+  horizontal02: "horizontal",
+  horizontal03: "horizontal",
+  horizontal04: "horizontal",
+  horizontal05: "horizontal",
   premium01: "premium",
+  premium02: "premium",
+  premium03: "premium",
+  premium04: "premium",
+  premium05: "premium",
   wide01: "wide",
+  wide02: "wide",
+  wide03: "wide",
+  wide04: "wide",
+  wide05: "wide",
   featured01: "featured",
+  featured02: "featured",
+  featured03: "featured",
+  featured04: "featured",
+  featured05: "featured",
   promo01: "promo",
-  flash01: "flash",
+  promo02: "promo",
+  promo03: "promo",
+  promo04: "promo",
+  promo05: "promo",
+  flash01: "flashSale",
+  flash02: "flashSale",
+  flash03: "flashSale",
+  flash04: "flashSale",
+  flash05: "flashSale",
 };
 
 function isJsonMap(value: unknown): value is JsonMap {
@@ -160,13 +192,45 @@ function normalizeCardVariantId(value: unknown): string {
       return "featured01";
 
     case "compact01":
+    case "compact02":
+    case "compact03":
+    case "compact04":
+    case "compact05":
     case "price01":
+    case "price02":
+    case "price03":
+    case "price04":
+    case "price05":
     case "horizontal01":
+    case "horizontal02":
+    case "horizontal03":
+    case "horizontal04":
+    case "horizontal05":
     case "premium01":
+    case "premium02":
+    case "premium03":
+    case "premium04":
+    case "premium05":
     case "wide01":
+    case "wide02":
+    case "wide03":
+    case "wide04":
+    case "wide05":
     case "featured01":
+    case "featured02":
+    case "featured03":
+    case "featured04":
+    case "featured05":
     case "promo01":
+    case "promo02":
+    case "promo03":
+    case "promo04":
+    case "promo05":
     case "flash01":
+    case "flash02":
+    case "flash03":
+    case "flash04":
+    case "flash05":
       return normalized;
 
     default:
@@ -207,6 +271,7 @@ function normalizeCardConfig(
 function normalizeCardLayoutType(value: unknown): string {
   return normalizeCardVariantId(value);
 }
+
 
 
 function normalizeExistingProductData(input: JsonMap): JsonMap {
