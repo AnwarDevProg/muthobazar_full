@@ -96,21 +96,92 @@ function asStringArray(value) {
         .map((item) => (0, callable_parsers_1.asTrimmedString)(item))
         .filter((item) => item.length > 0);
 }
-function normalizeCardLayoutType(value) {
+const cardVariantFamilyById = {
+    compact01: "compact",
+    price01: "price",
+    horizontal01: "horizontal",
+    premium01: "premium",
+    wide01: "wide",
+    featured01: "featured",
+    promo01: "promo",
+    flash01: "flash",
+};
+function isJsonMap(value) {
+    return (!!value &&
+        typeof value === "object" &&
+        !Array.isArray(value));
+}
+function normalizeCardVariantId(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
     switch (normalized) {
-        case "compact":
-        case "deal":
-        case "featured":
+        case "":
         case "standard":
+        case "default":
+        case "compact":
+            return "compact01";
+        case "deal":
+        case "promo":
+            return "promo01";
+        case "featured":
+            return "featured01";
+        case "flash":
+        case "flashsale":
+        case "flash_sale":
+        case "flash-sale":
+            return "flash01";
+        case "price":
+        case "card01":
+            return "price01";
+        case "horizontal":
+            return "horizontal01";
+        case "premium":
+        case "card02":
+            return "premium01";
+        case "wide":
+            return "wide01";
+        case "card03":
+            return "featured01";
+        case "compact01":
+        case "price01":
+        case "horizontal01":
+        case "premium01":
+        case "wide01":
+        case "featured01":
+        case "promo01":
+        case "flash01":
             return normalized;
         default:
-            return "standard";
+            return "compact01";
     }
+}
+function sanitizeCardSettings(value) {
+    if (!isJsonMap(value))
+        return {};
+    const sanitized = sanitizeFirestoreValue(value);
+    if (!isJsonMap(sanitized))
+        return {};
+    return sanitized;
+}
+function normalizeCardConfig(value, fallbackLayoutType) {
+    const input = isJsonMap(value) ? value : {};
+    const variantId = normalizeCardVariantId(input.variantId ?? fallbackLayoutType);
+    return {
+        familyId: cardVariantFamilyById[variantId] ?? "compact",
+        variantId,
+        presetId: (0, callable_parsers_1.asTrimmedString)(input.presetId).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(input.presetId)
+            : null,
+        settings: sanitizeCardSettings(input.settings),
+    };
+}
+function normalizeCardLayoutType(value) {
+    return normalizeCardVariantId(value);
 }
 function normalizeExistingProductData(input) {
     const output = { ...input };
-    output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+    const normalizedCardConfig = normalizeCardConfig(input.cardConfig, input.cardLayoutType);
+    output.cardLayoutType = normalizedCardConfig.variantId;
+    output.cardConfig = normalizedCardConfig;
     if ((0, callable_parsers_1.asTrimmedString)(output.productType).length === 0) {
         output.productType = "simple";
     }
@@ -138,6 +209,7 @@ function normalizeMergedProductPayload(currentData, patchInput, actorUid, produc
     };
     const titleEn = (0, callable_parsers_1.asTrimmedString)(mergedBase.titleEn);
     const slug = (0, callable_parsers_1.asTrimmedString)(mergedBase.slug).toLowerCase();
+    const normalizedCardConfig = normalizeCardConfig(mergedBase.cardConfig, mergedBase.cardLayoutType);
     const normalized = {
         ...mergedBase,
         id: productId,
@@ -172,7 +244,8 @@ function normalizeMergedProductPayload(currentData, patchInput, actorUid, produc
         deliveryShift: (0, callable_parsers_1.asTrimmedString)(mergedBase.deliveryShift).length > 0
             ? (0, callable_parsers_1.asTrimmedString)(mergedBase.deliveryShift)
             : "any",
-        cardLayoutType: normalizeCardLayoutType(mergedBase.cardLayoutType),
+        cardLayoutType: normalizedCardConfig.variantId,
+        cardConfig: normalizedCardConfig,
         tags: asStringArray(mergedBase.tags),
         keywords: asStringArray(mergedBase.keywords),
         price: asNumber(mergedBase.price, 0),
@@ -287,7 +360,8 @@ exports.adminUpdateProduct = (0, https_1.onCall)(async (request) => {
                     isEnabled: nextData.isEnabled ?? true,
                     categoryId: nextData.categoryId ?? null,
                     brandId: nextData.brandId ?? null,
-                    cardLayoutType: nextData.cardLayoutType ?? "standard",
+                    cardLayoutType: nextData.cardLayoutType ?? "compact01",
+                    cardConfig: nextData.cardConfig ?? null,
                 },
                 metadata: {
                     sku: nextData.sku ?? null,

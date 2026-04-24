@@ -100,24 +100,125 @@ function asStringArray(value: unknown): string[] {
     .filter((item) => item.length > 0);
 }
 
-function normalizeCardLayoutType(value: unknown): string {
+const cardVariantFamilyById: Record<string, string> = {
+  compact01: "compact",
+  price01: "price",
+  horizontal01: "horizontal",
+  premium01: "premium",
+  wide01: "wide",
+  featured01: "featured",
+  promo01: "promo",
+  flash01: "flash",
+};
+
+function isJsonMap(value: unknown): value is JsonMap {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
+function normalizeCardVariantId(value: unknown): string {
   const normalized = asTrimmedString(value).toLowerCase();
 
   switch (normalized) {
-    case "compact":
-    case "deal":
-    case "featured":
+    case "":
     case "standard":
+    case "default":
+    case "compact":
+      return "compact01";
+
+    case "deal":
+    case "promo":
+      return "promo01";
+
+    case "featured":
+      return "featured01";
+
+    case "flash":
+    case "flashsale":
+    case "flash_sale":
+    case "flash-sale":
+      return "flash01";
+
+    case "price":
+    case "card01":
+      return "price01";
+
+    case "horizontal":
+      return "horizontal01";
+
+    case "premium":
+    case "card02":
+      return "premium01";
+
+    case "wide":
+      return "wide01";
+
+    case "card03":
+      return "featured01";
+
+    case "compact01":
+    case "price01":
+    case "horizontal01":
+    case "premium01":
+    case "wide01":
+    case "featured01":
+    case "promo01":
+    case "flash01":
       return normalized;
+
     default:
-      return "standard";
+      return "compact01";
   }
 }
+
+function sanitizeCardSettings(value: unknown): JsonMap {
+  if (!isJsonMap(value)) return {};
+
+  const sanitized = sanitizeFirestoreValue(value);
+  if (!isJsonMap(sanitized)) return {};
+
+  return sanitized;
+}
+
+function normalizeCardConfig(
+  value: unknown,
+  fallbackLayoutType: unknown,
+): JsonMap {
+  const input = isJsonMap(value) ? value : {};
+
+  const variantId = normalizeCardVariantId(
+    input.variantId ?? fallbackLayoutType,
+  );
+
+  return {
+    familyId: cardVariantFamilyById[variantId] ?? "compact",
+    variantId,
+    presetId:
+      asTrimmedString(input.presetId).length > 0
+        ? asTrimmedString(input.presetId)
+        : null,
+    settings: sanitizeCardSettings(input.settings),
+  };
+}
+
+function normalizeCardLayoutType(value: unknown): string {
+  return normalizeCardVariantId(value);
+}
+
 
 function normalizeExistingProductData(input: JsonMap): JsonMap {
   const output: JsonMap = { ...input };
 
-  output.cardLayoutType = normalizeCardLayoutType(input.cardLayoutType);
+  const normalizedCardConfig = normalizeCardConfig(
+    input.cardConfig,
+    input.cardLayoutType,
+  );
+
+  output.cardLayoutType = normalizedCardConfig.variantId;
+  output.cardConfig = normalizedCardConfig;
 
   if (asTrimmedString(output.productType).length === 0) {
     output.productType = "simple";
@@ -159,6 +260,11 @@ function normalizeMergedProductPayload(
 
   const titleEn = asTrimmedString(mergedBase.titleEn);
   const slug = asTrimmedString(mergedBase.slug).toLowerCase();
+
+  const normalizedCardConfig = normalizeCardConfig(
+    mergedBase.cardConfig,
+    mergedBase.cardLayoutType,
+  );
 
   const normalized: JsonMap = {
     ...mergedBase,
@@ -211,7 +317,8 @@ function normalizeMergedProductPayload(
         ? asTrimmedString(mergedBase.deliveryShift)
         : "any",
 
-    cardLayoutType: normalizeCardLayoutType(mergedBase.cardLayoutType),
+    cardLayoutType: normalizedCardConfig.variantId,
+    cardConfig: normalizedCardConfig,
 
     tags: asStringArray(mergedBase.tags),
     keywords: asStringArray(mergedBase.keywords),
@@ -373,7 +480,8 @@ export const adminUpdateProduct = onCall<
             isEnabled: nextData.isEnabled ?? true,
             categoryId: nextData.categoryId ?? null,
             brandId: nextData.brandId ?? null,
-            cardLayoutType: nextData.cardLayoutType ?? "standard",
+            cardLayoutType: nextData.cardLayoutType ?? "compact01",
+            cardConfig: nextData.cardConfig ?? null,
           },
           metadata: {
             sku: nextData.sku ?? null,

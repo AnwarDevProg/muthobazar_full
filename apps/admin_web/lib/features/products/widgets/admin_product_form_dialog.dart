@@ -615,7 +615,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     _deliveryShift = _source.deliveryShift.isEmpty
         ? 'any'
         : _source.deliveryShift;
-    _cardLayoutType = _normalizeAdminCardVariantId(_source.cardLayoutType);
+    final initialCardConfig = _source.effectiveCardConfig.normalized();
+    _cardLayoutType = _normalizeAdminCardVariantId(initialCardConfig.variantId);
+    _cardSettingsDraft = _cardSettingsDraftFromConfig(initialCardConfig);
 
     _trackInventory = _source.trackInventory;
     _supportsInstantOrder = _source.supportsInstantOrder;
@@ -1375,12 +1377,12 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         children: _mediaItems
             .map(
               (item) => EditableTile(
-                title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
-                subtitle:
-                'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
-                leading: item.effectiveThumbUrl.trim().isEmpty
-                    ? const Icon(Icons.image_not_supported_outlined)
-                    : PreviewImage(url: item.effectiveThumbUrl),
+            title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
+            subtitle:
+            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
+            leading: item.effectiveThumbUrl.trim().isEmpty
+                ? const Icon(Icons.image_not_supported_outlined)
+                : PreviewImage(url: item.effectiveThumbUrl),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -2208,42 +2210,46 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
     switch (normalized) {
       case '':
-        return MBCardVariant.compact01.id;
-
-    // Current family ids stored instead of exact variant ids.
+      case 'standard':
+      case 'default':
       case 'compact':
         return MBCardVariant.compact01.id;
-      case 'price':
-        return MBCardVariant.price01.id;
-      case 'horizontal':
-        return MBCardVariant.horizontal01.id;
-      case 'premium':
-        return MBCardVariant.premium01.id;
-      case 'wide':
-        return MBCardVariant.wide01.id;
+
+      case 'deal':
       case 'promo':
         return MBCardVariant.promo01.id;
-      case 'flash':
-      case 'flashsale':
-      case 'flash_sale':
-        return MBCardVariant.flash01.id;
 
-    // Older layout bridge.
-      case 'standard':
-        return MBCardVariant.horizontal01.id;
-      case 'deal':
-        return MBCardVariant.flash01.id;
-      case 'card01':
-        return MBCardVariant.price01.id;
-      case 'card02':
-        return MBCardVariant.premium01.id;
-      case 'card03':
-        return MBCardVariant.featured01.id;
       case 'featured':
         return MBCardVariant.featured01.id;
 
+      case 'flash':
+      case 'flashsale':
+      case 'flash_sale':
+      case 'flash-sale':
+        return MBCardVariant.flash01.id;
+
+      case 'price':
+      case 'card01':
+        return MBCardVariant.price01.id;
+
+      case 'horizontal':
+        return MBCardVariant.horizontal01.id;
+
+      case 'premium':
+      case 'card02':
+        return MBCardVariant.premium01.id;
+
+      case 'wide':
+        return MBCardVariant.wide01.id;
+
+      case 'card03':
+        return MBCardVariant.featured01.id;
+
       default:
-        return normalized;
+        return MBCardVariantHelper.normalize(
+          normalized,
+          fallback: MBCardVariant.compact01,
+        );
     }
   }
 
@@ -2252,6 +2258,16 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       _normalizeAdminCardVariantId(_cardLayoutType),
       fallback: MBCardVariant.compact01,
     );
+  }
+
+  MBCardInstanceConfig get _selectedCardInstanceConfig {
+    final variant = _selectedAdminCardVariant;
+
+    return MBCardInstanceConfig(
+      family: variant.family,
+      variant: variant,
+      settings: _buildCardSettingsOverride(),
+    ).normalized();
   }
 
   Future<void> _openCardPickerDialog(BuildContext context) async {
@@ -2327,6 +2343,46 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       accent: MBCardAccentSettings(
         showPromoStrip: draft.showPromoStrip,
       ),
+    );
+  }
+
+
+  AdminProductCardSettingsResult? _cardSettingsDraftFromConfig(
+      MBCardInstanceConfig config,
+      ) {
+    final normalizedConfig = config.normalized();
+    final settings = normalizedConfig.settings;
+
+    if (settings.isEmpty) {
+      return null;
+    }
+
+    const defaultPrice = MBCardPriceSettings();
+    const defaultActions = MBCardActionSettings();
+    const defaultMeta = MBCardMetaSettings();
+    const defaultBorderEffect = MBCardBorderEffectSettings();
+    const defaultAccent = MBCardAccentSettings();
+
+    final price = settings.price ?? defaultPrice;
+    final actions = settings.actions ?? defaultActions;
+    final meta = settings.meta ?? defaultMeta;
+    final borderEffect = settings.borderEffect ?? defaultBorderEffect;
+    final accent = settings.accent ?? defaultAccent;
+
+    return AdminProductCardSettingsResult(
+      variantId: normalizedConfig.variantId,
+      showDiscountBadge: price.showDiscountBadge,
+      showSavingsText: price.showSavingsText,
+      emphasizeFinalPrice: price.emphasizeFinalPrice,
+      showAddToCart: actions.showAddToCart,
+      showViewDetails: actions.showViewDetails,
+      showSubtitle: meta.showSubtitle,
+      showBrand: meta.showBrand,
+      showUnitLabel: meta.showUnitLabel,
+      showStockHint: meta.showStockHint,
+      showDeliveryHint: meta.showDeliveryHint,
+      showBorder: borderEffect.showBorder,
+      showPromoStrip: accent.showPromoStrip,
     );
   }
 
@@ -2531,7 +2587,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               buildInfoChip('attributes: ${preview.attributes.length}'),
               buildInfoChip('variations: ${preview.variations.length}'),
               buildInfoChip('options: ${preview.purchaseOptions.length}'),
-              buildInfoChip('card: ${preview.cardLayoutType}'),
+              buildInfoChip('card: ${preview.effectiveCardVariantId}'),
+              buildInfoChip('card family: ${preview.effectiveCardFamilyId}'),
             ],
           ),
           const SizedBox(height: 12),
@@ -2723,6 +2780,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final media = _effectiveProductMediaItems;
     final derivedThumbnail = _effectiveThumbnailUrl;
     final derivedImageUrls = _effectiveImageUrls;
+    final selectedCardConfig = _selectedCardInstanceConfig;
 
     return (_source.id.trim().isEmpty ? MBProduct.empty() : _source).copyWith(
       id: _source.id,
@@ -2823,7 +2881,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       purchaseOptions: [..._purchaseOptions]
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
-      cardLayoutType: _normalizeAdminCardVariantId(_cardLayoutType),
+      cardLayoutType: selectedCardConfig.variantId,
+      cardConfig: selectedCardConfig,
       isFeatured: !_isVariableProduct && _isFeatured,
       isFlashSale: !_isVariableProduct && _isFlashSale,
       isEnabled: _isEnabled,
