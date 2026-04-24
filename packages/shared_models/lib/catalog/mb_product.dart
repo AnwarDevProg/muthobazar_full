@@ -38,8 +38,8 @@ class MBProduct {
   final String descriptionBn;
 
   final String thumbnailUrl;
-  final List imageUrls;
-  final List mediaItems;
+  final List<String> imageUrls;
+  final List<MBProductMedia> mediaItems;
 
   final double price;
   final double? salePrice;
@@ -75,11 +75,11 @@ class MBProduct {
   final String? brandSlug;
 
   final String productType;
-  final List tags;
-  final List keywords;
-  final List attributes;
-  final List variations;
-  final List purchaseOptions;
+  final List<String> tags;
+  final List<String> keywords;
+  final List<MBProductAttribute> attributes;
+  final List<MBProductVariation> variations;
+  final List<MBProductPurchaseOption> purchaseOptions;
 
   /// Legacy card field.
   ///
@@ -329,7 +329,7 @@ class MBProduct {
     return true;
   }
 
-  List get enabledMediaItems => mediaItems.where((item) => item.isEnabled).toList()
+  List<MBProductMedia> get enabledMediaItems => mediaItems.where((item) => item.isEnabled).toList()
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
   String get resolvedThumbnailUrl {
@@ -349,7 +349,7 @@ class MBProduct {
     return '';
   }
 
-  List get resolvedImageUrls {
+  List<String> get resolvedImageUrls {
     if (imageUrls.isNotEmpty) return imageUrls;
 
     final urls = <String>[];
@@ -376,8 +376,8 @@ class MBProduct {
     String? descriptionEn,
     String? descriptionBn,
     String? thumbnailUrl,
-    List? imageUrls,
-    List? mediaItems,
+    List<String>? imageUrls,
+    List<MBProductMedia>? mediaItems,
     double? price,
     double? salePrice,
     bool clearSalePrice = false,
@@ -422,11 +422,11 @@ class MBProduct {
     String? brandSlug,
     bool clearBrandSlug = false,
     String? productType,
-    List? tags,
-    List? keywords,
-    List? attributes,
-    List? variations,
-    List? purchaseOptions,
+    List<String>? tags,
+    List<String>? keywords,
+    List<MBProductAttribute>? attributes,
+    List<MBProductVariation>? variations,
+    List<MBProductPurchaseOption>? purchaseOptions,
     String? cardLayoutType,
     MBCardInstanceConfig? cardConfig,
     bool? isFeatured,
@@ -669,7 +669,7 @@ class MBProduct {
     if (map == null) return MBProduct.empty();
 
     final thumbnailUrl = (map['thumbnailUrl'] ?? '').toString();
-    final imageUrls = List.from(map['imageUrls'] ?? const []);
+    final imageUrls = _asStringList(map['imageUrls']);
     final mediaItems = _parseMediaItems(
       map['mediaItems'],
       thumbnailUrl: thumbnailUrl,
@@ -735,8 +735,8 @@ class MBProduct {
       brandNameBn: map['brandNameBn']?.toString(),
       brandSlug: map['brandSlug']?.toString(),
       productType: (map['productType'] ?? 'simple').toString(),
-      tags: List.from(map['tags'] ?? const []),
-      keywords: List.from(map['keywords'] ?? const []),
+      tags: _asStringList(map['tags']),
+      keywords: _asStringList(map['keywords']),
       attributes: _parseAttributes(map['attributes']),
       variations: _parseVariations(map['variations']),
       purchaseOptions: _parsePurchaseOptions(map['purchaseOptions']),
@@ -791,10 +791,19 @@ const MBCardInstanceConfig _defaultCardConfig = MBCardInstanceConfig(
   variant: MBCardVariant.compact01,
 );
 
-List _parseMediaItems(
+List<String> _asStringList(dynamic value) {
+  if (value is! List) return const <String>[];
+
+  return value
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
+}
+
+List<MBProductMedia> _parseMediaItems(
     dynamic rawMedia, {
       required String thumbnailUrl,
-      required List imageUrls,
+      required List<String> imageUrls,
     }) {
   final items = <MBProductMedia>[];
 
@@ -841,8 +850,8 @@ List _parseMediaItems(
   return fallback;
 }
 
-List _parseAttributes(dynamic rawAttributes) {
-  if (rawAttributes is! List) return const [];
+List<MBProductAttribute> _parseAttributes(dynamic rawAttributes) {
+  if (rawAttributes is! List) return const <MBProductAttribute>[];
 
   final items = <MBProductAttribute>[];
   for (final item in rawAttributes) {
@@ -854,8 +863,8 @@ List _parseAttributes(dynamic rawAttributes) {
   return items;
 }
 
-List _parseVariations(dynamic rawVariations) {
-  if (rawVariations is! List) return const [];
+List<MBProductVariation> _parseVariations(dynamic rawVariations) {
+  if (rawVariations is! List) return const <MBProductVariation>[];
 
   final items = <MBProductVariation>[];
   for (final item in rawVariations) {
@@ -867,8 +876,8 @@ List _parseVariations(dynamic rawVariations) {
   return items;
 }
 
-List _parsePurchaseOptions(dynamic rawOptions) {
-  if (rawOptions is! List) return const [];
+List<MBProductPurchaseOption> _parsePurchaseOptions(dynamic rawOptions) {
+  if (rawOptions is! List) return const <MBProductPurchaseOption>[];
 
   final items = <MBProductPurchaseOption>[];
   for (final item in rawOptions) {
