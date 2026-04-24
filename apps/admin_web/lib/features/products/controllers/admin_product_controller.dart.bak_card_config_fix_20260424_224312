@@ -1477,11 +1477,10 @@ class AdminProductController extends GetxController {
   }
 
   MBProduct _normalizeProduct(MBProduct product) {
-    final cardConfig = product.effectiveCardConfig.normalized();
-
     return product.copyWith(
-      cardLayoutType: cardConfig.variantId,
-      cardConfig: cardConfig,
+      cardLayoutType: MBProductCardLayoutHelper.normalize(
+        product.cardLayoutType,
+      ),
     );
   }
 
