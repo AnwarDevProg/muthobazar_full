@@ -96,127 +96,42 @@ function asStringArray(value) {
         .map((item) => (0, callable_parsers_1.asTrimmedString)(item))
         .filter((item) => item.length > 0);
 }
-const cardVariantFamilyById = {
-    compact01: "compact",
-    compact02: "compact",
-    compact03: "compact",
-    compact04: "compact",
-    compact05: "compact",
-    price01: "price",
-    price02: "price",
-    price03: "price",
-    price04: "price",
-    price05: "price",
-    horizontal01: "horizontal",
-    horizontal02: "horizontal",
-    horizontal03: "horizontal",
-    horizontal04: "horizontal",
-    horizontal05: "horizontal",
-    premium01: "premium",
-    premium02: "premium",
-    premium03: "premium",
-    premium04: "premium",
-    premium05: "premium",
-    wide01: "wide",
-    wide02: "wide",
-    wide03: "wide",
-    wide04: "wide",
-    wide05: "wide",
-    featured01: "featured",
-    featured02: "featured",
-    featured03: "featured",
-    featured04: "featured",
-    featured05: "featured",
-    promo01: "promo",
-    promo02: "promo",
-    promo03: "promo",
-    promo04: "promo",
-    promo05: "promo",
-    flash01: "flashSale",
-    flash02: "flashSale",
-    flash03: "flashSale",
-    flash04: "flashSale",
-    flash05: "flashSale",
-};
 function isJsonMap(value) {
     return (!!value &&
         typeof value === "object" &&
         !Array.isArray(value));
 }
+function isValidNewCardVariantId(value) {
+    return /^(compact|price|horizontal|premium|wide|featured|promo|flash)0[1-5]$/.test(value);
+}
+function familyIdFromVariantId(variantId) {
+    if (variantId.startsWith("compact"))
+        return "compact";
+    if (variantId.startsWith("price"))
+        return "price";
+    if (variantId.startsWith("horizontal"))
+        return "horizontal";
+    if (variantId.startsWith("premium"))
+        return "premium";
+    if (variantId.startsWith("wide"))
+        return "wide";
+    if (variantId.startsWith("featured"))
+        return "featured";
+    if (variantId.startsWith("promo"))
+        return "promo";
+    if (variantId.startsWith("flash"))
+        return "flash_sale";
+    throw new https_1.HttpsError("invalid-argument", `Invalid card variant id: ${variantId}`);
+}
 function normalizeCardVariantId(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
-    switch (normalized) {
-        case "":
-        case "standard":
-        case "default":
-        case "compact":
-            return "compact01";
-        case "deal":
-        case "promo":
-            return "promo01";
-        case "featured":
-            return "featured01";
-        case "flash":
-        case "flashsale":
-        case "flash_sale":
-        case "flash-sale":
-            return "flash01";
-        case "price":
-        case "card01":
-            return "price01";
-        case "horizontal":
-            return "horizontal01";
-        case "premium":
-        case "card02":
-            return "premium01";
-        case "wide":
-            return "wide01";
-        case "card03":
-            return "featured01";
-        case "compact01":
-        case "compact02":
-        case "compact03":
-        case "compact04":
-        case "compact05":
-        case "price01":
-        case "price02":
-        case "price03":
-        case "price04":
-        case "price05":
-        case "horizontal01":
-        case "horizontal02":
-        case "horizontal03":
-        case "horizontal04":
-        case "horizontal05":
-        case "premium01":
-        case "premium02":
-        case "premium03":
-        case "premium04":
-        case "premium05":
-        case "wide01":
-        case "wide02":
-        case "wide03":
-        case "wide04":
-        case "wide05":
-        case "featured01":
-        case "featured02":
-        case "featured03":
-        case "featured04":
-        case "featured05":
-        case "promo01":
-        case "promo02":
-        case "promo03":
-        case "promo04":
-        case "promo05":
-        case "flash01":
-        case "flash02":
-        case "flash03":
-        case "flash04":
-        case "flash05":
-            return normalized;
-        default:
-            return "compact01";
+    if (normalized.length === 0) {
+        return "compact01";
     }
+    if (!isValidNewCardVariantId(normalized)) {
+        throw new https_1.HttpsError("invalid-argument", `Invalid card variant id: ${normalized}. Use exact new variant ids like compact01, horizontal03, wide02, promo05.`);
+    }
+    return normalized;
 }
 function sanitizeCardSettings(value) {
     if (!isJsonMap(value))
@@ -230,7 +145,7 @@ function normalizeCardConfig(value, fallbackLayoutType) {
     const input = isJsonMap(value) ? value : {};
     const variantId = normalizeCardVariantId(input.variantId ?? fallbackLayoutType);
     return {
-        familyId: cardVariantFamilyById[variantId] ?? "compact",
+        familyId: familyIdFromVariantId(variantId),
         variantId,
         presetId: (0, callable_parsers_1.asTrimmedString)(input.presetId).length > 0
             ? (0, callable_parsers_1.asTrimmedString)(input.presetId)

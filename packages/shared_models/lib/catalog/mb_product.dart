@@ -254,19 +254,7 @@ class MBProduct {
       schedulePriceType == 'estimated' || schedulePriceType == 'market';
 
   MBCardInstanceConfig get effectiveCardConfig {
-    final normalizedConfig = cardConfig.normalized();
-    final normalizedLayoutType = _normalizeCardLayoutType(cardLayoutType);
-
-    final bool hasExplicitConfig = normalizedConfig.hasPreset ||
-        normalizedConfig.hasOverrides ||
-        normalizedConfig.variantId != _defaultCardConfig.variantId;
-
-    if (!hasExplicitConfig &&
-        normalizedLayoutType != normalizedConfig.variantId) {
-      return _cardConfigFromLayoutType(normalizedLayoutType);
-    }
-
-    return normalizedConfig;
+    return cardConfig.normalized();
   }
 
   String get normalizedCardLayoutType => effectiveCardConfig.variantId;
@@ -896,11 +884,9 @@ MBCardInstanceConfig _parseCardConfig(
       required dynamic fallbackLayoutType,
     }) {
   if (rawConfig is Map) {
-    final parsed = MBCardInstanceConfig.fromMap(
+    return MBCardInstanceConfig.fromMap(
       Map<String, dynamic>.from(rawConfig),
     ).normalized();
-
-    return parsed;
   }
 
   return _cardConfigFromLayoutType(fallbackLayoutType);
@@ -925,53 +911,18 @@ String _normalizeCardLayoutType(dynamic value) {
     return MBCardVariant.compact01.id;
   }
 
-  // Preserve exact new variant ids such as horizontal03, compact04,
-  // promo05, etc. This must happen before legacy/family alias mapping.
   for (final variant in MBCardVariant.values) {
     if (variant.id.toLowerCase() == normalized) {
       return variant.id;
     }
   }
 
-  switch (normalized) {
-    case 'standard':
-    case 'default':
-    case 'compact':
-      return MBCardVariant.compact01.id;
-    case 'deal':
-      return MBCardVariant.promo01.id;
-    case 'featured':
-      return MBCardVariant.featured01.id;
-    case 'flash':
-    case 'flashsale':
-    case 'flash_sale':
-    case 'flash-sale':
-      return MBCardVariant.flash01.id;
-    case 'price':
-      return MBCardVariant.price01.id;
-    case 'horizontal':
-      return MBCardVariant.horizontal01.id;
-    case 'premium':
-      return MBCardVariant.premium01.id;
-    case 'wide':
-      return MBCardVariant.wide01.id;
-    case 'promo':
-      return MBCardVariant.promo01.id;
-    case 'card01':
-      return MBCardVariant.price01.id;
-    case 'card02':
-      return MBCardVariant.premium01.id;
-    case 'card03':
-      return MBCardVariant.featured01.id;
-    default:
-      return MBCardVariant.compact01.id;
-  }
+  // New design only: no old layout aliases are accepted here.
+  // Invalid values safely fall back to the default new variant.
+  return MBCardVariant.compact01.id;
 }
 
-bool _isLegacyDealLayout(dynamic value) {
-  final normalized = value?.toString().trim().toLowerCase() ?? '';
-  return normalized == 'deal';
-}
+bool _isLegacyDealLayout(dynamic value) => false;
 
 double _asDouble(dynamic value, {double fallback = 0.0}) {
   if (value is double) return value;

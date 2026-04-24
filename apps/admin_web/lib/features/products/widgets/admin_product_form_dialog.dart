@@ -2212,53 +2212,15 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       return MBCardVariant.compact01.id;
     }
 
-    // Preserve exact new variant ids such as horizontal03, compact04,
-    // promo05, etc. This must happen before legacy/family alias mapping.
     for (final variant in MBCardVariant.values) {
       if (variant.id.toLowerCase() == normalized) {
         return variant.id;
       }
     }
 
-    switch (normalized) {
-      case 'standard':
-      case 'default':
-      case 'compact':
-        return MBCardVariant.compact01.id;
-
-      case 'deal':
-      case 'promo':
-        return MBCardVariant.promo01.id;
-
-      case 'featured':
-        return MBCardVariant.featured01.id;
-
-      case 'flash':
-      case 'flashsale':
-      case 'flash_sale':
-      case 'flash-sale':
-        return MBCardVariant.flash01.id;
-
-      case 'price':
-      case 'card01':
-        return MBCardVariant.price01.id;
-
-      case 'horizontal':
-        return MBCardVariant.horizontal01.id;
-
-      case 'premium':
-      case 'card02':
-        return MBCardVariant.premium01.id;
-
-      case 'wide':
-        return MBCardVariant.wide01.id;
-
-      case 'card03':
-        return MBCardVariant.featured01.id;
-
-      default:
-        return MBCardVariant.compact01.id;
-    }
+    // New design only: no old layout aliases are accepted here.
+    // Invalid values safely fall back to the default new variant.
+    return MBCardVariant.compact01.id;
   }
 
   MBCardVariant get _selectedAdminCardVariant {
