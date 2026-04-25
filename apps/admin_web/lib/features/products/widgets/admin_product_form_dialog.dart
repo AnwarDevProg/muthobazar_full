@@ -53,6 +53,7 @@ class AdminProductFormDialog extends StatefulWidget {
   final String? dialogTitle;
   final ValueChanged<MBProduct>? onSaved;
 
+
   static Future<MBProduct?> show(
       BuildContext context, {
         required String actorUid,
@@ -180,6 +181,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   bool get _showProductLevelInventory => !_isVariableProduct;
 
   bool get _showProductLevelQuantity => !_isVariableProduct;
+
+  bool kProductSaveDebugDumpEnabled = true;
 
   late int _sortOrder;
 
@@ -2591,12 +2594,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   Future<void> _downloadProductSaveDebugFile(MBProduct product) async {
     final now = DateTime.now();
-    final mode = _source.id.trim().isEmpty ? 'create' : 'edit';
-    final idPart = _safeDebugFileNamePart(
-      product.id.trim().isEmpty ? 'new_product' : product.id.trim(),
-    );
+    final mode = _source.id.trim().isEmpty ? 'create_new_product' : 'edit_product';
+    final namePart = _safeDebugFileNamePart(product.titleEn.trim());
     final timestamp = _safeDebugFileNamePart(now.toIso8601String());
-    final fileName = 'muthobazar_product_save_${mode}_${idPart}_$timestamp.txt';
+    final fileName = '${mode}_${namePart}_$timestamp.txt';
 
     final selectedVariant = _selectedAdminCardVariant;
     final selectedCardConfig = _selectedCardInstanceConfig.normalized();
@@ -2706,7 +2707,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     final product = _buildProductFromForm();
-    await _downloadProductSaveDebugFile(product);
+
+    if (kProductSaveDebugDumpEnabled) {
+      await _downloadProductSaveDebugFile(product);
+    }
     var saved = await _controller.saveProduct(
       product: product,
       actorUid: widget.actorUid,
@@ -2731,65 +2735,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     }
   }
 
-  Future<MBProduct?> _waitForRecoveredSavedProduct(MBProduct draft) async {
-    for (var attempt = 0; attempt < 12; attempt++) {
-      if (attempt > 0) {
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-      }
 
-      final recovered = _matchRecoveredProduct(draft);
-      if (recovered != null) {
-        return recovered;
-      }
-    }
 
-    return null;
-  }
-
-  MBProduct? _matchRecoveredProduct(MBProduct draft) {
-    final draftId = draft.id.trim();
-    final draftSlug = draft.slug.trim().toLowerCase();
-    final draftCode = (draft.productCode ?? '').trim().toLowerCase();
-    final draftSku = (draft.sku ?? '').trim().toLowerCase();
-    final draftTitleEn = draft.titleEn.trim().toLowerCase();
-    final draftTitleBn = draft.titleBn.trim().toLowerCase();
-
-    for (final item in _controller.products) {
-      final itemId = item.id.trim();
-      final itemSlug = item.slug.trim().toLowerCase();
-      final itemCode = (item.productCode ?? '').trim().toLowerCase();
-      final itemSku = (item.sku ?? '').trim().toLowerCase();
-      final itemTitleEn = item.titleEn.trim().toLowerCase();
-      final itemTitleBn = item.titleBn.trim().toLowerCase();
-
-      if (draftId.isNotEmpty && itemId == draftId) {
-        return item;
-      }
-
-      if (draftSlug.isNotEmpty &&
-          (itemSlug == draftSlug || itemSlug.startsWith('$draftSlug-'))) {
-        return item;
-      }
-
-      if (draftCode.isNotEmpty && itemCode == draftCode) {
-        return item;
-      }
-
-      if (draftSku.isNotEmpty && itemSku == draftSku) {
-        return item;
-      }
-
-      if (draftTitleEn.isNotEmpty && itemTitleEn == draftTitleEn) {
-        return item;
-      }
-
-      if (draftTitleBn.isNotEmpty && itemTitleBn == draftTitleBn) {
-        return item;
-      }
-    }
-
-    return null;
-  }
 
   MBProduct _buildProductFromForm() {
     final now = DateTime.now();

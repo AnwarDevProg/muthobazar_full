@@ -1,22 +1,10 @@
 // MuthoBazar Product Card Design System
-// File: mb_card_settings_override.dart
-// Location: packages/shared_models/lib/product_cards/config/mb_card_settings_override.dart
+// File: mb_card_render_defaults.dart
+// Location: packages/shared_models/lib/product_cards/config/mb_card_render_defaults.dart
 //
 // Purpose:
-// Defines the sparse, optional per-instance card settings override.
-//
-// Design rule:
-// - null group = no override.
-// - empty group = no custom value.
-// - unknown/unsupported groups should be ignored by a specific card variant.
-// - each card variant decides which groups/fields it supports.
-//
-// Merge flow:
-// system defaults
-// -> family defaults
-// -> variant defaults
-// -> preset defaults
-// -> this per-instance override.
+// Holds default settings for a family/variant/preset before instance overrides.
+// This version supports the expanded sparse card config groups.
 
 import 'mb_card_action_settings.dart';
 import 'mb_card_accent_settings.dart';
@@ -39,8 +27,8 @@ import 'mb_card_surface_settings.dart';
 import 'mb_card_timer_settings.dart';
 import 'mb_card_typography_settings.dart';
 
-class MBCardSettingsOverride {
-  const MBCardSettingsOverride({
+class MBCardRenderDefaults {
+  const MBCardRenderDefaults({
     this.surface,
     this.layout,
     this.background,
@@ -63,8 +51,8 @@ class MBCardSettingsOverride {
     this.animation,
   });
 
-  factory MBCardSettingsOverride.fromMap(Map map) {
-    return MBCardSettingsOverride(
+  factory MBCardRenderDefaults.fromMap(Map map) {
+    return MBCardRenderDefaults(
       surface: _readGroup(
         map['surface'],
         (value) => MBCardSurfaceSettings.fromMap(value),
@@ -172,7 +160,7 @@ class MBCardSettingsOverride {
   bool get isEmpty => toMap().isEmpty;
   bool get isNotEmpty => !isEmpty;
 
-  MBCardSettingsOverride copyWith({
+  MBCardRenderDefaults copyWith({
     Object? surface = _sentinel,
     Object? layout = _sentinel,
     Object? background = _sentinel,
@@ -194,7 +182,7 @@ class MBCardSettingsOverride {
     Object? ribbon = _sentinel,
     Object? animation = _sentinel,
   }) {
-    return MBCardSettingsOverride(
+    return MBCardRenderDefaults(
       surface: identical(surface, _sentinel)
           ? this.surface
           : surface as MBCardSurfaceSettings?,
@@ -283,11 +271,6 @@ class MBCardSettingsOverride {
     };
   }
 
-  @override
-  String toString() {
-    return 'MBCardSettingsOverride(${toMap().keys.join(', ')})';
-  }
-
   static const Object _sentinel = Object();
 
   static T? _readGroup<T>(
@@ -303,7 +286,6 @@ class MBCardSettingsOverride {
 
   static bool _hasMap(dynamic group) {
     if (group == null) return false;
-
     final value = group.toMap();
     return value is Map && value.isNotEmpty;
   }
