@@ -10,7 +10,6 @@ import '../controllers/admin_product_controller.dart';
 import 'admin_product_card_picker_dialog.dart';
 import 'admin_product_form_support.dart';
 import 'admin_product_card_settings_dialog.dart';
-import 'card_studio/admin_product_card_studio_dialog.dart';
 
 // File: admin_product_form_dialog.dart
 
@@ -203,7 +202,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
   AdminProductCardSettingsResult? _cardSettingsDraft;
-  MBCardInstanceConfig? _cardConfigDraft;
 
   MBProductVariation? get _primaryVariationForOwnership {
     for (final item in _variations) {
@@ -346,12 +344,26 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _openSelectedCardSettingsDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.edit,
-    );
-  }
+    final variant = _selectedAdminCardVariant;
 
+    final result = await AdminProductCardSettingsDialog.show(
+      context,
+      previewProduct: _buildProductFromForm(),
+      variant: variant,
+      initialValue: _cardSettingsDraft?.variantId == variant.id
+          ? _cardSettingsDraft
+          : null,
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _cardSettingsDraft = result;
+      _cardLayoutType = result.variantId;
+    });
+  }
 
   String? _findDuplicateAttributeMessage(
       MBProductAttribute candidate, {
@@ -612,7 +624,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final initialCardConfig = _source.effectiveCardConfig.normalized();
     _cardLayoutType = _normalizeAdminCardVariantId(initialCardConfig.variantId);
     _cardSettingsDraft = _cardSettingsDraftFromConfig(initialCardConfig);
-    _cardConfigDraft = initialCardConfig;
 
     _trackInventory = _source.trackInventory;
     _supportsInstantOrder = _source.supportsInstantOrder;
@@ -2236,56 +2247,50 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _openCardPickerDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.pick,
-    );
-  }
+    final previewProduct = _buildProductFromForm();
+    final previousVariantId = _selectedAdminCardVariant.id;
 
-
-  Future<void> _openCardStudioDialog(
-    BuildContext context, {
-    required AdminProductCardStudioMode initialMode,
-  }) async {
-    final result = await AdminProductCardStudioDialog.show(
+    final result = await AdminProductCardPickerDialog.show(
       context,
-      initialMode: initialMode,
-      initialConfig: _selectedCardInstanceConfig,
-      previewProductBuilder: _buildProductForCardStudioPreview,
+      previewProduct: previewProduct,
+      initialVariantId: previousVariantId,
+      onEditCard: (context, variant) async {
+        final settingsResult = await AdminProductCardSettingsDialog.show(
+          context,
+          previewProduct: _buildProductFromForm(),
+          variant: variant,
+          initialValue: _cardSettingsDraft?.variantId == variant.id
+              ? _cardSettingsDraft
+              : null,
+        );
+
+        if (!mounted || settingsResult == null) {
+          return;
+        }
+
+        setState(() {
+          _cardSettingsDraft = settingsResult;
+          _cardLayoutType = settingsResult.variantId;
+        });
+      },
     );
 
     if (!mounted || result == null) {
       return;
     }
 
-    final normalized = result.cardConfig.normalized();
-
     setState(() {
-      _cardLayoutType = normalized.variantId;
-      _cardConfigDraft = normalized;
-      _cardSettingsDraft = _cardSettingsDraftFromConfig(normalized);
+      _cardLayoutType = result.variantId;
+
+      if (_cardSettingsDraft?.variantId != result.variantId) {
+        _cardSettingsDraft = null;
+      }
     });
   }
 
-  MBProduct _buildProductForCardStudioPreview(
-    MBCardInstanceConfig cardConfig,
-  ) {
-    final normalized = cardConfig.normalized();
-
-    return _buildProductFromForm().copyWith(
-      cardLayoutType: normalized.variantId,
-      cardConfig: normalized,
-    );
-  }
   MBCardSettingsOverride _buildCardSettingsOverride() {
-    final selectedVariant = _selectedAdminCardVariant;
-    final configDraft = _cardConfigDraft?.normalized();
-
-    if (configDraft != null && configDraft.variant == selectedVariant) {
-      return configDraft.settings;
-    }
-
     final draft = _cardSettingsDraft;
+    final selectedVariant = _selectedAdminCardVariant;
 
     if (draft == null || draft.variantId != selectedVariant.id) {
       return const MBCardSettingsOverride();
@@ -2394,33 +2399,14 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   Widget _buildCardStyleSection(BuildContext context) {
     final selectedVariant = _selectedAdminCardVariant;
-    final hasCustomConfig =
-        _cardConfigDraft?.normalized().settings.isNotEmpty == true ||
-        (_cardSettingsDraft != null &&
-            _cardSettingsDraft!.variantId == selectedVariant.id);
 
     return SectionCard(
       title: 'Customer App Card Style',
       subtitle:
-          'Select the product-card variant and tune its settings in the Card Studio. The studio shows a persistent live mobile preview.',
+      'Pick a card from the showcase gallery, compare all families together, then optionally open card settings.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              buildInfoChip('family: ${selectedVariant.family.label}'),
-              buildInfoChip('variant: ${selectedVariant.id}'),
-              buildInfoChip(
-                selectedVariant.isFullWidth
-                    ? 'footprint: full'
-                    : 'footprint: half',
-              ),
-              if (hasCustomConfig) buildInfoChip('custom settings: on'),
-            ],
-          ),
-          const SizedBox(height: 12),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -2430,13 +2416,32 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                   .surfaceContainerHighest
                   .withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).dividerColor),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+              ),
             ),
             child: Text(
-              'The product dialog now keeps this section clean. Use Card Studio for side-by-side family/variant selection and live phone preview.',
+              'The picker uses the current form data as the live preview source. Fill the product information needed for the card, then open the gallery and compare cards visually.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              buildInfoChip('family: ${selectedVariant.family.label}'),
+              buildInfoChip('variant: ${selectedVariant.id}'),
+              buildInfoChip(
+                selectedVariant.isFullWidth ? 'footprint: full' : 'footprint: half',
+              ),
+              if (_cardSettingsDraft != null &&
+                  _cardSettingsDraft!.variantId == selectedVariant.id)
+                buildInfoChip('custom settings: on'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildSelectedCardPreview(context),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -2444,7 +2449,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 child: FilledButton.icon(
                   onPressed: () => _openCardPickerDialog(context),
                   icon: const Icon(Icons.grid_view_rounded),
-                  label: const Text('Select card'),
+                  label: const Text('Pick a card'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -2593,9 +2598,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final namePart = _safeDebugFileNamePart(product.titleEn.trim());
     final timestamp = _safeDebugFileNamePart(now.toIso8601String());
     final fileName = '${mode}_${namePart}_$timestamp.txt';
+
+    final selectedVariant = _selectedAdminCardVariant;
     final selectedCardConfig = _selectedCardInstanceConfig.normalized();
     final productCardConfig = product.effectiveCardConfig.normalized();
-    final selectedVariant = selectedCardConfig.variant;
 
     final dump = <String, Object?>{
       'debugPurpose':

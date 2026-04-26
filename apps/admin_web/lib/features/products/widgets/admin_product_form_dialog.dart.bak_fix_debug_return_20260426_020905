@@ -346,12 +346,26 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _openSelectedCardSettingsDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.edit,
-    );
-  }
+    final variant = _selectedAdminCardVariant;
 
+    final result = await AdminProductCardSettingsDialog.show(
+      context,
+      previewProduct: _buildProductFromForm(),
+      variant: variant,
+      initialValue: _cardSettingsDraft?.variantId == variant.id
+          ? _cardSettingsDraft
+          : null,
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _cardSettingsDraft = result;
+      _cardLayoutType = result.variantId;
+    });
+  }
 
   String? _findDuplicateAttributeMessage(
       MBProductAttribute candidate, {
@@ -2236,56 +2250,54 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
   Future<void> _openCardPickerDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.pick,
-    );
-  }
+    final previewProduct = _buildProductFromForm();
+    final previousVariantId = _selectedAdminCardVariant.id;
 
-
-  Future<void> _openCardStudioDialog(
-    BuildContext context, {
-    required AdminProductCardStudioMode initialMode,
-  }) async {
-    final result = await AdminProductCardStudioDialog.show(
+    final result = await AdminProductCardPickerDialog.show(
       context,
-      initialMode: initialMode,
-      initialConfig: _selectedCardInstanceConfig,
-      previewProductBuilder: _buildProductForCardStudioPreview,
+      previewProduct: previewProduct,
+      initialVariantId: previousVariantId,
+      onEditCard: (context, variant) async {
+        final settingsResult = await AdminProductCardSettingsDialog.show(
+          context,
+          previewProduct: _buildProductFromForm(),
+          variant: variant,
+          initialValue: _cardSettingsDraft?.variantId == variant.id
+              ? _cardSettingsDraft
+              : null,
+        );
+
+        if (!mounted || settingsResult == null) {
+          return;
+        }
+
+        setState(() {
+          _cardSettingsDraft = settingsResult;
+          _cardLayoutType = settingsResult.variantId;
+        });
+      },
     );
 
     if (!mounted || result == null) {
       return;
     }
 
-    final normalized = result.cardConfig.normalized();
-
     setState(() {
-      _cardLayoutType = normalized.variantId;
-      _cardConfigDraft = normalized;
-      _cardSettingsDraft = _cardSettingsDraftFromConfig(normalized);
+      _cardLayoutType = result.variantId;
+
+      if (_cardSettingsDraft?.variantId != result.variantId) {
+        _cardSettingsDraft = null;
+      }
     });
   }
 
-  MBProduct _buildProductForCardStudioPreview(
-    MBCardInstanceConfig cardConfig,
-  ) {
-    final normalized = cardConfig.normalized();
-
-    return _buildProductFromForm().copyWith(
-      cardLayoutType: normalized.variantId,
-      cardConfig: normalized,
-    );
-  }
   MBCardSettingsOverride _buildCardSettingsOverride() {
+    final draft = _cardSettingsDraft;
     final selectedVariant = _selectedAdminCardVariant;
     final configDraft = _cardConfigDraft?.normalized();
-
     if (configDraft != null && configDraft.variant == selectedVariant) {
       return configDraft.settings;
     }
-
-    final draft = _cardSettingsDraft;
 
     if (draft == null || draft.variantId != selectedVariant.id) {
       return const MBCardSettingsOverride();
@@ -2593,9 +2605,14 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final namePart = _safeDebugFileNamePart(product.titleEn.trim());
     final timestamp = _safeDebugFileNamePart(now.toIso8601String());
     final fileName = '${mode}_${namePart}_$timestamp.txt';
+
+    final selectedVariant = _selectedAdminCardVariant;
+    final configDraft = _cardConfigDraft?.normalized();
+    if (configDraft != null && configDraft.variant == selectedVariant) {
+      return configDraft.settings;
+    }
     final selectedCardConfig = _selectedCardInstanceConfig.normalized();
     final productCardConfig = product.effectiveCardConfig.normalized();
-    final selectedVariant = selectedCardConfig.variant;
 
     final dump = <String, Object?>{
       'debugPurpose':

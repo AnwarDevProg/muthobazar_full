@@ -2243,40 +2243,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
 
-  Future<void> _openCardStudioDialog(
-    BuildContext context, {
-    required AdminProductCardStudioMode initialMode,
-  }) async {
-    final result = await AdminProductCardStudioDialog.show(
-      context,
-      initialMode: initialMode,
-      initialConfig: _selectedCardInstanceConfig,
-      previewProductBuilder: _buildProductForCardStudioPreview,
-    );
-
-    if (!mounted || result == null) {
-      return;
-    }
-
-    final normalized = result.cardConfig.normalized();
-
-    setState(() {
-      _cardLayoutType = normalized.variantId;
-      _cardConfigDraft = normalized;
-      _cardSettingsDraft = _cardSettingsDraftFromConfig(normalized);
-    });
-  }
-
-  MBProduct _buildProductForCardStudioPreview(
-    MBCardInstanceConfig cardConfig,
-  ) {
-    final normalized = cardConfig.normalized();
-
-    return _buildProductFromForm().copyWith(
-      cardLayoutType: normalized.variantId,
-      cardConfig: normalized,
-    );
-  }
   MBCardSettingsOverride _buildCardSettingsOverride() {
     final selectedVariant = _selectedAdminCardVariant;
     final configDraft = _cardConfigDraft?.normalized();
