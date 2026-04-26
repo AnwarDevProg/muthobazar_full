@@ -1,16 +1,15 @@
-
+import 'package:customer_app/app/routes/customer_app_routes.dart';
+import 'package:customer_app/features/cart/controllers/cart_controller.dart';
+import 'package:customer_app/features/cart/helpers/cart_item_builder.dart';
 import 'package:customer_app/features/home/controllers/home_controller.dart';
 import 'package:customer_app/features/home/pages/offer_details_page.dart';
 import 'package:customer_app/features/home/widgets/floating_offer_card.dart';
 import 'package:customer_app/features/home/widgets/home_cache_debug_section.dart';
 import 'package:customer_app/features/home/widgets/home_renderer.dart';
-import 'package:customer_app/features/cart/controllers/cart_controller.dart';
-import 'package:customer_app/features/cart/helpers/cart_item_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
-import 'package:customer_app/app/routes/customer_app_routes.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,12 +66,13 @@ class _HomePageState extends State<HomePage> {
 
     Get.toNamed(
       AppRoutes.productDetails,
-      arguments: <String, dynamic>{
+      arguments: {
         'product': product,
         'offers': _controller.config.activeOffers,
       },
     );
   }
+
   void _handleProductAddToCart(dynamic product) {
     if (product is! MBProduct) return;
 
@@ -81,12 +81,12 @@ class _HomePageState extends State<HomePage> {
         title: 'Select Options',
         message: 'Please open the product and choose a variation first.',
       );
+
       _handleProductTap(product);
       return;
     }
 
     final cartController = Get.find<CartController>();
-
     final item = MBCartItemBuilder.buildForProduct(
       product: product,
       quantity: 1,
@@ -116,8 +116,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (offer.brandIds.isNotEmpty) {
-        return product.brandId != null &&
-            offer.brandIds.contains(product.brandId);
+        return product.brandId != null && offer.brandIds.contains(product.brandId);
       }
 
       return true;
@@ -131,13 +130,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openSearch() {
+    // Later: navigate to product search page or open search overlay.
+  }
+
+  void _openNotifications() {
+    // Later: navigate to notification center.
+  }
+
   @override
   Widget build(BuildContext context) {
     final floatingOffer = _controller.floatingOffer;
+    final topBarHeight = _HomeTopBar.totalHeight(context);
 
     return MBAppLayout(
       backgroundColor: MBColors.background,
-      safeTop: true,
+      safeTop: false,
       safeBottom: false,
       padding: EdgeInsets.zero,
       scrollable: false,
@@ -148,9 +156,11 @@ class _HomePageState extends State<HomePage> {
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
+                padding: EdgeInsets.only(
+                  top: topBarHeight + _HomeTopBar.kContentTopGap,
+                  bottom: 140,
+                ),
                 children: [
-                  const _HomeHeader(),
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: MBSpacing.pageHorizontal(context),
@@ -158,7 +168,6 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: MBSpacing.md),
                         if (_showCacheDebugSection) ...[
                           MBHomeCacheDebugSection(
                             isUsingCachedData: _controller.isUsingCachedData,
@@ -181,7 +190,6 @@ class _HomePageState extends State<HomePage> {
                           onProductAddToCart: _handleProductAddToCart,
                           onViewAllTap: _handleViewAllTap,
                         ),
-                        const SizedBox(height: 140),
                       ],
                     ),
                   ),
@@ -189,6 +197,20 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+
+          // Sticky top search/notification bar.
+          // This remains visible while the page scrolls.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _HomeTopBar(
+              notificationCount: 3,
+              onSearchTap: _openSearch,
+              onNotificationTap: _openNotifications,
+            ),
+          ),
+
           if (floatingOffer != null)
             Positioned(
               right: 16,
@@ -207,61 +229,168 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+class _HomeTopBar extends StatelessWidget {
+  const _HomeTopBar({
+    required this.notificationCount,
+    this.onSearchTap,
+    this.onNotificationTap,
+  });
+
+  // Manual adjustment values
+  // ------------------------
+  // kSearchHeight:
+  //   Height of both search box and notification button.
+  //   Recommended compact range: 40-46.
+  //
+  // kTopGapAfterStatusArea:
+  //   Space between phone status/notch area and search row.
+  //   Lower value = search row goes higher.
+  //   Recommended range: 4-10.
+  //
+  // kBottomPadding:
+  //   Orange area below the search row.
+  //   Lower value = top bar becomes shorter.
+  //   Recommended range: 7-14.
+  //
+  // kContentTopGap:
+  //   Space between sticky top bar and first home section.
+  //   Recommended range: 10-18.
+  //
+  // kBottomRadius:
+  //   Curved bottom edge of the orange header.
+  //   Recommended range: 18-26.
+  static const double kSearchHeight = 30;
+  static const double kTopGapAfterStatusArea = 3;
+  static const double kBottomPadding = 4;
+  static const double kContentTopGap = -8;
+  static const double kBottomRadius = 6;
+  static const double kSearchRadius = 5;
+  static const double kNotificationRadius = 6;
+  static const double kSearchIconSize = 20;
+  static const double kNotificationIconSize = 22;
+  static const double kNotificationBadgeTop = -3;
+  static const double kNotificationBadgeRight = -3;
+
+  final int notificationCount;
+  final VoidCallback? onSearchTap;
+  final VoidCallback? onNotificationTap;
+
+  static double totalHeight(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    return topInset +
+        kTopGapAfterStatusArea +
+        kSearchHeight +
+        kBottomPadding;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        MBSpacing.pageHorizontal(context),
-        MBSpacing.xxs,
-        MBSpacing.pageHorizontal(context),
-        MBSpacing.md,
-      ),
-      decoration: const BoxDecoration(
-        gradient: MBGradients.headerGradient,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(MBRadius.xl),
-          bottomRight: Radius.circular(MBRadius.xl),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MBSpacing.h(MBSpacing.xxs),
-            Text(
-              'Discover Daily Needs',
-              style: MBAppText.headline2(context).copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            MBSpacing.h(MBSpacing.xxxs),
-            Text(
-              'Search products, browse categories, and grab today’s offers.',
-              style: MBAppText.bodySmall(context).copyWith(
-                color: Colors.white.withValues(alpha: 0.92),
-              ),
-            ),
-            MBSpacing.h(MBSpacing.md),
-            Row(
-              children: [
-                const Expanded(
-                  child: MBTextField(
-                    hintText: 'Search products...',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                ),
-                MBSpacing.w(MBSpacing.sm),
-                const _NotificationButton(count: 3),
-              ],
+    final topInset = MediaQuery.paddingOf(context).top;
+    final horizontalPadding = MBSpacing.pageHorizontal(context);
+
+    return Material(
+      color: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: MBGradients.headerGradient,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(kBottomRadius),
+            bottomRight: Radius.circular(kBottomRadius),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 14,
+              offset: Offset(0, 6),
             ),
           ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            topInset + kTopGapAfterStatusArea,
+            horizontalPadding,
+            kBottomPadding,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _HomeSearchBox(
+                  height: kSearchHeight,
+                  radius: kSearchRadius,
+                  iconSize: kSearchIconSize,
+                  onTap: onSearchTap,
+                ),
+              ),
+              SizedBox(width: MBSpacing.sm),
+              _NotificationButton(
+                size: kSearchHeight,
+                radius: kNotificationRadius,
+                iconSize: kNotificationIconSize,
+                count: notificationCount,
+                onTap: onNotificationTap,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSearchBox extends StatelessWidget {
+  const _HomeSearchBox({
+    required this.height,
+    required this.radius,
+    required this.iconSize,
+    this.onTap,
+  });
+
+  final double height;
+  final double radius;
+  final double iconSize;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: MBSpacing.md,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  color: MBColors.textSecondary,
+                  size: iconSize,
+                ),
+                SizedBox(width: MBSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Search products...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: MBAppText.body(context).copyWith(
+                      color: MBColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -269,40 +398,50 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _NotificationButton extends StatelessWidget {
-  final int count;
-
   const _NotificationButton({
+    required this.size,
+    required this.radius,
+    required this.iconSize,
     required this.count,
+    this.onTap,
   });
+
+  final double size;
+  final double radius;
+  final double iconSize;
+  final int count;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          width: MBSpacing.buttonHeight(context) * 0.86,
-          height: MBSpacing.buttonHeight(context) * 0.86,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(MBRadius.md),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
+        Material(
+          color: Colors.white.withValues(alpha: 0.20),
+          borderRadius: BorderRadius.circular(radius),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Icon(
+                Icons.notifications_outlined,
+                color: Colors.white,
+                size: iconSize,
+              ),
             ),
-          ),
-          child: const Icon(
-            Icons.notifications_outlined,
-            color: Colors.white,
           ),
         ),
         if (count > 0)
           Positioned(
-            top: -4,
-            right: -4,
+            top: _HomeTopBar.kNotificationBadgeTop,
+            right: _HomeTopBar.kNotificationBadgeRight,
             child: Container(
               constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
+                minWidth: 17,
+                minHeight: 17,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
@@ -315,6 +454,7 @@ class _NotificationButton extends StatelessWidget {
                 style: MBAppText.caption(context).copyWith(
                   color: MBColors.primaryOrange,
                   fontWeight: FontWeight.w700,
+                  fontSize: 10,
                 ),
               ),
             ),
@@ -323,4 +463,3 @@ class _NotificationButton extends StatelessWidget {
     );
   }
 }
-

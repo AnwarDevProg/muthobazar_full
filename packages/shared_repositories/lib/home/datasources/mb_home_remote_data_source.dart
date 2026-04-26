@@ -1,5 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_models/shared_models.dart';
+
+// MB Home Remote Data Source
+// --------------------------
+// Fetches the full home bundle from Firestore.
+//
+// Development debug added:
+// - Logs raw Firestore cardConfig for each product.
+// - Logs parsed MBProduct.cardConfig.
+// - Logs parsed MBProduct.effectiveCardConfig.
+//
+// Purpose of the debug:
+// We already proved Admin Save writes full cardConfig.settings.
+// If Home renderer still receives settings={}, this file tells us whether:
+// 1) Firestore raw data has settings,
+// 2) MBProduct.fromMap loses settings,
+// 3) or data is lost later after this remote fetch.
+//
 
 abstract class MBHomeRemoteDataSource {
   Future<MBHomeCacheBundle> fetchHomeBundle();
@@ -79,10 +97,7 @@ class MBFirestoreHomeRemoteDataSource implements MBHomeRemoteDataSource {
           (map) => MBBrand.fromMap(map),
     );
 
-    final products = _mapDocs<MBProduct>(
-      results[5],
-          (map) => MBProduct.fromMap(map),
-    );
+    final products = _mapProductDocsWithCardConfigDebug(results[5]);
 
     return MBHomeCacheBundle(
       config: MBHomeConfig(
@@ -97,6 +112,90 @@ class MBFirestoreHomeRemoteDataSource implements MBHomeRemoteDataSource {
     );
   }
 
+  List<MBProduct> _mapProductDocsWithCardConfigDebug(
+      QuerySnapshot<Map<String, dynamic>> snapshot,
+      ) {
+    return snapshot.docs.map((doc) {
+      final raw = Map<String, dynamic>.from(doc.data());
+      final id = (raw['id'] ?? '').toString().trim();
+
+      if (id.isEmpty) {
+        raw['id'] = doc.id;
+      }
+
+      final rawCardConfig = raw['cardConfig'];
+      final product = MBProduct.fromMap(raw);
+
+
+      return product;
+    }).toList(growable: false);
+  }
+
+  void _debugProductCardConfig({
+    required MBProduct product,
+    required Object? rawCardConfig,
+  }) {
+    final parsedCardConfig = product.cardConfig.toMap();
+    final effectiveCardConfig = product.effectiveCardConfig.toMap();
+
+    final rawSettings = _extractSettings(rawCardConfig);
+    final parsedSettings = _extractSettings(parsedCardConfig);
+    final effectiveSettings = _extractSettings(effectiveCardConfig);
+
+    debugPrint(
+      '[HOME_REMOTE_CARD_DEBUG_SUMMARY] '
+          'id=${product.id}, '
+          'title=${product.titleEn}, '
+          'layout=${product.cardLayoutType}, '
+          'rawHasSettings=${_hasNonEmptySettings(rawCardConfig)}, '
+          'parsedHasSettings=${_hasNonEmptySettings(parsedCardConfig)}, '
+          'effectiveHasSettings=${_hasNonEmptySettings(effectiveCardConfig)}, '
+          'rawSettingsKeys=${rawSettings.keys.toList()}, '
+          'parsedSettingsKeys=${parsedSettings.keys.toList()}, '
+          'effectiveSettingsKeys=${effectiveSettings.keys.toList()}',
+    );
+
+    debugPrint(
+      '[HOME_REMOTE_CARD_DEBUG_RAW] '
+          'title=${product.titleEn}, '
+          'rawCardConfig=$rawCardConfig',
+    );
+
+    debugPrint(
+      '[HOME_REMOTE_CARD_DEBUG_PARSED] '
+          'title=${product.titleEn}, '
+          'parsedCardConfig=$parsedCardConfig',
+    );
+
+    debugPrint(
+      '[HOME_REMOTE_CARD_DEBUG_EFFECTIVE] '
+          'title=${product.titleEn}, '
+          'effectiveCardConfig=$effectiveCardConfig',
+    );
+  }
+
+  Map<String, dynamic> _extractSettings(Object? cardConfig) {
+    if (cardConfig is! Map) {
+      return const <String, dynamic>{};
+    }
+
+    final rawSettings = cardConfig['settings'];
+
+    if (rawSettings is! Map) {
+      return const <String, dynamic>{};
+    }
+
+    return Map<String, dynamic>.from(
+      rawSettings.map(
+            (key, value) => MapEntry(key.toString(), value),
+      ),
+    );
+  }
+
+  bool _hasNonEmptySettings(Object? cardConfig) {
+    return _extractSettings(cardConfig).isNotEmpty;
+  }
+
   List<T> _mapDocs<T>(
       QuerySnapshot<Map<String, dynamic>> snapshot,
       T Function(Map<String, dynamic> map) fromMap,
@@ -104,9 +203,11 @@ class MBFirestoreHomeRemoteDataSource implements MBHomeRemoteDataSource {
     return snapshot.docs.map((doc) {
       final raw = Map<String, dynamic>.from(doc.data());
       final id = (raw['id'] ?? '').toString().trim();
+
       if (id.isEmpty) {
         raw['id'] = doc.id;
       }
+
       return fromMap(raw);
     }).toList(growable: false);
   }

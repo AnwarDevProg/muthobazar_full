@@ -1,0 +1,72 @@
+import 'package:flutter/material.dart';
+import 'package:shared_models/shared_models.dart';
+import 'package:shared_ui/shared_ui.dart';
+import 'package:shared_ui/widgets/common/product_cards/mb_product_card_renderer.dart';
+
+// MB Home Product Grid Section
+// ----------------------------
+// Uses the real MuthoBazar product-card renderer instead of the old simple
+// MBProductCard widget.
+//
+// Why:
+// MBProductCard only receives title/price/image text values, so it cannot read
+// product.cardConfig or product.effectiveCardConfig. That is why saved card
+// settings were present in Firestore/Home remote parsing but disappeared at
+// render time.
+//
+// This section now passes the full MBProduct into MBProductCardRenderer so the
+// selected family, variant, and per-product card settings are preserved.
+
+class MBHomeProductGridSection extends StatelessWidget {
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final List<MBOffer> offers;
+  final void Function(MBProduct product)? onProductTap;
+  final void Function(MBProduct product)? onAddToCart;
+  final VoidCallback? onViewAllTap;
+
+  const MBHomeProductGridSection({
+    super.key,
+    required this.section,
+    required this.products,
+    this.offers = const <MBOffer>[],
+    this.onProductTap,
+    this.onAddToCart,
+    this.onViewAllTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (products.isEmpty) return const SizedBox.shrink();
+
+    final productGrid = MBLayoutGrid.homeProducts(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MBSectionTitle(
+          title: section.titleEn.isNotEmpty ? section.titleEn : 'Products',
+          actionText: section.showViewAll ? 'See All' : null,
+          onTapAction: onViewAllTap,
+        ),
+        MBSpacing.h(MBSpacing.sm),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: products.length,
+          gridDelegate: MBLayoutGrid.delegate(config: productGrid),
+          itemBuilder: (_, index) {
+            final product = products[index];
+
+            return MBProductCardRenderer(
+              product: product,
+              contextType: MBProductCardRenderContext.grid,
+              onTap: () => onProductTap?.call(product),
+              onAddToCartTap: () => onAddToCart?.call(product),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}

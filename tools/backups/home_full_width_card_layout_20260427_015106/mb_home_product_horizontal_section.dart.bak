@@ -5,10 +5,17 @@ import 'package:shared_ui/widgets/common/product_cards/mb_product_card_renderer.
 
 // MB Home Product Horizontal Section
 // ----------------------------------
-// Product-card-aware horizontal list.
+// Uses the real MuthoBazar product-card renderer instead of the old simple
+// MBProductCard widget.
 //
-// Full-width variants receive a wider item width in the horizontal scroller so
-// they are not squeezed into compact-card width.
+// Why:
+// MBProductCard only receives title/price/image text values, so it cannot read
+// product.cardConfig or product.effectiveCardConfig. That is why saved card
+// settings were present in Firestore/Home remote parsing but disappeared at
+// render time.
+//
+// This section now passes the full MBProduct into MBProductCardRenderer so the
+// selected family, variant, and per-product card settings are preserved.
 
 class MBHomeProductHorizontalSection extends StatelessWidget {
   final MBHomeSection section;
@@ -42,23 +49,19 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
         ),
         MBSpacing.h(MBSpacing.sm),
         SizedBox(
-          height: 265,
+          height: 255,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
             separatorBuilder: (_, __) => MBSpacing.w(MBSpacing.sm),
             itemBuilder: (context, index) {
               final product = products[index];
-              final isFullWidth = _isFullWidthProduct(product);
 
               return SizedBox(
-                width: _widthForProduct(context, product),
+                width: _widthForProduct(product),
                 child: MBProductCardRenderer(
                   product: product,
-                  contextType: isFullWidth
-                      ? MBProductCardRenderContext.featured
-                      : MBProductCardRenderContext.grid,
-                  featuredHeight: isFullWidth ? 245 : null,
+                  contextType: MBProductCardRenderContext.grid,
                   onTap: () => onProductTap?.call(product),
                   onAddToCartTap: () => onAddToCart?.call(product),
                 ),
@@ -70,19 +73,13 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
     );
   }
 
-  bool _isFullWidthProduct(MBProduct product) {
+  double _widthForProduct(MBProduct product) {
     final config = product.effectiveCardConfig.normalized();
-    return config.variant.isFullWidth;
-  }
 
-  double _widthForProduct(BuildContext context, MBProduct product) {
-    if (!_isFullWidthProduct(product)) {
-      return 170;
+    if (config.variant.isFullWidth) {
+      return 320;
     }
 
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final available = screenWidth - (MBSpacing.pageHorizontal(context) * 2);
-
-    return available.clamp(290.0, 360.0);
+    return 170;
   }
 }
