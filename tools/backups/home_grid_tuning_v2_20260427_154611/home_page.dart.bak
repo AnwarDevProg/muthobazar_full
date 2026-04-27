@@ -11,15 +11,6 @@ import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-
-class _HomeLayoutTuning {
-  const _HomeLayoutTuning._();
-
-  // Manual left/right margin for Home body content and product grid.
-  // Recommended: 8, 10, 12, or 16.
-  static const double bodyHorizontalPadding = 10;
-}
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -172,7 +163,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: _HomeLayoutTuning.bodyHorizontalPadding,
+                      horizontal: MBSpacing.pageHorizontal(context),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

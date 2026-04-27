@@ -1,0 +1,114 @@
+// MuthoBazar Home Grid Layout Tuning
+// ----------------------------------
+// Central manual adjustment values for the Home product grid.
+//
+// Use this file while the product-card variants are still being designed.
+// Later these values can move into the shared card registry/footprint system.
+
+class MBHomeGridLayoutTuning {
+  const MBHomeGridLayoutTuning._();
+
+  // Left/right margin of the Home body content.
+  // This is applied in home_page.dart by the patch script.
+  //
+  // Recommended range:
+  // 8  = wider cards, less side margin
+  // 10 = balanced
+  // 12 = safer breathing room
+  // 16 = old spacious look
+  static const double bodyHorizontalPadding = 10;
+
+  // Gap between two half-width cards in the same row.
+  //
+  // Recommended range:
+  // 8  = tight ecommerce grid
+  // 10 = balanced
+  // 12 = more breathing room
+  static const double cardColumnGap = 10;
+
+  // Vertical gap between product rows.
+  //
+  // Recommended range:
+  // 10 = compact
+  // 12 = balanced
+  // 14 = airy
+  static const double cardRowGap = 12;
+
+  // Gap between a product card and its adaptive filler.
+  //
+  // Recommended range:
+  // 4 = tight
+  // 6 = balanced
+  // 8 = airy
+  static const double fillerTopGap = 6;
+
+  // ----------------------------
+  // Half-width card slot heights
+  // ----------------------------
+  // These are SLOT heights for Home layout, not final card-design constants.
+  // Increase these when you see Flutter overflow stripes inside a card.
+
+  static const double compactDefaultPreferredHeight = 292;
+  static const double compactDefaultMinHeight = 270;
+  static const double compactDefaultMaxHeight = 334;
+
+  static const double compact01PreferredHeight = 292;
+  static const double compact01MinHeight = 270;
+  static const double compact01MaxHeight = 334;
+
+  static const double compact02PreferredHeight = 312;
+  static const double compact02MinHeight = 288;
+  static const double compact02MaxHeight = 352;
+
+  static const double compact05PreferredHeight = 324;
+  static const double compact05MinHeight = 298;
+  static const double compact05MaxHeight = 364;
+
+  static const double pricePreferredHeight = 306;
+  static const double priceMinHeight = 280;
+  static const double priceMaxHeight = 350;
+
+  static const double flashPreferredHeight = 306;
+  static const double flashMinHeight = 280;
+  static const double flashMaxHeight = 350;
+
+  static const double premiumPreferredHeight = 332;
+  static const double premiumMinHeight = 304;
+  static const double premiumMaxHeight = 374;
+
+  // ----------------------------
+  // Full-width card slot heights
+  // ----------------------------
+  // Increase these when full-width variants show overflow stripes.
+
+  static const double horizontalPreferredHeight = 210;
+  static const double horizontalMinHeight = 180;
+  static const double horizontalMaxHeight = 250;
+
+  static const double widePreferredHeight = 420;
+  static const double wideMinHeight = 360;
+  static const double wideMaxHeight = 480;
+
+  static const double promoPreferredHeight = 340;
+  static const double promoMinHeight = 300;
+  static const double promoMaxHeight = 400;
+
+  static const double featuredPreferredHeight = 380;
+  static const double featuredMinHeight = 340;
+  static const double featuredMaxHeight = 440;
+
+  static const double fullWidthFallbackPreferredHeight = 300;
+  static const double fullWidthFallbackMinHeight = 260;
+  static const double fullWidthFallbackMaxHeight = 360;
+
+  // ----------------------------
+  // Elastic decision tuning
+  // ----------------------------
+  // Higher = cards resize less, fillers are preferred more.
+  // Lower = cards resize more easily.
+  static const double elasticResizePenalty = 75;
+
+  // Higher = prefer expanding shorter card.
+  // Lower = prefer shrinking taller card more.
+  static const double shortCardExpandBias = 0.62;
+}

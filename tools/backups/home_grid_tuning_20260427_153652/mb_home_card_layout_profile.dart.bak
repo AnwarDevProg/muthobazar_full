@@ -1,0 +1,214 @@
+import 'package:shared_models/shared_models.dart';
+
+import 'mb_home_grid_layout_tuning.dart';
+
+// MB Home Card Layout Profile
+// ---------------------------
+// Temporary Home-layout profile resolver for product-card variants.
+//
+// Important:
+// These heights are HOME SLOT heights. They are intentionally tunable while
+// card variants are still being designed. If a card shows yellow/black Flutter
+// overflow stripes, increase the relevant preferred/max height here.
+//
+// Later this should move into the shared card variant registry/footprint model.
+
+class MBHomeCardLayoutProfile {
+  const MBHomeCardLayoutProfile({
+    required this.familyId,
+    required this.variantId,
+    required this.preferredHeight,
+    required this.minHeight,
+    required this.maxHeight,
+    required this.isFullWidth,
+  });
+
+  final String familyId;
+  final String variantId;
+  final double preferredHeight;
+  final double minHeight;
+  final double maxHeight;
+  final bool isFullWidth;
+
+  double get maxShrink => preferredHeight - minHeight;
+  double get maxExpand => maxHeight - preferredHeight;
+
+  static MBHomeCardLayoutProfile resolve(MBProduct product) {
+    final config = product.effectiveCardConfig.normalized();
+    final familyId = config.familyId;
+    final variantId = config.variantId;
+    final isFullWidth = config.variant.isFullWidth;
+
+    if (isFullWidth) {
+      return _fullWidthProfile(
+        familyId: familyId,
+        variantId: variantId,
+      );
+    }
+
+    return _halfWidthProfile(
+      familyId: familyId,
+      variantId: variantId,
+    );
+  }
+
+  static MBHomeCardLayoutProfile _halfWidthProfile({
+    required String familyId,
+    required String variantId,
+  }) {
+    if (variantId == 'compact01') {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.compact01PreferredHeight,
+        MBHomeGridLayoutTuning.compact01MinHeight,
+        MBHomeGridLayoutTuning.compact01MaxHeight,
+      );
+    }
+
+    if (variantId == 'compact02') {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.compact02PreferredHeight,
+        MBHomeGridLayoutTuning.compact02MinHeight,
+        MBHomeGridLayoutTuning.compact02MaxHeight,
+      );
+    }
+
+    if (variantId == 'compact05') {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.compact05PreferredHeight,
+        MBHomeGridLayoutTuning.compact05MinHeight,
+        MBHomeGridLayoutTuning.compact05MaxHeight,
+      );
+    }
+
+    if (familyId == 'premium' || variantId.startsWith('premium')) {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.premiumPreferredHeight,
+        MBHomeGridLayoutTuning.premiumMinHeight,
+        MBHomeGridLayoutTuning.premiumMaxHeight,
+      );
+    }
+
+    if (familyId == 'flash_sale' || variantId.startsWith('flash')) {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.flashPreferredHeight,
+        MBHomeGridLayoutTuning.flashMinHeight,
+        MBHomeGridLayoutTuning.flashMaxHeight,
+      );
+    }
+
+    if (familyId == 'price' || variantId.startsWith('price')) {
+      return _half(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.pricePreferredHeight,
+        MBHomeGridLayoutTuning.priceMinHeight,
+        MBHomeGridLayoutTuning.priceMaxHeight,
+      );
+    }
+
+    return _half(
+      familyId,
+      variantId,
+      MBHomeGridLayoutTuning.compactDefaultPreferredHeight,
+      MBHomeGridLayoutTuning.compactDefaultMinHeight,
+      MBHomeGridLayoutTuning.compactDefaultMaxHeight,
+    );
+  }
+
+  static MBHomeCardLayoutProfile _fullWidthProfile({
+    required String familyId,
+    required String variantId,
+  }) {
+    if (familyId == 'horizontal' || variantId.startsWith('horizontal')) {
+      return _full(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.horizontalPreferredHeight,
+        MBHomeGridLayoutTuning.horizontalMinHeight,
+        MBHomeGridLayoutTuning.horizontalMaxHeight,
+      );
+    }
+
+    if (familyId == 'wide' || variantId.startsWith('wide')) {
+      return _full(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.widePreferredHeight,
+        MBHomeGridLayoutTuning.wideMinHeight,
+        MBHomeGridLayoutTuning.wideMaxHeight,
+      );
+    }
+
+    if (familyId == 'promo' || variantId.startsWith('promo')) {
+      return _full(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.promoPreferredHeight,
+        MBHomeGridLayoutTuning.promoMinHeight,
+        MBHomeGridLayoutTuning.promoMaxHeight,
+      );
+    }
+
+    if (familyId == 'featured' || variantId.startsWith('featured')) {
+      return _full(
+        familyId,
+        variantId,
+        MBHomeGridLayoutTuning.featuredPreferredHeight,
+        MBHomeGridLayoutTuning.featuredMinHeight,
+        MBHomeGridLayoutTuning.featuredMaxHeight,
+      );
+    }
+
+    return _full(
+      familyId,
+      variantId,
+      MBHomeGridLayoutTuning.fullWidthFallbackPreferredHeight,
+      MBHomeGridLayoutTuning.fullWidthFallbackMinHeight,
+      MBHomeGridLayoutTuning.fullWidthFallbackMaxHeight,
+    );
+  }
+
+  static MBHomeCardLayoutProfile _half(
+    String familyId,
+    String variantId,
+    double preferredHeight,
+    double minHeight,
+    double maxHeight,
+  ) {
+    return MBHomeCardLayoutProfile(
+      familyId: familyId,
+      variantId: variantId,
+      preferredHeight: preferredHeight,
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+      isFullWidth: false,
+    );
+  }
+
+  static MBHomeCardLayoutProfile _full(
+    String familyId,
+    String variantId,
+    double preferredHeight,
+    double minHeight,
+    double maxHeight,
+  ) {
+    return MBHomeCardLayoutProfile(
+      familyId: familyId,
+      variantId: variantId,
+      preferredHeight: preferredHeight,
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+      isFullWidth: true,
+    );
+  }
+}
