@@ -99,3 +99,5 @@ export 'theme/mb_radius.dart';
 export 'theme/mb_text_styles.dart';
 export 'theme/mb_text_theme.dart';
 export 'theme/mb_theme.dart';
+export 'widgets/common/product_cards/design_engine/mb_design_card_engine.dart';
+export 'widgets/common/product_cards/design_studio/mb_card_design_studio.dart';

@@ -39,3 +39,4 @@ export 'home/mb_home_section.dart';
 
 
 export 'product_cards/config/product_card_config.dart';
+export 'product_cards/design/mb_card_design_models.dart';

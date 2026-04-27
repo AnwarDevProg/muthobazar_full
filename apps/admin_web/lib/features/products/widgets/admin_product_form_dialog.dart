@@ -10,6 +10,7 @@ import '../controllers/admin_product_controller.dart';
 import 'admin_product_card_picker_dialog.dart';
 import 'admin_product_form_support.dart';
 import 'admin_product_card_settings_dialog.dart';
+import 'card_design/admin_card_design_studio_dialog.dart';
 import 'card_studio/admin_product_card_studio_dialog.dart';
 
 // File: admin_product_form_dialog.dart
@@ -203,6 +204,16 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
   AdminProductCardSettingsResult? _cardSettingsDraft;
+  /// New design-family card JSON returned from MBCardDesignStudio.
+  ///
+  /// This lives beside the old cardConfig while the new design engine is
+  /// being rolled out.
+  String? _cardDesignJson;
+
+  bool get _hasCardDesignJson {
+    final value = _cardDesignJson;
+    return value != null && value.trim().isNotEmpty;
+  }
   MBCardInstanceConfig? _cardConfigDraft;
 
   MBProductVariation? get _primaryVariationForOwnership {
@@ -612,6 +623,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final initialCardConfig = _source.effectiveCardConfig.normalized();
     _cardLayoutType = _normalizeAdminCardVariantId(initialCardConfig.variantId);
     _cardSettingsDraft = _cardSettingsDraftFromConfig(initialCardConfig);
+    _cardDesignJson = _source.cardDesignJson;
     _cardConfigDraft = initialCardConfig;
 
     _trackInventory = _source.trackInventory;
@@ -2235,6 +2247,127 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     ).normalized();
   }
 
+
+  Future<void> _openCardDesignStudioDialog(BuildContext context) async {
+    final result = await AdminCardDesignStudioDialog.show(
+      context,
+      previewProduct: _source,
+      initialDesignJson: _cardDesignJson,
+      title: 'Product Card Design Studio',
+    );
+
+    if (result == null) {
+      return;
+    }
+
+    setState(() {
+      _cardDesignJson = result.designJson.trim().isEmpty
+          ? null
+          : result.designJson.trim();
+    });
+  }
+
+  Widget _buildCardDesignInfoChip(
+    BuildContext context,
+    String label,
+  ) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.20),
+        ),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardDesignStudioBridgePanel(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _hasCardDesignJson
+            ? theme.colorScheme.primary.withValues(alpha: 0.08)
+            : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _hasCardDesignJson
+              ? theme.colorScheme.primary.withValues(alpha: 0.35)
+              : theme.dividerColor.withValues(alpha: 0.70),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.design_services_rounded,
+                color: _hasCardDesignJson
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'New Design Studio',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_hasCardDesignJson)
+                _buildCardDesignInfoChip(context, 'saved design JSON'),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _hasCardDesignJson
+                ? 'A free-design card layout is attached to this product. Open the studio to edit, drag, resize, copy, or paste the design JSON.'
+                : 'Open the new design-family studio to create a free-position card design. This is saved beside the legacy cardConfig.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: () => _openCardDesignStudioDialog(context),
+                icon: const Icon(Icons.brush_rounded),
+                label: Text(
+                  _hasCardDesignJson
+                      ? 'Edit Design Studio'
+                      : 'Open Design Studio',
+                ),
+              ),
+              if (_hasCardDesignJson)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() => _cardDesignJson = null);
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Clear design JSON'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
   Future<void> _openCardPickerDialog(BuildContext context) async {
     await _openCardStudioDialog(
       context,
@@ -2911,6 +3044,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
       cardLayoutType: selectedCardConfig.variantId,
       cardConfig: selectedCardConfig,
+      cardDesignJson: _cardDesignJson?.trim().isEmpty ?? true
+          ? null
+          : _cardDesignJson!.trim(),
+      clearCardDesignJson: _cardDesignJson?.trim().isEmpty ?? true,
       isFeatured: !_isVariableProduct && _isFeatured,
       isFlashSale: !_isVariableProduct && _isFlashSale,
       isEnabled: _isEnabled,

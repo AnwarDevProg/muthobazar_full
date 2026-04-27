@@ -92,6 +92,17 @@ class MBProduct {
   /// This stores the card family, exact variant, optional preset, and all
   /// per-product card setting overrides.
   final MBCardInstanceConfig cardConfig;
+  /// New design-family card studio JSON.
+  ///
+  /// This is the first persistence bridge for the free-design renderer.
+  /// It stores the exported design-state JSON from MBCardDesignStudio.
+  /// The old cardConfig remains untouched for legacy/variant fallback.
+  final String? cardDesignJson;
+
+  bool get hasCardDesignJson {
+    final value = cardDesignJson;
+    return value != null && value.trim().isNotEmpty;
+  }
 
   final bool isFeatured;
   final bool isFlashSale;
@@ -178,7 +189,7 @@ class MBProduct {
     this.variations = const [],
     this.purchaseOptions = const [],
     this.cardLayoutType = 'compact01',
-    this.cardConfig = _defaultCardConfig,
+    this.cardConfig = _defaultCardConfig,    this.cardDesignJson,
     this.isFeatured = false,
     this.isFlashSale = false,
     this.isEnabled = true,
@@ -416,7 +427,8 @@ class MBProduct {
     List<MBProductVariation>? variations,
     List<MBProductPurchaseOption>? purchaseOptions,
     String? cardLayoutType,
-    MBCardInstanceConfig? cardConfig,
+    MBCardInstanceConfig? cardConfig,    String? cardDesignJson,
+    bool clearCardDesignJson = false,
     bool? isFeatured,
     bool? isFlashSale,
     bool? isEnabled,
@@ -531,7 +543,9 @@ class MBProduct {
       variations: variations ?? this.variations,
       purchaseOptions: purchaseOptions ?? this.purchaseOptions,
       cardLayoutType: nextCardConfig.normalized().variantId,
-      cardConfig: nextCardConfig.normalized(),
+      cardConfig: nextCardConfig.normalized(),      cardDesignJson: clearCardDesignJson
+          ? null
+          : (cardDesignJson ?? this.cardDesignJson),
       isFeatured: isFeatured ?? this.isFeatured,
       isFlashSale: isFlashSale ?? this.isFlashSale,
       isEnabled: isEnabled ?? this.isEnabled,
@@ -619,7 +633,8 @@ class MBProduct {
       'variations': variations.map((e) => e.toMap()).toList(),
       'purchaseOptions': purchaseOptions.map((e) => e.toMap()).toList(),
       'cardLayoutType': normalizedConfig.variantId,
-      'cardConfig': normalizedConfig.toMap(),
+      'cardConfig': normalizedConfig.toMap(),      if (cardDesignJson?.trim().isNotEmpty ?? false)
+        'cardDesignJson': cardDesignJson!.trim(),
       'isFeatured': isFeatured,
       'isFlashSale': isFlashSale,
       'isEnabled': isEnabled,
@@ -729,7 +744,9 @@ class MBProduct {
       variations: _parseVariations(map['variations']),
       purchaseOptions: _parsePurchaseOptions(map['purchaseOptions']),
       cardLayoutType: cardConfig.variantId,
-      cardConfig: cardConfig,
+      cardConfig: cardConfig,      cardDesignJson: _asNullableString(
+        map['cardDesignJson'] ?? map['cardDesignJsonV1'],
+      ),
       isFeatured: _asBool(map['isFeatured'], fallback: false),
       isFlashSale: _asBool(map['isFlashSale'], fallback: false),
       isEnabled: _asBool(map['isEnabled'], fallback: true),
@@ -779,6 +796,11 @@ const MBCardInstanceConfig _defaultCardConfig = MBCardInstanceConfig(
   variant: MBCardVariant.compact01,
 );
 
+String? _asNullableString(dynamic value) {
+  final normalized = value?.toString().trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  return normalized;
+}
 List<String> _asStringList(dynamic value) {
   if (value is! List) return const <String>[];
 
