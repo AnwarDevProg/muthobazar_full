@@ -2292,6 +2292,52 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
   }
 
+  Future<void> _openCardDesignStudioV2Dialog(BuildContext context) async {
+    final previewProduct = _buildProductFromForm();
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final size = MediaQuery.sizeOf(dialogContext);
+
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 18,
+          ),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: SizedBox(
+            width: size.width * 0.96,
+            height: size.height * 0.92,
+            child: MBCardDesignStudioV2(
+              products: [previewProduct],
+              initialProductIndex: 0,
+              initialDesignJson: _cardDesignJson,
+              title: 'Product Card Design Studio V2',
+              wrapWithScaffold: false,
+              onSave: (json) {
+                Navigator.of(dialogContext).pop(json);
+              },
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    final normalized = result.trim();
+
+    setState(() {
+      _cardDesignJson = normalized.isEmpty ? null : normalized;
+    });
+  }
   Widget _buildCardDesignStudioBridgePanel(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -2354,6 +2400,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                       : 'Open Design Studio',
                 ),
               ),
+              OutlinedButton.icon(                 onPressed: () => _openCardDesignStudioV2Dialog(context),                 icon: const Icon(Icons.dashboard_customize_rounded),                 label: const Text('Open Studio V2'),               ),
               if (_hasCardDesignJson)
                 OutlinedButton.icon(
                   onPressed: () {

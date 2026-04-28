@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
 import '../mb_design_card_defaults.dart';
+import '../mb_design_element_runtime_style.dart';
 
 // MuthoBazar Design Card Engine V1
 // File: mb_design_text_element.dart
 //
 // Purpose:
 // Basic text element for title/subtitle/price labels.
+//
+// Element-style upgrade:
+// The template can now pass runtimeStyle from cardDesignJson['elementStyles'].
 
 class MBDesignTextElement extends StatelessWidget {
   const MBDesignTextElement({
@@ -15,6 +19,7 @@ class MBDesignTextElement extends StatelessWidget {
     required this.text,
     this.element,
     this.defaultStyle,
+    this.runtimeStyle,
     this.maxLines = 1,
     this.textAlign = TextAlign.start,
   });
@@ -22,6 +27,7 @@ class MBDesignTextElement extends StatelessWidget {
   final String text;
   final MBCardElementConfig? element;
   final TextStyle? defaultStyle;
+  final MBDesignElementRuntimeStyle? runtimeStyle;
   final int maxLines;
   final TextAlign textAlign;
 
@@ -35,7 +41,7 @@ class MBDesignTextElement extends StatelessWidget {
       text,
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      textAlign: textAlign,
+      textAlign: runtimeStyle?.textAlign ?? textAlign,
       style: _style(),
     );
   }
@@ -52,12 +58,14 @@ class MBDesignTextElement extends StatelessWidget {
           height: 1.1,
         );
 
-    return base.copyWith(
+    final tokenMerged = base.copyWith(
       fontSize: style?.fontSize ?? base.fontSize,
       color: _colorFromToken(style?.colorToken) ?? base.color,
       fontWeight: _fontWeight(style?.fontWeight) ?? base.fontWeight,
       fontStyle: _fontStyle(style?.fontStyle) ?? base.fontStyle,
     );
+
+    return runtimeStyle?.mergeTextStyle(tokenMerged) ?? tokenMerged;
   }
 
   Color? _colorFromToken(String? token) {

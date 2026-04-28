@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
 import '../mb_design_card_defaults.dart';
+import '../mb_design_element_runtime_style.dart';
 import 'mb_design_text_element.dart';
 
 // MuthoBazar Design Card Engine V1
@@ -17,12 +18,21 @@ class MBDesignPriceElement extends StatelessWidget {
     this.originalPriceText,
     this.finalPriceElement,
     this.originalPriceElement,
+    this.finalPriceColor,
+    this.originalPriceColor,
+    this.finalPriceStyle,
+    this.originalPriceStyle,
   });
 
   final String finalPriceText;
   final String? originalPriceText;
   final MBCardElementConfig? finalPriceElement;
   final MBCardElementConfig? originalPriceElement;
+
+  final Color? finalPriceColor;
+  final Color? originalPriceColor;
+  final MBDesignElementRuntimeStyle? finalPriceStyle;
+  final MBDesignElementRuntimeStyle? originalPriceStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +47,9 @@ class MBDesignPriceElement extends StatelessWidget {
         MBDesignTextElement(
           text: finalPriceText,
           element: finalPriceElement,
-          defaultStyle: const TextStyle(
-            color: MBDesignCardDefaults.orangeDark,
+          runtimeStyle: finalPriceStyle,
+          defaultStyle: TextStyle(
+            color: finalPriceColor ?? MBDesignCardDefaults.orangeDark,
             fontSize: 17,
             fontWeight: FontWeight.w900,
             height: 1,
@@ -52,13 +63,23 @@ class MBDesignPriceElement extends StatelessWidget {
             originalPriceText!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: MBDesignCardDefaults.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.lineThrough,
-              height: 1.1,
-            ),
+            style: originalPriceStyle?.mergeTextStyle(
+                  TextStyle(
+                    color:
+                        originalPriceColor ?? MBDesignCardDefaults.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.lineThrough,
+                    height: 1.1,
+                  ),
+                ) ??
+                TextStyle(
+                  color: originalPriceColor ?? MBDesignCardDefaults.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.lineThrough,
+                  height: 1.1,
+                ),
           ),
         ],
       ],

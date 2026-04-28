@@ -8,6 +8,8 @@ import 'package:shared_models/product_cards/design/mb_card_element_position.dart
 import 'package:shared_models/product_cards/design/mb_card_element_size.dart';
 import 'package:shared_models/shared_models.dart';
 import '../design_engine/mb_design_card_engine.dart';
+import '../design_engine/mb_design_runtime_palette.dart';
+import '../design_engine/mb_design_element_runtime_style.dart';
 
 // MuthoBazar Reusable Card Design Studio Shell
 // -------------------------------------------
@@ -73,6 +75,10 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
   String _activePresetId = 'rich';
   String _activeElementId = 'title';
 
+  String _activePaletteId = 'orange_fresh';
+  late Map<String, String> _paletteValues =
+      MBDesignRuntimePalette.presetHexMap(_activePaletteId);
+
   late Set<String> _visibleElementIds =
       Set<String>.from(_presets[_activePresetId] ?? _richPreset);
 
@@ -81,6 +87,9 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
 
   final Map<String, MBCardElementSize> _sizeOverrides =
       <String, MBCardElementSize>{};
+
+  final Map<String, Map<String, Object?>> _elementStyleOverrides =
+      <String, Map<String, Object?>>{};
 
   static const List<String> _allElementIds = <String>[
     'backgroundPanel',
@@ -352,6 +361,8 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
         'cardWidth': _cardWidth,
         'visibleElementCount': _visibleElementIds.length,
         'activeElementId': _activeElementId,
+        'palette': _paletteMap,
+        'elementStyles': _cleanElementStyleOverrides(),
         'positionOverrides': _positionOverrides.map(
           (key, value) => MapEntry(key, value.toMap()),
         ),
@@ -416,10 +427,19 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
     return resolved ?? const MBCardElementSize();
   }
 
+  Map<String, Object?> get _paletteMap {
+    return <String, Object?>{
+      'presetId': _activePaletteId,
+      for (final key in MBDesignRuntimePalette.editableHexKeys)
+        key: _paletteValues[key],
+    };
+  }
+
   Map<String, Object?> get _exportableDesignState {
     final visible = _visibleElementIds.toList()..sort();
     final positionKeys = _positionOverrides.keys.toList()..sort();
     final sizeKeys = _sizeOverrides.keys.toList()..sort();
+    final styleKeys = _elementStyleOverrides.keys.toList()..sort();
 
     return <String, Object?>{
       'version': 1,
@@ -434,12 +454,18 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
         'minHeight': _minHeight,
         'maxHeight': _maxHeight,
       },
+      'palette': _paletteMap,
       'visibleElementIds': visible,
       'positionOverrides': <String, Object?>{
         for (final key in positionKeys) key: _positionOverrides[key]!.toMap(),
       },
       'sizeOverrides': <String, Object?>{
         for (final key in sizeKeys) key: _sizeOverrides[key]!.toMap(),
+      },
+      'elementStyles': <String, Object?>{
+        for (final key in styleKeys)
+          if ((_elementStyleOverrides[key] ?? <String, Object?>{}).isNotEmpty)
+            key: _elementStyleOverrides[key],
       },
     };
   }
@@ -548,12 +574,20 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: MBDesignCardRenderer(
-                    product: _selectedProduct,
-                    config: _config,
-                    onTap: _showSnack('Product tapped'),
-                    onPrimaryCtaTap: _showSnack('Primary CTA tapped'),
-                    onSecondaryCtaTap: _showSnack('Secondary CTA tapped'),
+                  child: MBDesignRuntimePaletteScope(
+                    palette: MBDesignRuntimePalette.fromMap(_paletteMap),
+                    child: MBDesignElementRuntimeStyleScope(
+                      styles: MBDesignElementRuntimeStyles.fromMap(
+                        _cleanElementStyleOverrides(),
+                      ),
+                      child: MBDesignCardRenderer(
+                        product: _selectedProduct,
+                        config: _config,
+                        onTap: _showSnack('Product tapped'),
+                        onPrimaryCtaTap: _showSnack('Primary CTA tapped'),
+                        onSecondaryCtaTap: _showSnack('Secondary CTA tapped'),
+                      ),
+                    ),
                   ),
                 ),
                 _buildActiveElementDragHandle(cardHeight),
@@ -897,6 +931,8 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
                   _presetChip('all', 'All'),
                 ],
               ),
+              const SizedBox(height: 18),
+              _buildPalettePanel(),
               const SizedBox(height: 18),
               _sectionLabel('Preview'),
               SwitchListTile.adaptive(
@@ -1274,6 +1310,8 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              _buildElementStylePanel(),
               const SizedBox(height: 14),
               _sectionLabel('Active element position'),
               const SizedBox(height: 8),
@@ -1295,7 +1333,8 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
                 'visible elements: ${_visibleElementIds.length}\n'
                 'supported elements: ${_config.elements.length}\n'
                 'position overrides: ${_positionOverrides.length}\n'
-                'size overrides: ${_sizeOverrides.length}',
+                'size overrides: ${_sizeOverrides.length}\n'
+                'style overrides: ${_elementStyleOverrides.length}',
               ),
               const SizedBox(height: 12),
               _sectionLabel('Visible element ids'),
@@ -1309,6 +1348,10 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
               _sectionLabel('All size overrides'),
               const SizedBox(height: 8),
               _codeBox(_allSizeOverridesText()),
+              const SizedBox(height: 12),
+              _sectionLabel('All element style overrides'),
+              const SizedBox(height: 8),
+              _codeBox(_allElementStyleOverridesText()),
             ],
           ),
         ),
@@ -1357,6 +1400,849 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
             )
           : null,
     );
+  }
+
+
+
+  Widget _buildElementStylePanel() {
+    final style = _activeStyleMap;
+    final activeElement = _activeElementId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('Element style tuning'),
+        const SizedBox(height: 8),
+        Text(
+          'Active element: $activeElement',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF777777),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _styleHexField(
+              keyName: 'textColorHex',
+              label: 'Text color',
+              fallbackHex: _styleFallbackTextHex(activeElement),
+            ),
+            _styleHexField(
+              keyName: 'backgroundHex',
+              label: 'Background',
+              fallbackHex: _styleFallbackBackgroundHex(activeElement),
+            ),
+            _styleHexField(
+              keyName: 'borderHex',
+              label: 'Border / ring color',
+              fallbackHex: _styleFallbackBorderHex(activeElement),
+            ),
+            _styleHexField(
+              keyName: 'shadowHex',
+              label: 'Shadow color',
+              fallbackHex: '#000000',
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _styleNullableSlider(
+          label: 'Font size',
+          keyName: 'fontSize',
+          defaultValue: _defaultStyleFontSize(activeElement),
+          min: 7,
+          max: 32,
+          divisions: 50,
+          decimals: 1,
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _styleDropdownValue(
+            keyName: 'fontWeight',
+            allowedValues: const [
+              'auto',
+              'w400',
+              'w500',
+              'w600',
+              'w700',
+              'w800',
+              'w900',
+            ],
+          ),
+          decoration: _inputDecoration('Font weight'),
+          items: const [
+            DropdownMenuItem(value: 'auto', child: Text('Auto')),
+            DropdownMenuItem(value: 'w400', child: Text('Normal / w400')),
+            DropdownMenuItem(value: 'w500', child: Text('Medium / w500')),
+            DropdownMenuItem(value: 'w600', child: Text('SemiBold / w600')),
+            DropdownMenuItem(value: 'w700', child: Text('Bold / w700')),
+            DropdownMenuItem(value: 'w800', child: Text('ExtraBold / w800')),
+            DropdownMenuItem(value: 'w900', child: Text('Black / w900')),
+          ],
+          onChanged: (value) {
+            if (value == null || value == 'auto') {
+              _setActiveStyleValue('fontWeight', null);
+              return;
+            }
+
+            _setActiveStyleValue('fontWeight', value);
+          },
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _styleDropdownValue(
+            keyName: 'fontStyle',
+            allowedValues: const [
+              'auto',
+              'normal',
+              'italic',
+            ],
+          ),
+          decoration: _inputDecoration('Font style'),
+          items: const [
+            DropdownMenuItem(value: 'auto', child: Text('Auto')),
+            DropdownMenuItem(value: 'normal', child: Text('Normal')),
+            DropdownMenuItem(value: 'italic', child: Text('Italic')),
+          ],
+          onChanged: (value) {
+            if (value == null || value == 'auto') {
+              _setActiveStyleValue('fontStyle', null);
+              return;
+            }
+
+            _setActiveStyleValue('fontStyle', value);
+          },
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _styleDropdownValue(
+            keyName: 'textAlign',
+            allowedValues: const [
+              'auto',
+              'start',
+              'center',
+              'end',
+            ],
+          ),
+          decoration: _inputDecoration('Text alignment'),
+          items: const [
+            DropdownMenuItem(value: 'auto', child: Text('Auto')),
+            DropdownMenuItem(value: 'start', child: Text('Start')),
+            DropdownMenuItem(value: 'center', child: Text('Center')),
+            DropdownMenuItem(value: 'end', child: Text('End')),
+          ],
+          onChanged: (value) {
+            if (value == null || value == 'auto') {
+              _setActiveStyleValue('textAlign', null);
+              return;
+            }
+
+            _setActiveStyleValue('textAlign', value);
+          },
+        ),
+        const SizedBox(height: 10),
+        _styleNullableSlider(
+          label: 'Border radius',
+          keyName: 'borderRadius',
+          defaultValue: _defaultStyleRadius(activeElement),
+          min: 0,
+          max: 999,
+          divisions: 60,
+        ),
+        _styleNullableSlider(
+          label: 'Border width',
+          keyName: 'borderWidth',
+          defaultValue: _defaultStyleBorderWidth(activeElement),
+          min: 0,
+          max: 12,
+          divisions: 24,
+          decimals: 1,
+        ),
+        _styleNullableSlider(
+          label: 'Padding X',
+          keyName: 'paddingX',
+          defaultValue: _defaultStylePaddingX(activeElement),
+          min: 0,
+          max: 32,
+          divisions: 32,
+          decimals: 1,
+        ),
+        _styleNullableSlider(
+          label: 'Padding Y',
+          keyName: 'paddingY',
+          defaultValue: _defaultStylePaddingY(activeElement),
+          min: 0,
+          max: 24,
+          divisions: 24,
+          decimals: 1,
+        ),
+        _styleNullableSlider(
+          label: 'Shadow opacity',
+          keyName: 'shadowOpacity',
+          defaultValue: 0.14,
+          min: 0,
+          max: 0.50,
+          divisions: 25,
+          decimals: 2,
+        ),
+        _styleNullableSlider(
+          label: 'Shadow blur',
+          keyName: 'shadowBlur',
+          defaultValue: 12,
+          min: 0,
+          max: 40,
+          divisions: 40,
+          decimals: 1,
+        ),
+        _styleNullableSlider(
+          label: 'Shadow Y',
+          keyName: 'shadowDy',
+          defaultValue: 4,
+          min: -12,
+          max: 24,
+          divisions: 36,
+          decimals: 1,
+        ),
+        _styleNullableSlider(
+          label: 'Image ring width',
+          keyName: 'ringWidth',
+          defaultValue: 5,
+          min: 0,
+          max: 16,
+          divisions: 32,
+          decimals: 1,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _resetActiveElementStyle,
+              icon: const Icon(Icons.format_clear_rounded),
+              label: const Text('Reset active style'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _resetAllElementStyles,
+              icon: const Icon(Icons.layers_clear_rounded),
+              label: const Text('Reset all styles'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _codeBox(_prettyElementStyle(activeElement, style)),
+      ],
+    );
+  }
+
+  Map<String, Object?> get _activeStyleMap {
+    return Map<String, Object?>.from(
+      _elementStyleOverrides[_activeElementId] ?? <String, Object?>{},
+    );
+  }
+
+  Map<String, Object?> _cleanElementStyleOverrides() {
+    final result = <String, Object?>{};
+    final keys = _elementStyleOverrides.keys.toList()..sort();
+
+    for (final key in keys) {
+      final value = Map<String, Object?>.from(
+        _elementStyleOverrides[key] ?? <String, Object?>{},
+      );
+
+      value.removeWhere((_, item) {
+        if (item == null) return true;
+        if (item is String && item.trim().isEmpty) return true;
+        return false;
+      });
+
+      if (value.isNotEmpty) {
+        result[key] = value;
+      }
+    }
+
+    return result;
+  }
+
+  void _setActiveStyleValue(String key, Object? value) {
+    setState(() {
+      _activePresetId = 'custom';
+
+      final current = Map<String, Object?>.from(
+        _elementStyleOverrides[_activeElementId] ?? <String, Object?>{},
+      );
+
+      if (value == null || (value is String && value.trim().isEmpty)) {
+        current.remove(key);
+      } else {
+        current[key] = value;
+      }
+
+      if (current.isEmpty) {
+        _elementStyleOverrides.remove(_activeElementId);
+      } else {
+        _elementStyleOverrides[_activeElementId] = current;
+      }
+    });
+  }
+
+  void _resetActiveElementStyle() {
+    setState(() {
+      _elementStyleOverrides.remove(_activeElementId);
+    });
+  }
+
+  void _resetAllElementStyles() {
+    setState(() {
+      _elementStyleOverrides.clear();
+    });
+  }
+
+  String _styleDropdownValue({
+    required String keyName,
+    required List<String> allowedValues,
+  }) {
+    final value = _activeStyleMap[keyName]?.toString().trim();
+    if (value == null || value.isEmpty) {
+      return 'auto';
+    }
+
+    if (allowedValues.contains(value)) {
+      return value;
+    }
+
+    return 'auto';
+  }
+
+  Widget _styleHexField({
+    required String keyName,
+    required String label,
+    required String fallbackHex,
+  }) {
+    final rawCurrent = _activeStyleMap[keyName]?.toString() ?? fallbackHex;
+    final current = MBDesignRuntimePalette.normalizeHex(rawCurrent);
+    final isValid = MBDesignRuntimePalette.isValidHex(current);
+    final swatchColor = MBDesignRuntimePalette.colorFromHex(
+      current,
+      fallback: Colors.transparent,
+    );
+
+    void openPicker() {
+      _openHexColorPicker(
+        title: '$label Â· $_activeElementId',
+        initialHex: current,
+        fallbackHex: fallbackHex,
+        onSelected: (hex) => _setActiveStyleValue(keyName, hex),
+      );
+    }
+
+    return SizedBox(
+      width: 190,
+      child: TextFormField(
+        key: ValueKey(
+          'style_picker_${_activeElementId}_${keyName}_$current',
+        ),
+        initialValue: current,
+        readOnly: true,
+        onTap: openPicker,
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          prefixIcon: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: openPicker,
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: swatchColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.10),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: swatchColor.withValues(alpha: 0.22),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const SizedBox(
+                  width: 22,
+                  height: 22,
+                ),
+              ),
+            ),
+          ),
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Pick color',
+                icon: const Icon(Icons.palette_outlined, size: 18),
+                onPressed: openPicker,
+              ),
+              IconButton(
+                tooltip: 'Clear',
+                icon: const Icon(Icons.close_rounded, size: 17),
+                onPressed: () => _setActiveStyleValue(keyName, null),
+              ),
+            ],
+          ),
+          errorText: isValid ? null : 'Use #RRGGBB',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openHexColorPicker({
+    required String title,
+    required String initialHex,
+    required String fallbackHex,
+    required ValueChanged<String> onSelected,
+  }) async {
+    final startHex = MBDesignRuntimePalette.isValidHex(initialHex)
+        ? MBDesignRuntimePalette.normalizeHex(initialHex)
+        : MBDesignRuntimePalette.normalizeHex(fallbackHex);
+
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return _MBHexColorPickerDialog(
+          title: title,
+          initialHex: startHex,
+        );
+      },
+    );
+
+    if (picked == null) {
+      return;
+    }
+
+    final normalized = MBDesignRuntimePalette.normalizeHex(picked);
+
+    if (!MBDesignRuntimePalette.isValidHex(normalized)) {
+      return;
+    }
+
+    onSelected(normalized);
+  }
+  Widget _styleNullableSlider({
+    required String label,
+    required String keyName,
+    required double defaultValue,
+    required double min,
+    required double max,
+    int? divisions,
+    int decimals = 0,
+  }) {
+    final rawValue = _activeStyleMap[keyName];
+    final enabled = rawValue != null;
+    final numericValue = _readStyleDouble(rawValue) ?? defaultValue;
+    final effectiveValue = numericValue.clamp(min, max).toDouble();
+    final display = decimals == 0
+        ? effectiveValue.toStringAsFixed(0)
+        : effectiveValue.toStringAsFixed(decimals);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: enabled
+              ? const Color(0xFFFFF7EF)
+              : const Color(0xFFF8F8F9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: enabled
+                ? const Color(0xFFFF7A00).withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    enabled ? display : 'auto',
+                    style: TextStyle(
+                      color: enabled
+                          ? const Color(0xFFFF6A00)
+                          : const Color(0xFF777777),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Switch.adaptive(
+                    value: enabled,
+                    onChanged: (state) {
+                      if (state) {
+                        _setActiveStyleValue(keyName, defaultValue);
+                      } else {
+                        _setActiveStyleValue(keyName, null);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              if (enabled)
+                Slider(
+                  value: effectiveValue,
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: (value) => _setActiveStyleValue(keyName, value),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  double? _readStyleDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString().trim() ?? '');
+  }
+
+  String _styleFallbackTextHex(String elementId) {
+    final palette = MBDesignRuntimePalette.normalizePaletteMap(_paletteMap);
+
+    switch (elementId) {
+      case 'title':
+        return palette['titleTextHex'] ?? '#FFFFFF';
+      case 'subtitle':
+        return palette['subtitleTextHex'] ?? '#FFFFFF';
+      case 'finalPrice':
+      case 'priceBadge':
+        return palette['priceTextHex'] ?? '#0D4C7A';
+      case 'secondaryCta':
+      case 'primaryCta':
+        return palette['buttonTextHex'] ?? '#FFFFFF';
+      case 'deliveryHint':
+        return palette['deliveryChipTextHex'] ?? '#1565C0';
+      case 'timer':
+        return palette['timerChipTextHex'] ?? '#B55A00';
+      default:
+        return palette['badgeTextHex'] ?? '#FF6A00';
+    }
+  }
+
+  String _styleFallbackBackgroundHex(String elementId) {
+    final palette = MBDesignRuntimePalette.normalizePaletteMap(_paletteMap);
+
+    switch (elementId) {
+      case 'secondaryCta':
+      case 'primaryCta':
+        return palette['buttonEndHex'] ?? '#FF6500';
+      case 'priceBadge':
+        return palette['priceBubbleBackgroundHex'] ?? '#FFE1CF';
+      case 'deliveryHint':
+        return palette['deliveryChipBackgroundHex'] ?? '#E7F0FF';
+      case 'timer':
+        return palette['timerChipBackgroundHex'] ?? '#FFF2DE';
+      case 'media':
+      case 'imageFrame':
+        return palette['badgeBackgroundHex'] ?? '#FFFFFF';
+      default:
+        return palette['badgeBackgroundHex'] ?? '#FFFFFF';
+    }
+  }
+
+  String _styleFallbackBorderHex(String elementId) {
+    final palette = MBDesignRuntimePalette.normalizePaletteMap(_paletteMap);
+
+    switch (elementId) {
+      case 'media':
+      case 'imageFrame':
+        return palette['badgeBackgroundHex'] ?? '#FFFFFF';
+      default:
+        return palette['cardBorderHex'] ?? '#FF8E24';
+    }
+  }
+
+  double _defaultStyleFontSize(String elementId) {
+    switch (elementId) {
+      case 'title':
+        return 18;
+      case 'subtitle':
+        return 11.5;
+      case 'finalPrice':
+        return 17;
+      case 'priceBadge':
+        return 14;
+      case 'secondaryCta':
+      case 'primaryCta':
+        return 11;
+      default:
+        return 10.5;
+    }
+  }
+
+  double _defaultStyleRadius(String elementId) {
+    switch (elementId) {
+      case 'title':
+      case 'subtitle':
+        return 0;
+      case 'media':
+      case 'imageFrame':
+      case 'priceBadge':
+      case 'secondaryCta':
+      case 'primaryCta':
+      default:
+        return 999;
+    }
+  }
+
+  double _defaultStyleBorderWidth(String elementId) {
+    switch (elementId) {
+      case 'media':
+        return 4;
+      case 'imageFrame':
+        return 5;
+      case 'priceBadge':
+        return 3;
+      default:
+        return 1;
+    }
+  }
+
+  double _defaultStylePaddingX(String elementId) {
+    switch (elementId) {
+      case 'secondaryCta':
+      case 'primaryCta':
+        return 14;
+      case 'deliveryHint':
+      case 'timer':
+      case 'savingBadge':
+      case 'imageOverlay':
+        return 9;
+      default:
+        return 8;
+    }
+  }
+
+  double _defaultStylePaddingY(String elementId) {
+    switch (elementId) {
+      case 'secondaryCta':
+      case 'primaryCta':
+        return 8;
+      case 'deliveryHint':
+      case 'timer':
+        return 6;
+      default:
+        return 5;
+    }
+  }
+
+  String _prettyElementStyle(
+    String elementId,
+    Map<String, Object?> style,
+  ) {
+    if (style.isEmpty) {
+      return 'elementId: $elementId\nNo style overrides.';
+    }
+
+    final keys = style.keys.toList()..sort();
+
+    return [
+      'elementId: $elementId',
+      for (final key in keys) '$key: ${style[key]}',
+    ].join('\n');
+  }
+
+
+  Widget _buildPalettePanel() {
+    final palettePreview = MBDesignRuntimePalette.fromMap(_paletteMap);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('Palette / Color tuning'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final presetId in MBDesignRuntimePalette.presetIds)
+              ChoiceChip(
+                label: Text(MBDesignRuntimePalette.presetLabel(presetId)),
+                selected: _activePaletteId == presetId,
+                onSelected: (_) => _applyPalettePreset(presetId),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                palettePreview.panelStart,
+                palettePreview.panelEnd,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: palettePreview.cardBorder.withValues(alpha: 0.55),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  MBDesignRuntimePalette.presetLabel(_activePaletteId),
+                  style: TextStyle(
+                    color: palettePreview.titleText,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  gradient: palettePreview.buttonGradient,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Button',
+                  style: TextStyle(
+                    color: palettePreview.buttonText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final key in MBDesignRuntimePalette.editableHexKeys)
+              SizedBox(
+                width: 190,
+                child: _paletteHexField(key),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _paletteHexField(String key) {
+    final rawValue = _paletteValues[key] ??
+        MBDesignRuntimePalette.presetHexMap(_activePaletteId)[key] ??
+        '#FFFFFF';
+
+    final value = MBDesignRuntimePalette.normalizeHex(rawValue);
+    final isValid = MBDesignRuntimePalette.isValidHex(value);
+    final swatchColor = MBDesignRuntimePalette.colorFromHex(
+      value,
+      fallback: Colors.transparent,
+    );
+
+    void openPicker() {
+      _openHexColorPicker(
+        title: MBDesignRuntimePalette.fieldLabel(key),
+        initialHex: value,
+        fallbackHex: '#FFFFFF',
+        onSelected: (hex) => _applyPaletteHex(key, hex),
+      );
+    }
+
+    return TextFormField(
+      key: ValueKey('palette_picker_${_activePaletteId}_${key}_$value'),
+      initialValue: value,
+      readOnly: true,
+      onTap: openPicker,
+      decoration: InputDecoration(
+        labelText: MBDesignRuntimePalette.fieldLabel(key),
+        isDense: true,
+        prefixIcon: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: openPicker,
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: swatchColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.black.withValues(alpha: 0.10),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: swatchColor.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const SizedBox(
+                width: 22,
+                height: 22,
+              ),
+            ),
+          ),
+        ),
+        suffixIcon: IconButton(
+          tooltip: 'Pick color',
+          icon: const Icon(Icons.palette_outlined, size: 18),
+          onPressed: openPicker,
+        ),
+        errorText: isValid ? null : 'Use #RRGGBB',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  void _applyPaletteHex(String key, String rawHex) {
+    final normalized = MBDesignRuntimePalette.normalizeHex(rawHex);
+
+    if (!MBDesignRuntimePalette.isValidHex(normalized)) {
+      return;
+    }
+
+    setState(() {
+      _activePresetId = 'custom';
+      _paletteValues = <String, String>{
+        ..._paletteValues,
+        key: normalized,
+      };
+    });
+  }
+  void _applyPalettePreset(String presetId) {
+    setState(() {
+      _activePresetId = 'custom';
+      _activePaletteId = presetId;
+      _paletteValues = MBDesignRuntimePalette.presetHexMap(presetId);
+    });
   }
 
   Widget _sectionLabel(String text) {
@@ -1647,10 +2533,13 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
       _visibleElementIds = Set<String>.from(_richPreset);
       _positionOverrides.clear();
       _sizeOverrides.clear();
+      _elementStyleOverrides.clear();
       _cardWidth = 220;
       _aspectRatio = 0.56;
       _minHeight = 430;
       _maxHeight = 520;
+      _activePaletteId = 'orange_fresh';
+      _paletteValues = MBDesignRuntimePalette.presetHexMap(_activePaletteId);
     });
 
     _showSnack('Design config reset')();
@@ -1826,6 +2715,9 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
       );
 
       final layout = _readMap(map['layout']);
+      final importedPalette = MBDesignRuntimePalette.normalizePaletteMap(
+        _readMap(map['palette']),
+      );
 
       final importedVisible = _readStringList(
         map['visibleElementIds'],
@@ -1839,11 +2731,18 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
         map['sizeOverrides'],
       );
 
+      final importedStyles = _readElementStyles(
+        map['elementStyles'],
+      );
+
       setState(() {
         _activePresetId = activePresetId.isEmpty ? 'custom' : activePresetId;
         _activeElementId = _allElementIds.contains(activeElementId)
             ? activeElementId
             : 'title';
+
+        _activePaletteId = importedPalette['presetId'] ?? 'orange_fresh';
+        _paletteValues = Map<String, String>.from(importedPalette);
 
         if (importedVisible.isNotEmpty) {
           _visibleElementIds = importedVisible;
@@ -1856,6 +2755,10 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
         _sizeOverrides
           ..clear()
           ..addAll(importedSizes);
+
+        _elementStyleOverrides
+          ..clear()
+          ..addAll(importedStyles);
 
         _cardWidth = _readDouble(
           layout['cardWidth'],
@@ -1934,6 +2837,23 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
     return keys
         .map(
           (key) => _prettySize(key, _sizeOverrides[key]!),
+        )
+        .join('\n\n');
+  }
+
+  String _allElementStyleOverridesText() {
+    final cleaned = _cleanElementStyleOverrides();
+    if (cleaned.isEmpty) {
+      return 'No element style overrides yet.';
+    }
+
+    final keys = cleaned.keys.toList()..sort();
+    return keys
+        .map(
+          (key) => _prettyElementStyle(
+            key,
+            Map<String, Object?>.from(cleaned[key] as Map),
+          ),
         )
         .join('\n\n');
   }
@@ -2020,6 +2940,47 @@ class _MBCardDesignStudioState extends State<MBCardDesignStudio> {
     return result;
   }
 
+  static Map<String, Map<String, Object?>> _readElementStyles(Object? value) {
+    final map = _readMap(value);
+    final result = <String, Map<String, Object?>>{};
+
+    for (final entry in map.entries) {
+      final elementId = entry.key.toString().trim();
+      final rawStyle = entry.value;
+
+      if (elementId.isEmpty || rawStyle is! Map) {
+        continue;
+      }
+
+      final style = <String, Object?>{};
+      final rawMap = _readMap(rawStyle);
+
+      for (final styleEntry in rawMap.entries) {
+        final key = styleEntry.key.toString().trim();
+        final item = styleEntry.value;
+
+        if (key.isEmpty) {
+          continue;
+        }
+
+        if (item == null) {
+          continue;
+        }
+
+        if (item is String && item.trim().isEmpty) {
+          continue;
+        }
+
+        style[key] = item;
+      }
+
+      if (style.isNotEmpty) {
+        result[elementId] = style;
+      }
+    }
+
+    return result;
+  }
   static final MBProduct _fallbackProduct = MBProduct.fromMap(
     <String, dynamic>{
       'id': 'design_studio_fallback_product',
@@ -2145,3 +3106,363 @@ class _DragHandleBadge extends StatelessWidget {
   }
 }
 
+class _MBHexColorPickerDialog extends StatefulWidget {
+  const _MBHexColorPickerDialog({
+    required this.title,
+    required this.initialHex,
+  });
+
+  final String title;
+  final String initialHex;
+
+  @override
+  State<_MBHexColorPickerDialog> createState() =>
+      _MBHexColorPickerDialogState();
+}
+
+class _MBHexColorPickerDialogState extends State<_MBHexColorPickerDialog> {
+  late int _red;
+  late int _green;
+  late int _blue;
+  late final TextEditingController _hexController;
+
+  static const List<String> _quickColors = <String>[
+    '#FFFFFF',
+    '#F8FAFC',
+    '#F1F5F9',
+    '#E5E7EB',
+    '#111827',
+    '#000000',
+    '#FF7A00',
+    '#FF6500',
+    '#FFA53A',
+    '#FFE1CF',
+    '#42C66B',
+    '#129A44',
+    '#22A652',
+    '#EFFFF0',
+    '#2196F3',
+    '#1565C0',
+    '#E7F0FF',
+    '#7C3AED',
+    '#EC4899',
+    '#F43F5E',
+    '#FFB300',
+    '#075E2D',
+    '#0D4C7A',
+    '#6C6C6C',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initialColor = MBDesignRuntimePalette.colorFromHex(
+      widget.initialHex,
+      fallback: const Color(0xFFFF7A00),
+    );
+
+    _red = (initialColor.r * 255).round().clamp(0, 255).toInt();
+    _green = (initialColor.g * 255).round().clamp(0, 255).toInt();
+    _blue = (initialColor.b * 255).round().clamp(0, 255).toInt();
+    _hexController = TextEditingController(text: _currentHex);
+  }
+
+  @override
+  void dispose() {
+    _hexController.dispose();
+    super.dispose();
+  }
+
+  Color get _currentColor {
+    return Color.fromARGB(255, _red, _green, _blue);
+  }
+
+  String get _currentHex {
+    String part(int value) {
+      return value.clamp(0, 255).toRadixString(16).padLeft(2, '0');
+    }
+
+    return '#${part(_red)}${part(_green)}${part(_blue)}'.toUpperCase();
+  }
+
+  void _setColorFromHex(String rawHex) {
+    final normalized = MBDesignRuntimePalette.normalizeHex(rawHex);
+
+    if (!MBDesignRuntimePalette.isValidHex(normalized)) {
+      return;
+    }
+
+    final color = MBDesignRuntimePalette.colorFromHex(
+      normalized,
+      fallback: _currentColor,
+    );
+
+    setState(() {
+      _red = (color.r * 255).round().clamp(0, 255).toInt();
+      _green = (color.g * 255).round().clamp(0, 255).toInt();
+      _blue = (color.b * 255).round().clamp(0, 255).toInt();
+      _hexController.text = normalized;
+      _hexController.selection = TextSelection.collapsed(
+        offset: _hexController.text.length,
+      );
+    });
+  }
+
+  void _setChannel({
+    required String channel,
+    required double value,
+  }) {
+    setState(() {
+      final channelValue = value.round().clamp(0, 255).toInt();
+
+      switch (channel) {
+        case 'r':
+          _red = channelValue;
+          break;
+        case 'g':
+          _green = channelValue;
+          break;
+        case 'b':
+          _blue = channelValue;
+          break;
+      }
+
+      _hexController.text = _currentHex;
+      _hexController.selection = TextSelection.collapsed(
+        offset: _hexController.text.length,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _currentColor;
+
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.24),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 82,
+                  child: Center(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7,
+                        ),
+                        child: Text(
+                          _currentHex,
+                          style: const TextStyle(
+                            color: Color(0xFF111827),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _hexController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'HEX color',
+                  hintText: '#FF7A00',
+                  prefixIcon: const Icon(Icons.tag_rounded),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onChanged: _setColorFromHex,
+              ),
+              const SizedBox(height: 12),
+              _buildChannelSlider(
+                label: 'Red',
+                value: _red,
+                onChanged: (value) => _setChannel(
+                  channel: 'r',
+                  value: value,
+                ),
+              ),
+              _buildChannelSlider(
+                label: 'Green',
+                value: _green,
+                onChanged: (value) => _setChannel(
+                  channel: 'g',
+                  value: value,
+                ),
+              ),
+              _buildChannelSlider(
+                label: 'Blue',
+                value: _blue,
+                onChanged: (value) => _setChannel(
+                  channel: 'b',
+                  value: value,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Quick colors',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final hex in _quickColors)
+                    _ColorPickerSwatch(
+                      hex: hex,
+                      selected: MBDesignRuntimePalette.normalizeHex(hex) ==
+                          _currentHex,
+                      onTap: () => _setColorFromHex(hex),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(_currentHex),
+          icon: const Icon(Icons.check_rounded),
+          label: const Text('Apply color'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChannelSlider({
+    required String label,
+    required int value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 54,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Slider(
+            value: value.toDouble(),
+            min: 0,
+            max: 255,
+            divisions: 255,
+            onChanged: onChanged,
+          ),
+        ),
+        SizedBox(
+          width: 36,
+          child: Text(
+            value.toString(),
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ColorPickerSwatch extends StatelessWidget {
+  const _ColorPickerSwatch({
+    required this.hex,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String hex;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = MBDesignRuntimePalette.colorFromHex(
+      hex,
+      fallback: Colors.transparent,
+    );
+
+    return Tooltip(
+      message: hex,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.black.withValues(alpha: 0.10),
+              width: selected ? 3 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: selected ? 0.34 : 0.16),
+                blurRadius: selected ? 12 : 6,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: selected
+              ? const Icon(
+                  Icons.check_rounded,
+                  size: 17,
+                  color: Colors.white,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}

@@ -9,6 +9,8 @@ import '../elements/mb_design_price_element.dart';
 import '../elements/mb_design_text_element.dart';
 import '../mb_design_card_context.dart';
 import '../mb_design_card_defaults.dart';
+import '../mb_design_runtime_palette.dart';
+import '../mb_design_element_runtime_style.dart';
 import '../positioning/mb_design_positioned_element.dart';
 
 // MuthoBazar Design Card Engine V1
@@ -88,6 +90,8 @@ class _HeroPosterCardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final elements = _ResolvedHeroElements(contextData.config);
+    final palette = mbResolveDesignRuntimePalette(context, contextData.config);
+    final elementStyles = mbResolveDesignElementRuntimeStyles(context, contextData.config);
 
     final layers = <_HeroLayer>[
       _HeroLayer(
@@ -95,6 +99,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'topLeftOverlay',
         child: _SoftRibbonChip(
           text: contextData.resolveBinding(elements.ribbon),
+          palette: palette,
         ),
       ),
       _HeroLayer(
@@ -102,6 +107,8 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'topRightOverlay',
         child: _PriceBubble(
           text: contextData.finalPriceText,
+          palette: palette,
+          style: elementStyles.of('priceBadge'),
         ),
       ),
       _HeroLayer(
@@ -109,8 +116,8 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'topTextStart',
         child: _MiniLabel(
           text: contextData.brandName.toUpperCase(),
-          color: Colors.white.withValues(alpha: 0.92),
-          background: Colors.white.withValues(alpha: 0.16),
+          color: palette.titleText.withValues(alpha: 0.92),
+          background: palette.badgeBackground.withValues(alpha: 0.16),
         ),
       ),
       _HeroLayer(
@@ -118,9 +125,9 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'belowBrand',
         child: _MiniLabel(
           text: contextData.categoryName,
-          color: const Color(0xFFFF7A00),
-          background: Colors.white,
-          borderColor: Colors.white.withValues(alpha: 0.34),
+          color: palette.badgeText,
+          background: palette.badgeBackground,
+          borderColor: palette.badgeBackground.withValues(alpha: 0.34),
         ),
       ),
       _HeroLayer(
@@ -128,6 +135,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'actionTop1',
         child: _RoundIconButton(
           icon: Icons.favorite_border_rounded,
+          palette: palette,
           onTap: contextData.onTap,
         ),
       ),
@@ -136,6 +144,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'actionTop2',
         child: _RoundIconButton(
           icon: Icons.compare_arrows_rounded,
+          palette: palette,
           onTap: contextData.onTap,
         ),
       ),
@@ -144,6 +153,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'actionTop3',
         child: _RoundIconButton(
           icon: Icons.share_outlined,
+          palette: palette,
           onTap: contextData.onTap,
         ),
       ),
@@ -154,9 +164,10 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: MBDesignTextElement(
           text: contextData.title,
           element: elements.title,
+          runtimeStyle: elementStyles.of('title'),
           maxLines: 2,
-          defaultStyle: const TextStyle(
-            color: Colors.white,
+          defaultStyle: TextStyle(
+            color: palette.titleText,
             fontSize: 18,
             fontWeight: FontWeight.w900,
             fontStyle: FontStyle.italic,
@@ -171,9 +182,10 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: MBDesignTextElement(
           text: contextData.subtitle,
           element: elements.subtitle,
+          runtimeStyle: elementStyles.of('subtitle'),
           maxLines: 3,
           defaultStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.90),
+            color: palette.subtitleText.withValues(alpha: 0.90),
             fontSize: 11.5,
             fontWeight: FontWeight.w500,
             height: 1.18,
@@ -188,6 +200,8 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: _MediaCluster(
           contextData: contextData,
           elements: elements,
+          palette: palette,
+          elementStyles: elementStyles,
         ),
       ),
       _HeroLayer(
@@ -195,6 +209,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'metaLine1',
         child: _StarRating(
           rating: contextData.ratingValue,
+          palette: palette,
         ),
       ),
       _HeroLayer(
@@ -203,7 +218,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: Text(
           contextData.reviewCountText,
           style: TextStyle(
-            color: const Color(0xFF6C6C6C).withValues(alpha: 0.90),
+            color: palette.mutedText.withValues(alpha: 0.90),
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -216,8 +231,9 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: _SoftInfoChip(
           icon: Icons.inventory_2_outlined,
           text: contextData.stockHint,
-          foreground: const Color(0xFF0B7C43),
-          background: const Color(0xFFE7F7ED),
+          style: elementStyles.of('stockHint'),
+          foreground: palette.stockChipText,
+          background: palette.stockChipBackground,
         ),
       ),
       _HeroLayer(
@@ -227,8 +243,9 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: _SoftInfoChip(
           icon: Icons.local_shipping_outlined,
           text: contextData.deliveryHint,
-          foreground: const Color(0xFF1565C0),
-          background: const Color(0xFFE7F0FF),
+          style: elementStyles.of('deliveryHint'),
+          foreground: palette.deliveryChipText,
+          background: palette.deliveryChipBackground,
         ),
       ),
       _HeroLayer(
@@ -237,8 +254,9 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: _SoftInfoChip(
           icon: Icons.timer_outlined,
           text: contextData.timerText,
-          foreground: const Color(0xFFB55A00),
-          background: const Color(0xFFFFF2DE),
+          style: elementStyles.of('timer'),
+          foreground: palette.timerChipText,
+          background: palette.timerChipBackground,
         ),
       ),
       _HeroLayer(
@@ -255,6 +273,10 @@ class _HeroPosterCardBody extends StatelessWidget {
         width: width * 0.44,
         child: MBDesignPriceElement(
           finalPriceText: contextData.finalPriceText,
+          finalPriceColor: palette.priceText,
+          originalPriceColor: palette.originalPriceText,
+          finalPriceStyle: elementStyles.of('finalPrice'),
+          originalPriceStyle: elementStyles.of('originalPrice'),
           originalPriceText: elements.isVisible(elements.originalPrice)
               ? contextData.originalPriceText
               : null,
@@ -267,8 +289,8 @@ class _HeroPosterCardBody extends StatelessWidget {
         fallbackSlot: 'priceRowEnd',
         child: Text(
           contextData.unitLabel,
-          style: const TextStyle(
-            color: Color(0xFF7A7A7A),
+          style: TextStyle(
+            color: palette.mutedText,
             fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
@@ -280,6 +302,10 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: MBDesignBadgeElement(
           text: contextData.savingText ?? '',
           element: elements.savingBadge,
+          runtimeStyle: elementStyles.of('savingBadge'),
+          backgroundColor: palette.badgeBackground,
+          textColor: palette.badgeText,
+          borderColor: palette.badgeText.withValues(alpha: 0.18),
         ),
       ),
       _HeroLayer(
@@ -296,7 +322,11 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: MBDesignCtaElement(
           text: 'Buy',
           element: elements.secondaryCta,
+          runtimeStyle: elementStyles.of('secondaryCta'),
           onTap: contextData.onSecondaryCtaTap,
+          gradient: palette.buttonGradient,
+          textColor: palette.buttonText,
+          shadowColor: palette.buttonEnd.withValues(alpha: 0.24),
         ),
       ),
       _HeroLayer(
@@ -306,7 +336,11 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: MBDesignCtaElement(
           text: 'Add',
           element: elements.primaryCta,
+          runtimeStyle: elementStyles.of('primaryCta'),
           onTap: contextData.onPrimaryCtaTap,
+          gradient: palette.buttonGradient,
+          textColor: palette.buttonText,
+          shadowColor: palette.buttonEnd.withValues(alpha: 0.24),
         ),
       ),
     ];
@@ -322,7 +356,7 @@ class _HeroPosterCardBody extends StatelessWidget {
         color: MBDesignCardDefaults.surface,
         borderRadius: BorderRadius.circular(26),
         border: Border.all(
-          color: const Color(0xFFFF8E24).withValues(alpha: 0.20),
+          color: palette.cardBorder.withValues(alpha: 0.20),
           width: 1.15,
         ),
         boxShadow: MBDesignCardDefaults.softShadow,
@@ -332,8 +366,8 @@ class _HeroPosterCardBody extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            const Positioned.fill(
-              child: _DiagonalPanelBackground(),
+            Positioned.fill(
+              child: _DiagonalPanelBackground(palette: palette),
             ),
             for (final layer in layers) layer.build(),
           ],
@@ -373,10 +407,14 @@ class _MediaCluster extends StatelessWidget {
   const _MediaCluster({
     required this.contextData,
     required this.elements,
+    required this.palette,
+    required this.elementStyles,
   });
 
   final MBDesignCardContext contextData;
   final _ResolvedHeroElements elements;
+  final MBDesignRuntimePalette palette;
+  final MBDesignElementRuntimeStyles elementStyles;
 
   @override
   Widget build(BuildContext context) {
@@ -384,37 +422,19 @@ class _MediaCluster extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         if (elements.isVisible(elements.imageFrame))
-          Container(
-            width: 146,
-            height: 146,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.42),
-            ),
+          _ImageFrameOuter(
+            palette: palette,
+            style: elementStyles.of('imageFrame'),
           ),
         if (elements.isVisible(elements.imageFrame))
-          Container(
-            width: 132,
-            height: 132,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFF3E3),
-              border: Border.all(
-                color: Colors.white,
-                width: 5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.10),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
+          _ImageFrameInner(
+            palette: palette,
+            style: elementStyles.of('imageFrame'),
           ),
         MBDesignMediaElement(
           imageUrl: contextData.imageUrl,
           element: elements.media,
+          runtimeStyle: elementStyles.of('media'),
           size: 120,
         ),
         if (elements.isVisible(elements.promoBadge))
@@ -439,6 +459,10 @@ class _MediaCluster extends StatelessWidget {
             child: MBDesignBadgeElement(
               text: contextData.savingText ?? '',
               element: elements.imageOverlay,
+              runtimeStyle: elementStyles.of('imageOverlay'),
+              backgroundColor: palette.badgeBackground,
+              textColor: palette.badgeText,
+              borderColor: palette.badgeText.withValues(alpha: 0.18),
             ),
           ),
         if (elements.isVisible(elements.flashBadge))
@@ -461,28 +485,107 @@ class _MediaCluster extends StatelessWidget {
   }
 }
 
+
+class _ImageFrameOuter extends StatelessWidget {
+  const _ImageFrameOuter({
+    required this.palette,
+    this.style,
+  });
+
+  final MBDesignRuntimePalette palette;
+  final MBDesignElementRuntimeStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = style?.borderRadius ?? 999;
+    return Container(
+      width: 146,
+      height: 146,
+      decoration: BoxDecoration(
+        color: style?.backgroundColor ??
+            palette.badgeBackground.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(radius),
+        border: style?.borderColor == null
+            ? null
+            : Border.all(
+                color: style!.borderColor!,
+                width: style?.borderWidth ?? 1,
+              ),
+        boxShadow: style?.boxShadow(),
+      ),
+    );
+  }
+}
+
+class _ImageFrameInner extends StatelessWidget {
+  const _ImageFrameInner({
+    required this.palette,
+    this.style,
+  });
+
+  final MBDesignRuntimePalette palette;
+  final MBDesignElementRuntimeStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = style?.borderRadius ?? 999;
+    return Container(
+      width: 132,
+      height: 132,
+      decoration: BoxDecoration(
+        color: palette.surfaceEnd,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: style?.ringColor ?? palette.badgeBackground,
+          width: style?.ringWidth ?? 5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (style?.shadowColor ?? Colors.black).withValues(
+              alpha: style?.shadowOpacity ?? 0.10,
+            ),
+            blurRadius: style?.shadowBlur ?? 14,
+            offset: Offset(0, style?.shadowDy ?? 6),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 class _DiagonalPanelBackground extends StatelessWidget {
-  const _DiagonalPanelBackground();
+  const _DiagonalPanelBackground({
+    required this.palette,
+  });
+
+  final MBDesignRuntimePalette palette;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _DiagonalPanelPainter(),
+      painter: _DiagonalPanelPainter(palette: palette),
       child: const SizedBox.expand(),
     );
   }
 }
 
 class _DiagonalPanelPainter extends CustomPainter {
+  const _DiagonalPanelPainter({
+    required this.palette,
+  });
+
+  final MBDesignRuntimePalette palette;
+
   @override
   void paint(Canvas canvas, Size size) {
     final panelPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFFFFA53A),
-          Color(0xFFFF7400),
+          palette.panelStart,
+          palette.panelEnd,
         ],
       ).createShader(
         Rect.fromLTWH(0, 0, size.width, size.height * 0.70),
@@ -517,12 +620,12 @@ class _DiagonalPanelPainter extends CustomPainter {
     );
 
     final lowerPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color(0xFFFFFBF6),
-          Color(0xFFFFF4E8),
+          palette.surfaceStart,
+          palette.surfaceEnd,
         ],
       ).createShader(
         Rect.fromLTWH(0, size.height * 0.45, size.width, size.height * 0.55),
@@ -540,15 +643,19 @@ class _DiagonalPanelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DiagonalPanelPainter oldDelegate) {
+    return oldDelegate.palette != palette;
+  }
 }
 
 class _SoftRibbonChip extends StatelessWidget {
   const _SoftRibbonChip({
     required this.text,
+    required this.palette,
   });
 
   final String text;
+  final MBDesignRuntimePalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +664,7 @@ class _SoftRibbonChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
+        color: palette.badgeBackground.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(9),
         boxShadow: [
           BoxShadow(
@@ -569,8 +676,8 @@ class _SoftRibbonChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Color(0xFF404040),
+        style: TextStyle(
+          color: palette.badgeText,
           fontSize: 11,
           fontWeight: FontWeight.w800,
         ),
@@ -582,33 +689,51 @@ class _SoftRibbonChip extends StatelessWidget {
 class _PriceBubble extends StatelessWidget {
   const _PriceBubble({
     required this.text,
+    required this.palette,
+    this.style,
   });
 
   final String text;
+  final MBDesignRuntimePalette palette;
+  final MBDesignElementRuntimeStyle? style;
 
   @override
   Widget build(BuildContext context) {
+    final radius = style?.borderRadius ?? 999;
+    final borderWidth = style?.borderWidth ?? 3;
+    final background = style?.backgroundColor ?? palette.priceBubbleBackground;
+    final textColor = style?.textColor ?? palette.priceBubbleText;
+
     return Container(
       width: 60,
       height: 60,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFFFFE1CF),
+        color: background,
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.90),
-          width: 3,
+          color: style?.borderColor ?? Colors.white.withValues(alpha: 0.90),
+          width: borderWidth,
         ),
+        boxShadow: style?.boxShadow(),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFF0D4C7A),
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-          height: 1.0,
-        ),
+        style: style?.mergeTextStyle(
+              TextStyle(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                height: 1.0,
+              ),
+            ) ??
+            TextStyle(
+              color: textColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
       ),
     );
   }
@@ -658,10 +783,12 @@ class _MiniLabel extends StatelessWidget {
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
     required this.icon,
+    required this.palette,
     this.onTap,
   });
 
   final IconData icon;
+  final MBDesignRuntimePalette palette;
   final VoidCallback? onTap;
 
   @override
@@ -683,7 +810,7 @@ class _RoundIconButton extends StatelessWidget {
       child: Icon(
         icon,
         size: 15,
-        color: const Color(0xFFFF7A00),
+        color: palette.buttonEnd,
       ),
     );
 
@@ -734,9 +861,11 @@ class _SmallAccentChip extends StatelessWidget {
 class _StarRating extends StatelessWidget {
   const _StarRating({
     required this.rating,
+    required this.palette,
   });
 
   final double rating;
+  final MBDesignRuntimePalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -749,7 +878,7 @@ class _StarRating extends StatelessWidget {
           Icon(
             index < fullStars ? Icons.star_rounded : Icons.star_border_rounded,
             size: 15,
-            color: const Color(0xFFFFB300),
+            color: palette.ratingStar,
           ),
       ],
     );
@@ -762,22 +891,32 @@ class _SoftInfoChip extends StatelessWidget {
     required this.text,
     required this.foreground,
     required this.background,
+    this.style,
   });
 
   final IconData icon;
   final String text;
   final Color foreground;
   final Color background;
+  final MBDesignElementRuntimeStyle? style;
 
   @override
   Widget build(BuildContext context) {
     if (text.trim().isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      padding: style?.padding ??
+          const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
+        color: style?.backgroundColor ?? background,
+        borderRadius: BorderRadius.circular(style?.borderRadius ?? 999),
+        border: style?.borderColor == null
+            ? null
+            : Border.all(
+                color: style!.borderColor!,
+                width: style?.borderWidth ?? 1,
+              ),
+        boxShadow: style?.boxShadow(),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -792,12 +931,20 @@ class _SoftInfoChip extends StatelessWidget {
             child: Text(
               text,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: foreground,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                height: 1.0,
-              ),
+              style: style?.mergeTextStyle(
+                    TextStyle(
+                      color: style?.textColor ?? foreground,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                    ),
+                  ) ??
+                  TextStyle(
+                    color: foreground,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                  ),
             ),
           ),
         ],

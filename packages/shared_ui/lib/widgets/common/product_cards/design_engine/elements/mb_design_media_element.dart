@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 
 import '../mb_design_card_defaults.dart';
+import '../mb_design_element_runtime_style.dart';
 
 // MuthoBazar Design Card Engine V1
 // File: mb_design_media_element.dart
 //
 // Purpose:
-// Media/image element with first-pass support for circular hero media.
+// Media/image element with support for circular hero media.
 
 class MBDesignMediaElement extends StatelessWidget {
   const MBDesignMediaElement({
     super.key,
     required this.imageUrl,
     this.element,
+    this.runtimeStyle,
     this.size = 116,
   });
 
   final String imageUrl;
   final MBCardElementConfig? element;
+  final MBDesignElementRuntimeStyle? runtimeStyle;
   final double size;
 
   @override
@@ -29,6 +32,8 @@ class MBDesignMediaElement extends StatelessWidget {
 
     final shape = element?.stylePreset ?? 'media_circle';
     final isCircle = shape.contains('circle');
+    final radius = runtimeStyle?.borderRadius ?? (isCircle ? size : 18.0);
+    final borderWidth = runtimeStyle?.ringWidth ?? runtimeStyle?.borderWidth ?? 4;
 
     final content = imageUrl.trim().isEmpty
         ? _placeholder()
@@ -42,23 +47,30 @@ class MBDesignMediaElement extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white,
-        shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: isCircle ? null : BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: runtimeStyle?.backgroundColor ?? Colors.white,
+        shape: isCircle && runtimeStyle?.borderRadius == null
+            ? BoxShape.circle
+            : BoxShape.rectangle,
+        borderRadius: isCircle && runtimeStyle?.borderRadius == null
+            ? null
+            : BorderRadius.circular(radius),
+        boxShadow: runtimeStyle?.boxShadow() ??
+            [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
         border: Border.all(
-          color: Colors.white,
-          width: 4,
+          color: runtimeStyle?.ringColor ??
+              runtimeStyle?.borderColor ??
+              Colors.white,
+          width: borderWidth,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(isCircle ? size : 14),
+        borderRadius: BorderRadius.circular(radius),
         child: content,
       ),
     );

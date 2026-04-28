@@ -1,37 +1,26 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_ui/widgets/common/product_cards/mb_product_card_renderer.dart';
-import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_layout_profile.dart';
 import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_layout_resolver.dart';
-
-import 'gap_fillers/mb_home_gap_filler_models.dart';
-import 'gap_fillers/mb_home_gap_filler_resolver.dart';
-import 'gap_fillers/mb_home_gap_filler_widget.dart';
-import 'gap_fillers/mb_home_grid_layout_tuning.dart';
 
 // MB Home Product Grid Section
 // ----------------------------
-// Product-card-aware Home grid.
+// Saved-design-aware Home grid.
 //
-// Important:
-// Card height is now resolved from product card config and shared card defaults:
-// product.effectiveCardConfig.settings.layout
-// -> MBProductCardLayoutResolver
-// -> variant/family defaults
-//
-// The Home grid no longer owns hardcoded card-family heights.
+// Rules:
+// - Shuffle products once when a fresh product list arrives.
+// - Half-width cards are paired two per row.
+// - Full-width cards render as full rows.
+// - If a saved design exists, card height comes from saved cardDesignJson,
+//   scaled against the current runtime cell width.
+// - If no saved design exists, old MBProductCardRenderer layout profile is used.
+// - Small remaining gaps in a half pair are filled with a subtle filler block.
 
 class MBHomeProductGridSection extends StatefulWidget {
-  final MBHomeSection section;
-  final List<MBProduct> products;
-  final List<MBOffer> offers;
-  final void Function(MBProduct product)? onProductTap;
-  final void Function(MBProduct product)? onAddToCart;
-  final VoidCallback? onViewAllTap;
-
   const MBHomeProductGridSection({
     super.key,
     required this.section,
@@ -42,6 +31,13 @@ class MBHomeProductGridSection extends StatefulWidget {
     this.onViewAllTap,
   });
 
+  final MBHomeSection section;
+  final List<MBProduct> products;
+  final List<MBOffer> offers;
+  final void Function(MBProduct product)? onProductTap;
+  final void Function(MBProduct product)? onAddToCart;
+  final VoidCallback? onViewAllTap;
+
   @override
   State<MBHomeProductGridSection> createState() =>
       _MBHomeProductGridSectionState();
@@ -49,7 +45,6 @@ class MBHomeProductGridSection extends StatefulWidget {
 
 class _MBHomeProductGridSectionState extends State<MBHomeProductGridSection> {
   late List<MBProduct> _orderedProducts;
-
   List<MBProduct>? _lastProductsRef;
   String _lastProductSignature = '';
 
@@ -64,9 +59,8 @@ class _MBHomeProductGridSectionState extends State<MBHomeProductGridSection> {
     super.didUpdateWidget(oldWidget);
 
     final nextSignature = _signatureFor(widget.products);
-    final shouldRefreshOrder =
-        !identical(_lastProductsRef, widget.products) ||
-            _lastProductSignature != nextSignature;
+    final shouldRefreshOrder = !identical(_lastProductsRef, widget.products) ||
+        _lastProductSignature != nextSignature;
 
     if (shouldRefreshOrder) {
       _prepareProducts(forceShuffle: true);
@@ -76,7 +70,6 @@ class _MBHomeProductGridSectionState extends State<MBHomeProductGridSection> {
   void _prepareProducts({required bool forceShuffle}) {
     _lastProductsRef = widget.products;
     _lastProductSignature = _signatureFor(widget.products);
-
     _orderedProducts = List<MBProduct>.of(widget.products, growable: false);
 
     if (forceShuffle && _orderedProducts.length > 1) {
@@ -87,13 +80,13 @@ class _MBHomeProductGridSectionState extends State<MBHomeProductGridSection> {
   String _signatureFor(List<MBProduct> products) {
     return products.map((product) {
       final config = product.effectiveCardConfig.normalized();
-
       return [
         product.id,
         product.titleEn,
         product.cardLayoutType,
         config.familyId,
         config.variantId,
+        product.cardDesignJson?.hashCode ?? 0,
       ].join(':');
     }).join('|');
   }
@@ -115,11 +108,11 @@ class _MBHomeProductGridSectionState extends State<MBHomeProductGridSection> {
         MBSpacing.h(MBSpacing.sm),
         LayoutBuilder(
           builder: (context, constraints) {
-            final availableWidth = constraints.maxWidth.isFinite &&
-                    constraints.maxWidth > 0
-                ? constraints.maxWidth
-                : MediaQuery.sizeOf(context).width -
-                    (MBSpacing.pageHorizontal(context) * 2);
+            final availableWidth =
+                constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                    ? constraints.maxWidth
+                    : MediaQuery.sizeOf(context).width -
+                        (MBSpacing.pageHorizontal(context) * 2);
 
             return _ProductCardFlow(
               products: _orderedProducts,
@@ -149,10 +142,10 @@ class _ProductCardFlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columnGap = MBHomeGridLayoutTuning.cardColumnGap;
-    final rowGap = MBHomeGridLayoutTuning.cardRowGap;
-    final halfWidth = ((maxWidth - columnGap) / 2).clamp(120, maxWidth);
+    const columnGap = 12.0;
+    const rowGap = 14.0;
 
+    final halfWidth = ((maxWidth - columnGap) / 2).clamp(120, maxWidth);
     final rows = _buildGaplessRows();
 
     return Column(
@@ -165,7 +158,7 @@ class _ProductCardFlow extends StatelessWidget {
             halfWidth: halfWidth.toDouble(),
             fullWidth: maxWidth,
           ),
-          if (index != rows.length - 1) SizedBox(height: rowGap),
+          if (index != rows.length - 1) const SizedBox(height: rowGap),
         ],
       ],
     );
@@ -173,7 +166,6 @@ class _ProductCardFlow extends StatelessWidget {
 
   List<_ProductCardRow> _buildGaplessRows() {
     final rows = <_ProductCardRow>[];
-
     MBProduct? pendingHalf;
     final heldFullWidthCards = <MBProduct>[];
 
@@ -223,15 +215,12 @@ class _ProductCardFlow extends StatelessWidget {
 
     if (pendingHalf != null && heldFullWidthCards.isNotEmpty) {
       flushHeldFullWidthCards();
-
       rows.add(
         _ProductCardRow.half(
           first: pendingHalf!,
           second: null,
         ),
       );
-
-      pendingHalf = null;
     } else {
       flushHeldFullWidthCards();
 
@@ -257,19 +246,20 @@ class _ProductCardFlow extends StatelessWidget {
     final fullWidthProduct = row.fullWidthProduct;
 
     if (fullWidthProduct != null) {
-      final profile = _profile(
+      final height = _CardRuntimeHeightResolver.heightForProduct(
         product: fullWidthProduct,
-        availableWidth: fullWidth,
+        width: fullWidth,
+        featured: true,
       );
 
       return SizedBox(
-        height: profile.preferredHeight,
-        child: MBProductCardRenderer(
+        height: height,
+        child: _SavedAwareCard(
           product: fullWidthProduct,
-          contextType: MBProductCardRenderContext.featured,
-          featuredHeight: profile.preferredHeight,
-          onTap: () => onProductTap?.call(fullWidthProduct),
-          onAddToCartTap: () => onAddToCart?.call(fullWidthProduct),
+          featured: true,
+          featuredHeight: height,
+          onProductTap: onProductTap,
+          onAddToCart: onAddToCart,
         ),
       );
     }
@@ -285,18 +275,12 @@ class _ProductCardFlow extends StatelessWidget {
   }
 
   bool _isFullWidthProduct(MBProduct product) {
+    if (product.hasCardDesignJson) {
+      return false;
+    }
+
     final config = product.effectiveCardConfig.normalized();
     return config.variant.isFullWidth;
-  }
-
-  MBProductCardLayoutProfile _profile({
-    required MBProduct product,
-    required double availableWidth,
-  }) {
-    return MBProductCardLayoutResolver.resolve(
-      product: product,
-      availableWidth: availableWidth,
-    );
   }
 }
 
@@ -319,16 +303,22 @@ class _HalfWidthPairRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (second == null) {
-      final profile = _profile(first);
+    final firstHeight = _CardRuntimeHeightResolver.heightForProduct(
+      product: first,
+      width: halfWidth,
+    );
 
+    if (second == null) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: SizedBox(
-              height: profile.preferredHeight,
-              child: _card(first),
+            child: _HalfCardSlot(
+              product: first,
+              cardHeight: firstHeight,
+              fillerHeight: 0,
+              onProductTap: onProductTap,
+              onAddToCart: onAddToCart,
             ),
           ),
           SizedBox(width: gap),
@@ -337,11 +327,14 @@ class _HalfWidthPairRow extends StatelessWidget {
       );
     }
 
-    final plan = _HalfPairPlan.resolve(
-      first: first,
-      second: second!,
-      halfWidth: halfWidth,
+    final secondHeight = _CardRuntimeHeightResolver.heightForProduct(
+      product: second!,
+      width: halfWidth,
     );
+
+    final rowHeight = max(firstHeight, secondHeight);
+    final firstFiller = max(0.0, rowHeight - firstHeight);
+    final secondFiller = max(0.0, rowHeight - secondHeight);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,8 +342,8 @@ class _HalfWidthPairRow extends StatelessWidget {
         Expanded(
           child: _HalfCardSlot(
             product: first,
-            cardHeight: plan.firstCardHeight,
-            filler: plan.firstFiller,
+            cardHeight: firstHeight,
+            fillerHeight: firstFiller,
             onProductTap: onProductTap,
             onAddToCart: onAddToCart,
           ),
@@ -359,29 +352,13 @@ class _HalfWidthPairRow extends StatelessWidget {
         Expanded(
           child: _HalfCardSlot(
             product: second!,
-            cardHeight: plan.secondCardHeight,
-            filler: plan.secondFiller,
+            cardHeight: secondHeight,
+            fillerHeight: secondFiller,
             onProductTap: onProductTap,
             onAddToCart: onAddToCart,
           ),
         ),
       ],
-    );
-  }
-
-  MBProductCardLayoutProfile _profile(MBProduct product) {
-    return MBProductCardLayoutResolver.resolve(
-      product: product,
-      availableWidth: halfWidth,
-    );
-  }
-
-  Widget _card(MBProduct product) {
-    return MBProductCardRenderer(
-      product: product,
-      contextType: MBProductCardRenderContext.grid,
-      onTap: () => onProductTap?.call(product),
-      onAddToCartTap: () => onAddToCart?.call(product),
     );
   }
 }
@@ -390,248 +367,210 @@ class _HalfCardSlot extends StatelessWidget {
   const _HalfCardSlot({
     required this.product,
     required this.cardHeight,
-    required this.filler,
+    required this.fillerHeight,
     this.onProductTap,
     this.onAddToCart,
   });
 
   final MBProduct product;
   final double cardHeight;
-  final MBHomeGapFillerDecision? filler;
+  final double fillerHeight;
   final void Function(MBProduct product)? onProductTap;
   final void Function(MBProduct product)? onAddToCart;
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
+          width: double.infinity,
           height: cardHeight,
-          child: MBProductCardRenderer(
+          child: _SavedAwareCard(
             product: product,
-            contextType: MBProductCardRenderContext.grid,
-            onTap: () => onProductTap?.call(product),
-            onAddToCartTap: () => onAddToCart?.call(product),
+            onProductTap: onProductTap,
+            onAddToCart: onAddToCart,
           ),
         ),
-        if (filler != null)
-          MBHomeGapFillerWidget(
-            decision: filler!,
-          ),
+        if (fillerHeight > 8)
+          Container(
+            height: fillerHeight,
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFFF7A00).withValues(alpha: 0.12),
+                  const Color(0xFFFF7A00).withValues(alpha: 0.04),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          )
+        else if (fillerHeight > 0)
+          SizedBox(height: fillerHeight),
       ],
     );
   }
 }
 
-class _HalfPairPlan {
-  const _HalfPairPlan({
-    required this.firstCardHeight,
-    required this.secondCardHeight,
-    this.firstFiller,
-    this.secondFiller,
+class _SavedAwareCard extends StatelessWidget {
+  const _SavedAwareCard({
+    required this.product,
+    this.featured = false,
+    this.featuredHeight,
+    this.onProductTap,
+    this.onAddToCart,
   });
 
-  final double firstCardHeight;
-  final double secondCardHeight;
-  final MBHomeGapFillerDecision? firstFiller;
-  final MBHomeGapFillerDecision? secondFiller;
+  final MBProduct product;
+  final bool featured;
+  final double? featuredHeight;
+  final void Function(MBProduct product)? onProductTap;
+  final void Function(MBProduct product)? onAddToCart;
 
-  static _HalfPairPlan resolve({
-    required MBProduct first,
-    required MBProduct second,
-    required double halfWidth,
-  }) {
-    final firstProfile = _profile(first, halfWidth);
-    final secondProfile = _profile(second, halfWidth);
-
-    final firstPreferred = firstProfile.preferredHeight;
-    final secondPreferred = secondProfile.preferredHeight;
-
-    if ((firstPreferred - secondPreferred).abs() < 1) {
-      return _HalfPairPlan(
-        firstCardHeight: firstPreferred,
-        secondCardHeight: secondPreferred,
-      );
-    }
-
-    final firstIsShorter = firstPreferred < secondPreferred;
-    final shortProfile = firstIsShorter ? firstProfile : secondProfile;
-    final tallProfile = firstIsShorter ? secondProfile : firstProfile;
-
-    final initialGap = tallProfile.preferredHeight - shortProfile.preferredHeight;
-
-    // Step 1: Try filler first. If a useful filler can fit the current gap,
-    // preserve both product cards at preferred height.
-    final directFiller = MBHomeGapFillerResolver.resolve(initialGap);
-    if (directFiller != null) {
-      return _buildPlan(
-        firstIsShorter: firstIsShorter,
-        firstHeight: firstPreferred,
-        secondHeight: secondPreferred,
-        filler: directFiller,
-      );
-    }
-
-    // Step 2: No filler fits. Try safe product height adjustment and then
-    // resolve filler again for the remaining gap.
-    final elastic = _resolveElasticPlan(
-      firstIsShorter: firstIsShorter,
-      firstProfile: firstProfile,
-      secondProfile: secondProfile,
-    );
-
-    if (elastic != null) {
-      return elastic;
-    }
-
-    return _HalfPairPlan(
-      firstCardHeight: firstPreferred,
-      secondCardHeight: secondPreferred,
-    );
-  }
-
-  static MBProductCardLayoutProfile _profile(MBProduct product, double width) {
-    return MBProductCardLayoutResolver.resolve(
+  @override
+  Widget build(BuildContext context) {
+    return MBSavedDesignProductCard(
       product: product,
-      availableWidth: width,
-    );
-  }
-
-  static _HalfPairPlan? _resolveElasticPlan({
-    required bool firstIsShorter,
-    required MBProductCardLayoutProfile firstProfile,
-    required MBProductCardLayoutProfile secondProfile,
-  }) {
-    final shortProfile = firstIsShorter ? firstProfile : secondProfile;
-    final tallProfile = firstIsShorter ? secondProfile : firstProfile;
-
-    final initialGap = tallProfile.preferredHeight - shortProfile.preferredHeight;
-    final maxAdjustment = shortProfile.maxExpand + tallProfile.maxShrink;
-
-    _HalfPairPlan? bestPlan;
-    double? bestScore;
-
-    final maxWholeGap = initialGap.floor();
-
-    for (var targetGap = 0; targetGap <= maxWholeGap; targetGap++) {
-      final adjustmentNeeded = initialGap - targetGap;
-
-      if (adjustmentNeeded < 0 || adjustmentNeeded > maxAdjustment) {
-        continue;
-      }
-
-      final filler = MBHomeGapFillerResolver.resolve(targetGap.toDouble());
-      final canAbsorbTinyGap = targetGap <= 8;
-
-      if (filler == null && !canAbsorbTinyGap) {
-        continue;
-      }
-
-      final heights = _distributeAdjustment(
-        firstIsShorter: firstIsShorter,
-        firstProfile: firstProfile,
-        secondProfile: secondProfile,
-        adjustmentNeeded: adjustmentNeeded,
-      );
-
-      if (heights == null) {
-        continue;
-      }
-
-      final elasticPenalty =
-          adjustmentNeeded * MBHomeGridLayoutTuning.elasticResizePenalty;
-      final fillerScore = filler?.score ?? 650;
-      final score = elasticPenalty + fillerScore;
-
-      if (bestScore == null || score < bestScore) {
-        bestScore = score;
-        bestPlan = _buildPlan(
-          firstIsShorter: firstIsShorter,
-          firstHeight: heights.firstHeight,
-          secondHeight: heights.secondHeight,
-          filler: filler,
-        );
-      }
-    }
-
-    return bestPlan;
-  }
-
-  static _ElasticHeights? _distributeAdjustment({
-    required bool firstIsShorter,
-    required MBProductCardLayoutProfile firstProfile,
-    required MBProductCardLayoutProfile secondProfile,
-    required double adjustmentNeeded,
-  }) {
-    final shortProfile = firstIsShorter ? firstProfile : secondProfile;
-    final tallProfile = firstIsShorter ? secondProfile : firstProfile;
-
-    var remaining = adjustmentNeeded;
-
-    var expandShort = min(
-      shortProfile.maxExpand,
-      remaining * MBHomeGridLayoutTuning.shortCardExpandBias,
-    );
-    remaining -= expandShort;
-
-    var shrinkTall = min(tallProfile.maxShrink, remaining);
-    remaining -= shrinkTall;
-
-    if (remaining > 0.01) {
-      final extraExpand = min(shortProfile.maxExpand - expandShort, remaining);
-      expandShort += extraExpand;
-      remaining -= extraExpand;
-    }
-
-    if (remaining > 0.01) {
-      final extraShrink = min(tallProfile.maxShrink - shrinkTall, remaining);
-      shrinkTall += extraShrink;
-      remaining -= extraShrink;
-    }
-
-    if (remaining > 0.01) {
-      return null;
-    }
-
-    final shortHeight = shortProfile.preferredHeight + expandShort;
-    final tallHeight = tallProfile.preferredHeight - shrinkTall;
-
-    if (firstIsShorter) {
-      return _ElasticHeights(
-        firstHeight: shortHeight,
-        secondHeight: tallHeight,
-      );
-    }
-
-    return _ElasticHeights(
-      firstHeight: tallHeight,
-      secondHeight: shortHeight,
-    );
-  }
-
-  static _HalfPairPlan _buildPlan({
-    required bool firstIsShorter,
-    required double firstHeight,
-    required double secondHeight,
-    required MBHomeGapFillerDecision? filler,
-  }) {
-    return _HalfPairPlan(
-      firstCardHeight: firstHeight,
-      secondCardHeight: secondHeight,
-      firstFiller: firstIsShorter ? filler : null,
-      secondFiller: firstIsShorter ? null : filler,
+      fitInsideParent: false,
+      onTap: () => onProductTap?.call(product),
+      onPrimaryCtaTap: () => onAddToCart?.call(product),
+      onSecondaryCtaTap: () => onAddToCart?.call(product),
+      fallback: MBProductCardRenderer(
+        product: product,
+        contextType: featured
+            ? MBProductCardRenderContext.featured
+            : MBProductCardRenderContext.grid,
+        featuredHeight: featured ? featuredHeight : null,
+        onTap: () => onProductTap?.call(product),
+        onAddToCartTap: () => onAddToCart?.call(product),
+      ),
     );
   }
 }
 
-class _ElasticHeights {
-  const _ElasticHeights({
-    required this.firstHeight,
-    required this.secondHeight,
+class _CardRuntimeHeightResolver {
+  const _CardRuntimeHeightResolver._();
+
+  static double heightForProduct({
+    required MBProduct product,
+    required double width,
+    bool featured = false,
+  }) {
+    if (product.hasCardDesignJson) {
+      final metrics = _SavedDesignLayoutMetrics.fromJson(
+        product.cardDesignJson,
+      );
+
+      return metrics.heightForWidth(width);
+    }
+
+    final profile = MBProductCardLayoutResolver.resolve(
+      product: product,
+      availableWidth: width,
+    );
+
+    return featured ? profile.preferredHeight : profile.preferredHeight;
+  }
+}
+
+class _SavedDesignLayoutMetrics {
+  const _SavedDesignLayoutMetrics({
+    required this.savedCardWidth,
+    required this.aspectRatio,
+    required this.minHeight,
+    required this.maxHeight,
   });
 
-  final double firstHeight;
-  final double secondHeight;
+  final double savedCardWidth;
+  final double aspectRatio;
+  final double minHeight;
+  final double maxHeight;
+
+  factory _SavedDesignLayoutMetrics.fromJson(String? rawJson) {
+    final layout = _readLayoutMap(rawJson);
+
+    final savedCardWidth = _readDouble(
+      layout['cardWidth'],
+      fallback: 220,
+    ).clamp(120, 420).toDouble();
+
+    final aspectRatio = _readDouble(
+      layout['aspectRatio'],
+      fallback: 0.56,
+    ).clamp(0.35, 1.25).toDouble();
+
+    final minHeight = _readDouble(
+      layout['minHeight'],
+      fallback: 430,
+    ).clamp(120, 900).toDouble();
+
+    final maxHeight = _readDouble(
+      layout['maxHeight'],
+      fallback: 520,
+    ).clamp(minHeight, 1200).toDouble();
+
+    return _SavedDesignLayoutMetrics(
+      savedCardWidth: savedCardWidth,
+      aspectRatio: aspectRatio,
+      minHeight: minHeight,
+      maxHeight: maxHeight,
+    );
+  }
+
+  double heightForWidth(double runtimeWidth) {
+    final safeWidth = runtimeWidth.clamp(80, 800).toDouble();
+    final scale = (safeWidth / savedCardWidth).clamp(0.35, 2.5).toDouble();
+
+    final rawHeight = safeWidth / aspectRatio;
+    final scaledMinHeight = minHeight * scale;
+    final scaledMaxHeight = maxHeight * scale;
+
+    final safeMin = scaledMinHeight.clamp(80, 1200).toDouble();
+    final safeMax = scaledMaxHeight.clamp(safeMin, 1400).toDouble();
+
+    return rawHeight.clamp(safeMin, safeMax).toDouble();
+  }
+
+  static Map<String, dynamic> _readLayoutMap(String? rawJson) {
+    final source = rawJson?.trim();
+    if (source == null || source.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    try {
+      final decoded = jsonDecode(source);
+      if (decoded is! Map) {
+        return <String, dynamic>{};
+      }
+
+      final rawLayout = decoded['layout'];
+      if (rawLayout is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(rawLayout);
+      }
+
+      if (rawLayout is Map) {
+        return rawLayout.map(
+          (key, value) => MapEntry(key.toString(), value),
+        );
+      }
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+
+    return <String, dynamic>{};
+  }
+
+  static double _readDouble(
+    Object? value, {
+    required double fallback,
+  }) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
+  }
 }
 
 class _ProductCardRow {
