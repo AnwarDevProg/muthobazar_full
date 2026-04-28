@@ -2443,6 +2443,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           const SizedBox(height: 12),
           _buildSelectedCardPreview(context),
           const SizedBox(height: 12),
+
           Row(
             children: [
               Expanded(
