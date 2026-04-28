@@ -277,23 +277,6 @@ class MBAdvancedCardDesignDocument {
     'quantity',
     'divider',
     'shape',
-    'panel',
-    'imageOverlay',
-    'priceBadge',
-    'promoBadge',
-    'flashBadge',
-    'savingText',
-    'compare',
-    'share',
-    'secondaryCta',
-    'progress',
-    'dots',
-    'ribbon',
-    'border',
-    'effect',
-    'shadow',
-    'spacing',
-    'animation',
   };
 
   final int version;
@@ -743,40 +726,6 @@ class MBAdvancedCardDesignDocument {
         return 'divider_line';
       case 'shape':
         return 'shape_circle';
-      case 'panel':
-        return 'panel_top_soft';
-      case 'imageOverlay':
-        return 'image_overlay_light';
-      case 'priceBadge':
-        return 'price_badge_round';
-      case 'promoBadge':
-        return 'promo_badge';
-      case 'flashBadge':
-        return 'flash_sale_badge';
-      case 'savingText':
-        return 'saving_text_chip';
-      case 'compare':
-        return 'compare_icon';
-      case 'share':
-        return 'share_icon';
-      case 'secondaryCta':
-        return 'secondary_cta_outline';
-      case 'progress':
-        return 'stock_progress_bar';
-      case 'dots':
-        return 'indicator_dots';
-      case 'ribbon':
-        return 'corner_ribbon';
-      case 'border':
-        return 'outer_border_line';
-      case 'effect':
-        return 'effect_glow';
-      case 'shadow':
-        return 'shadow_soft';
-      case 'spacing':
-        return 'spacing_padding_guide';
-      case 'animation':
-        return 'animation_pulse';
       default:
         return 'basic';
     }
@@ -826,40 +775,6 @@ class MBAdvancedCardDesignDocument {
         return 'static.divider';
       case 'shape':
         return 'static.shape';
-      case 'panel':
-        return 'static.panel';
-      case 'imageOverlay':
-        return 'static.overlay';
-      case 'priceBadge':
-        return 'product.finalPrice';
-      case 'promoBadge':
-        return 'static.promo';
-      case 'flashBadge':
-        return 'static.flash';
-      case 'savingText':
-        return 'static.saving';
-      case 'compare':
-        return 'action.compare';
-      case 'share':
-        return 'action.share';
-      case 'secondaryCta':
-        return 'action.details';
-      case 'progress':
-        return 'static.progress';
-      case 'dots':
-        return 'static.dots';
-      case 'ribbon':
-        return 'static.ribbon';
-      case 'border':
-        return 'static.border';
-      case 'effect':
-        return 'static.effect';
-      case 'shadow':
-        return 'static.shadow';
-      case 'spacing':
-        return 'static.spacing';
-      case 'animation':
-        return 'static.animation';
       default:
         return 'static';
     }
@@ -896,26 +811,6 @@ class MBAdvancedCardDesignDocument {
       case 'divider':
       case 'shape':
         return <String, dynamic>{'backgroundHex': '#FFFFFF', 'opacity': 0.5, 'borderRadius': 999.0};
-
-      case 'panel':
-      case 'imageOverlay':
-      case 'progress':
-      case 'dots':
-      case 'border':
-      case 'effect':
-      case 'shadow':
-      case 'spacing':
-        return <String, dynamic>{'backgroundHex': '#FFFFFF', 'opacity': 0.5, 'borderRadius': 24.0};
-      case 'priceBadge':
-      case 'promoBadge':
-      case 'flashBadge':
-      case 'savingText':
-      case 'compare':
-      case 'share':
-      case 'secondaryCta':
-      case 'ribbon':
-      case 'animation':
-        return <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0};
       default:
         return <String, dynamic>{};
     }

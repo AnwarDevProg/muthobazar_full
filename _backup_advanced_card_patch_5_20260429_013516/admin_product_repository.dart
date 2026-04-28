@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:shared_models/shared_models.dart';
@@ -539,7 +539,8 @@ class AdminProductRepository {
     });
 
     final responseProductId = _extractProductId(response.data) ?? product.id;
-final productData = _extractProductMap(response.data);
+
+    final productData = _extractProductMap(response.data);
     if (productData != null) {
       final parsed = _tryParseProductMap(
         productData,
@@ -576,7 +577,8 @@ final productData = _extractProductMap(response.data);
     });
 
     final responseProductId = _extractProductId(response.data) ?? product.id;
-final productData = _extractProductMap(response.data);
+
+    final productData = _extractProductMap(response.data);
     if (productData != null) {
       final parsed = _tryParseProductMap(
         productData,
@@ -886,5 +888,3 @@ dynamic _normalizeFirestoreValue(dynamic value) {
 
   return value;
 }
-
-

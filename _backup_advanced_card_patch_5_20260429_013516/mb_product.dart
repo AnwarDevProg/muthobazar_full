@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import '../product_cards/config/mb_card_family.dart';
 import '../product_cards/config/mb_card_instance_config.dart';
@@ -632,10 +632,8 @@ class MBProduct {
       'attributes': attributes.map((e) => e.toMap()).toList(),
       'variations': variations.map((e) => e.toMap()).toList(),
       'purchaseOptions': purchaseOptions.map((e) => e.toMap()).toList(),
-      'cardLayoutType': _cardDesignLayoutTypeFromJson(cardDesignJson) ?? normalizedConfig.variantId,
-      if (!(cardDesignJson?.trim().isNotEmpty ?? false))
-        'cardConfig': normalizedConfig.toMap(),
-      if (cardDesignJson?.trim().isNotEmpty ?? false)
+      'cardLayoutType': normalizedConfig.variantId,
+      'cardConfig': normalizedConfig.toMap(),      if (cardDesignJson?.trim().isNotEmpty ?? false)
         'cardDesignJson': cardDesignJson!.trim(),
       'isFeatured': isFeatured,
       'isFlashSale': isFlashSale,
@@ -798,22 +796,6 @@ const MBCardInstanceConfig _defaultCardConfig = MBCardInstanceConfig(
   variant: MBCardVariant.compact01,
 );
 
-String? _cardDesignLayoutTypeFromJson(String? source) {
-  final text = source?.trim();
-  if (text == null || text.isEmpty) return null;
-  try {
-    final decoded = json.decode(text);
-    if (decoded is Map) {
-      final templateId = decoded['templateId']?.toString().trim() ?? '';
-      if (templateId.isNotEmpty) return templateId;
-      final designFamilyId = decoded['designFamilyId']?.toString().trim() ?? '';
-      if (designFamilyId.isNotEmpty) return designFamilyId;
-    }
-  } catch (_) {
-    // Invalid JSON still means this product is using the advanced design slot.
-  }
-  return 'advanced_v3';
-}
 String? _asNullableString(dynamic value) {
   final normalized = value?.toString().trim();
   if (normalized == null || normalized.isEmpty) return null;
@@ -1016,4 +998,3 @@ DateTime? _asNullableDateTime(dynamic value) {
 
   return DateTime.tryParse(text);
 }
-

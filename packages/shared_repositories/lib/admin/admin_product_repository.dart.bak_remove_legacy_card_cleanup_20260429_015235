@@ -539,7 +539,9 @@ class AdminProductRepository {
     });
 
     final responseProductId = _extractProductId(response.data) ?? product.id;
-final productData = _extractProductMap(response.data);
+    await _deleteLegacyCardConfigIfNeeded(productId: responseProductId, product: product);
+
+    final productData = _extractProductMap(response.data);
     if (productData != null) {
       final parsed = _tryParseProductMap(
         productData,
@@ -576,7 +578,9 @@ final productData = _extractProductMap(response.data);
     });
 
     final responseProductId = _extractProductId(response.data) ?? product.id;
-final productData = _extractProductMap(response.data);
+    await _deleteLegacyCardConfigIfNeeded(productId: responseProductId, product: product);
+
+    final productData = _extractProductMap(response.data);
     if (productData != null) {
       final parsed = _tryParseProductMap(
         productData,
@@ -886,5 +890,3 @@ dynamic _normalizeFirestoreValue(dynamic value) {
 
   return value;
 }
-
-

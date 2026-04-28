@@ -2445,11 +2445,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 ),
               ),
               OutlinedButton.icon(                 onPressed: () => _openCardDesignStudioV2Dialog(context),                 icon: const Icon(Icons.dashboard_customize_rounded),                 label: const Text('Open Studio V2'),               ),
-              OutlinedButton.icon(
-                onPressed: () => _openCardDesignStudioV3Dialog(context),
-                icon: const Icon(Icons.auto_awesome_motion_rounded),
-                label: const Text('Open Studio V3'),
-              ),
               if (_hasCardDesignJson)
                 OutlinedButton.icon(
                   onPressed: () {
@@ -3510,7 +3505,6 @@ Wrap(
     });
   }
 }
-
 
 
 

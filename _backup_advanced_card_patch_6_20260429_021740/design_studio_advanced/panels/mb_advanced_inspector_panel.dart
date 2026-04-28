@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 right inspector panel.
+// Patch 5 right inspector panel.
 //
 // Purpose:
 // - Extends the inspector with richer controls for both the card and nodes.
@@ -7,8 +7,6 @@
 // - Adds inline color swatch pickers + manual hex input.
 // - Exposes more editable style props so the canvas feels more like a real
 //   design tool instead of a demo-only inspector.
-// - Rebinds all text inputs when the selected node changes.
-// - Adds MRP/old-price strike and chip-cross controls.
 
 import 'package:flutter/material.dart';
 
@@ -64,7 +62,6 @@ class MBAdvancedInspectorPanel extends StatelessWidget {
                     onUpdateDocument: onUpdateDocument,
                   )
                 : _NodeInspector(
-                    key: ValueKey<String>('node_inspector_${selectedNode.id}'),
                     node: selectedNode,
                     onUpdateNode: onUpdateNode,
                     onDeleteNode: onDeleteNode,
@@ -512,85 +509,6 @@ class _NodeInspector extends StatelessWidget {
             ),
           ],
         ),
-        if (node.elementType == 'mrp') ...<Widget>[
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: 'MRP strike / chip cross',
-            subtitle: 'Old price strike appears only when sale price is lower.',
-            children: <Widget>[
-              _ToggleRow(
-                label: 'Auto strike when discounted',
-                value: _styleBool(style, 'autoStrikeWhenDiscounted', true),
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{
-                      'autoStrikeWhenDiscounted': value,
-                    }),
-                  ),
-                ),
-              ),
-              _TextInputRow(
-                label: 'Strike mode',
-                value: _styleString(
-                  style,
-                  'strikeMode',
-                  node.variantId.contains('chip') ? 'cross' : 'lineThrough',
-                ),
-                hintText: 'lineThrough / horizontal / diagonal / cross',
-                onSubmitted: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeMode': value}),
-                  ),
-                ),
-              ),
-              _ColorFieldRow(
-                label: 'Strike color',
-                value: _styleString(style, 'strikeColorHex', '#FF4A4A'),
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeColorHex': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike thickness',
-                value: _styleDouble(style, 'strikeThickness', 1.6),
-                min: 0.5,
-                max: 12,
-                decimals: 1,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeThickness': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike width factor',
-                value: _styleDouble(style, 'strikeWidthFactor', 0.92),
-                min: 0.1,
-                max: 1.4,
-                decimals: 2,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeWidthFactor': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike angle',
-                value: _styleDouble(style, 'strikeAngleDeg', -14),
-                min: -45,
-                max: 45,
-                decimals: 0,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeAngleDeg': value}),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: 12),
         _SectionCard(
           title: 'State',
@@ -738,7 +656,6 @@ class _TextInputRow extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           TextFormField(
-            key: ValueKey<String>('${label}_${value}_${hintText ?? ''}'),
             initialValue: value,
             onFieldSubmitted: onSubmitted,
             decoration: InputDecoration(
@@ -1158,17 +1075,6 @@ String _styleString(Map<String, dynamic> style, String key, String fallback) {
   final value = style[key]?.toString().trim();
   if (value == null || value.isEmpty) return fallback;
   return value;
-}
-
-bool _styleBool(Map<String, dynamic> style, String key, bool fallback) {
-  final value = style[key];
-  if (value is bool) return value;
-  if (value is String) {
-    final normalized = value.trim().toLowerCase();
-    if (normalized == 'true') return true;
-    if (normalized == 'false') return false;
-  }
-  return fallback;
 }
 
 Color _hexToColor(String hex) {

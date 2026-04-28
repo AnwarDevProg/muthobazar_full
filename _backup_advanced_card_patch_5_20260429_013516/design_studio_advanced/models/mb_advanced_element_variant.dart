@@ -1,8 +1,8 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 5 full element/variant catalog.
+// Patch 2B element/variant catalog.
 //
 // Purpose:
-// - Expands the left drawer to a full 35-element starter catalog.
+// - Expands the left drawer to a much larger starter catalog.
 // - Keeps the drawer grouped by expandable sections.
 // - Each section exposes concrete draggable variants.
 // - Card variants patch the document layout/palette instead of creating nodes.
@@ -395,11 +395,6 @@ class MBAdvancedElementCatalog {
               'fontWeight': 'w700',
               'prefixText': 'MRP ',
               'decoration': 'lineThrough',
-              'autoStrikeWhenDiscounted': true,
-              'strikeMode': 'lineThrough',
-              'strikeColorHex': '#FBE4D5',
-              'strikeThickness': 1.5,
-              'strikeWidthFactor': 0.90,
             },
           ),
           MBAdvancedElementVariant(
@@ -418,12 +413,6 @@ class MBAdvancedElementCatalog {
               'fontWeight': 'w800',
               'borderRadius': 999.0,
               'prefixText': 'MRP ',
-              'autoStrikeWhenDiscounted': true,
-              'strikeMode': 'cross',
-              'strikeColorHex': '#FF4A4A',
-              'strikeThickness': 1.8,
-              'strikeWidthFactor': 0.82,
-              'strikeAngleDeg': -14.0,
             },
           ),
         ],
@@ -971,191 +960,6 @@ class MBAdvancedElementCatalog {
               'borderRadius': 999.0,
             },
           ),
-        ],
-      ),
-
-      MBAdvancedElementGroup(
-        id: 'panel',
-        title: 'Panels',
-        subtitle: 'Top panel, diagonal panel and hero panel',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(
-            id: 'panel_top_soft',
-            groupId: 'panel',
-            elementType: 'panel',
-            title: 'Top panel',
-            description: 'Soft top card panel',
-            binding: 'static.panel',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.18, z: 6),
-            defaultSize: MBAdvancedDesignNodeSize(width: 240, height: 120),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FF9A3D', 'opacity': 0.62, 'borderRadius': 24.0},
-          ),
-          MBAdvancedElementVariant(
-            id: 'panel_diagonal_hero',
-            groupId: 'panel',
-            elementType: 'panel',
-            title: 'Diagonal panel',
-            description: 'Hero diagonal visual panel',
-            binding: 'static.panel',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.24, z: 6),
-            defaultSize: MBAdvancedDesignNodeSize(width: 260, height: 150),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFB25E', 'opacity': 0.52, 'borderRadius': 30.0},
-          ),
-          MBAdvancedElementVariant(
-            id: 'panel_hero_blob',
-            groupId: 'panel',
-            elementType: 'panel',
-            title: 'Hero panel',
-            description: 'Large rounded hero backdrop',
-            binding: 'static.panel',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.35, z: 5),
-            defaultSize: MBAdvancedDesignNodeSize(width: 220, height: 170),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFF3E9', 'opacity': 0.88, 'borderRadius': 34.0},
-          ),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'imageOverlay',
-        title: 'Image Overlay',
-        subtitle: 'Overlay layer above or below product media',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(
-            id: 'image_overlay_light',
-            groupId: 'imageOverlay',
-            elementType: 'imageOverlay',
-            title: 'Light overlay',
-            description: 'Soft white overlay',
-            binding: 'static.overlay',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.52, z: 29),
-            defaultSize: MBAdvancedDesignNodeSize(width: 172, height: 172),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'opacity': 0.18, 'borderRadius': 999.0},
-          ),
-          MBAdvancedElementVariant(
-            id: 'image_overlay_dark',
-            groupId: 'imageOverlay',
-            elementType: 'imageOverlay',
-            title: 'Dark overlay',
-            description: 'Soft dark overlay',
-            binding: 'static.overlay',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.52, z: 31),
-            defaultSize: MBAdvancedDesignNodeSize(width: 150, height: 150),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#151922', 'opacity': 0.22, 'borderRadius': 999.0},
-          ),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'priceBadge',
-        title: 'Price Badge',
-        subtitle: 'Dedicated floating price badges',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(
-            id: 'price_badge_round',
-            groupId: 'priceBadge',
-            elementType: 'priceBadge',
-            title: 'Round badge',
-            description: 'Circular price badge',
-            binding: 'product.finalPrice',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.82, y: 0.16, z: 45),
-            defaultSize: MBAdvancedDesignNodeSize(width: 66, height: 66),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 14.0, 'fontWeight': 'w900', 'borderRadius': 999.0},
-          ),
-          MBAdvancedElementVariant(
-            id: 'price_badge_dark',
-            groupId: 'priceBadge',
-            elementType: 'priceBadge',
-            title: 'Dark badge',
-            description: 'Dark price badge',
-            binding: 'product.finalPrice',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.82, y: 0.16, z: 45),
-            defaultSize: MBAdvancedDesignNodeSize(width: 72, height: 34),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#151922', 'textColorHex': '#FFFFFF', 'fontSize': 13.0, 'fontWeight': 'w900', 'borderRadius': 999.0},
-          ),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'promoFlash',
-        title: 'Promo / Flash',
-        subtitle: 'Promo badge, flash-sale badge and saving text',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(
-            id: 'promo_badge',
-            groupId: 'promoFlash',
-            elementType: 'promoBadge',
-            title: 'Promo badge',
-            description: 'General promo chip',
-            binding: 'static.promo',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.24, y: 0.16, z: 44),
-            defaultSize: MBAdvancedDesignNodeSize(width: 92, height: 28),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': 'Promo'},
-          ),
-          MBAdvancedElementVariant(
-            id: 'flash_sale_badge',
-            groupId: 'promoFlash',
-            elementType: 'flashBadge',
-            title: 'Flash badge',
-            description: 'Flash sale marker',
-            binding: 'static.flash',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.24, y: 0.16, z: 44),
-            defaultSize: MBAdvancedDesignNodeSize(width: 102, height: 28),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#151922', 'textColorHex': '#FFFFFF', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': 'Flash'},
-          ),
-          MBAdvancedElementVariant(
-            id: 'saving_text_chip',
-            groupId: 'promoFlash',
-            elementType: 'savingText',
-            title: 'Saving text',
-            description: 'Save amount chip',
-            binding: 'static.saving',
-            defaultPosition: MBAdvancedDesignNodePosition(x: 0.68, y: 0.62, z: 44),
-            defaultSize: MBAdvancedDesignNodeSize(width: 90, height: 28),
-            defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': 'Save 25%'},
-          ),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'actionsExtra',
-        title: 'More Actions',
-        subtitle: 'Compare, share and secondary CTA',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(
-            id: 'compare_icon', groupId: 'actionsExtra', elementType: 'compare', title: 'Compare', description: 'Compare action icon', binding: 'action.compare', defaultPosition: MBAdvancedDesignNodePosition(x: 0.72, y: 0.08, z: 44), defaultSize: MBAdvancedDesignNodeSize(width: 30, height: 30), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 14.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': '⇄'}),
-          MBAdvancedElementVariant(
-            id: 'share_icon', groupId: 'actionsExtra', elementType: 'share', title: 'Share', description: 'Share action icon', binding: 'action.share', defaultPosition: MBAdvancedDesignNodePosition(x: 0.58, y: 0.08, z: 44), defaultSize: MBAdvancedDesignNodeSize(width: 30, height: 30), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 14.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': '↗'}),
-          MBAdvancedElementVariant(
-            id: 'secondary_cta_outline', groupId: 'actionsExtra', elementType: 'secondaryCta', title: 'Secondary CTA', description: 'Secondary outline button', binding: 'action.details', defaultPosition: MBAdvancedDesignNodePosition(x: 0.34, y: 0.92, z: 44), defaultSize: MBAdvancedDesignNodeSize(width: 96, height: 32), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'borderHex': '#FF6500', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': 'Details'}),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'progressDotsRibbon',
-        title: 'Progress / Dots / Ribbon',
-        subtitle: 'Stock progress, carousel dots and corner tags',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(id: 'stock_progress_bar', groupId: 'progressDotsRibbon', elementType: 'progress', title: 'Stock progress', description: 'Progress bar', binding: 'static.progress', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.82, z: 24), defaultSize: MBAdvancedDesignNodeSize(width: 160, height: 8), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'fillHex': '#FF6500', 'opacity': 0.9, 'progress': 0.62, 'borderRadius': 999.0}),
-          MBAdvancedElementVariant(id: 'indicator_dots', groupId: 'progressDotsRibbon', elementType: 'dots', title: 'Indicator dots', description: 'Small dots row', binding: 'static.dots', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.96, z: 42), defaultSize: MBAdvancedDesignNodeSize(width: 74, height: 12), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'fillHex': '#FF6500', 'opacity': 0.9, 'borderRadius': 999.0}),
-          MBAdvancedElementVariant(id: 'corner_ribbon', groupId: 'progressDotsRibbon', elementType: 'ribbon', title: 'Corner ribbon', description: 'Corner tag', binding: 'static.ribbon', defaultPosition: MBAdvancedDesignNodePosition(x: 0.82, y: 0.08, z: 48), defaultSize: MBAdvancedDesignNodeSize(width: 92, height: 28), defaultStyle: <String, dynamic>{'backgroundHex': '#151922', 'textColorHex': '#FFFFFF', 'fontSize': 10.0, 'fontWeight': 'w900', 'borderRadius': 10.0, 'label': 'NEW'}),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'cardEffects',
-        title: 'Border / Effects',
-        subtitle: 'Outer line, glow, wave, electric and flame',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(id: 'outer_border_line', groupId: 'cardEffects', elementType: 'border', title: 'Outer line', description: 'Card border element', binding: 'static.border', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.50, z: 60), defaultSize: MBAdvancedDesignNodeSize(width: 220, height: 340), defaultStyle: <String, dynamic>{'backgroundHex': '#00000000', 'borderHex': '#FFFFFF', 'borderWidth': 2.0, 'opacity': 1.0, 'borderRadius': 28.0}),
-          MBAdvancedElementVariant(id: 'effect_glow', groupId: 'cardEffects', elementType: 'effect', title: 'Glow', description: 'Soft glow effect', binding: 'static.effect', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.55, z: 4), defaultSize: MBAdvancedDesignNodeSize(width: 190, height: 190), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'opacity': 0.18, 'borderRadius': 999.0, 'effect': 'glow'}),
-          MBAdvancedElementVariant(id: 'effect_electric', groupId: 'cardEffects', elementType: 'effect', title: 'Electric', description: 'Electric edge marker', binding: 'static.effect', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.50, z: 4), defaultSize: MBAdvancedDesignNodeSize(width: 210, height: 330), defaultStyle: <String, dynamic>{'backgroundHex': '#00000000', 'borderHex': '#00A3FF', 'borderWidth': 2.0, 'opacity': 0.8, 'borderRadius': 28.0, 'effect': 'electric'}),
-          MBAdvancedElementVariant(id: 'effect_flame', groupId: 'cardEffects', elementType: 'effect', title: 'Flame', description: 'Flame warm glow', binding: 'static.effect', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.20, z: 4), defaultSize: MBAdvancedDesignNodeSize(width: 180, height: 90), defaultStyle: <String, dynamic>{'backgroundHex': '#FF6500', 'opacity': 0.24, 'borderRadius': 999.0, 'effect': 'flame'}),
-          MBAdvancedElementVariant(id: 'effect_wave', groupId: 'cardEffects', elementType: 'effect', title: 'Wave', description: 'Wave visual band', binding: 'static.effect', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.64, z: 4), defaultSize: MBAdvancedDesignNodeSize(width: 240, height: 42), defaultStyle: <String, dynamic>{'backgroundHex': '#FFF3E9', 'opacity': 0.55, 'borderRadius': 999.0, 'effect': 'wave'}),
-        ],
-      ),
-      MBAdvancedElementGroup(
-        id: 'layoutMotion',
-        title: 'Spacing / Shadow / Animation',
-        subtitle: 'Padding guide, elevation and hover/pulse effects',
-        variants: <MBAdvancedElementVariant>[
-          MBAdvancedElementVariant(id: 'shadow_soft', groupId: 'layoutMotion', elementType: 'shadow', title: 'Soft shadow', description: 'Soft elevation layer', binding: 'static.shadow', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.54, z: 3), defaultSize: MBAdvancedDesignNodeSize(width: 190, height: 220), defaultStyle: <String, dynamic>{'backgroundHex': '#000000', 'opacity': 0.10, 'borderRadius': 34.0}),
-          MBAdvancedElementVariant(id: 'spacing_padding_guide', groupId: 'layoutMotion', elementType: 'spacing', title: 'Padding guide', description: 'Inner spacing guide', binding: 'static.spacing', defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.50, z: 62), defaultSize: MBAdvancedDesignNodeSize(width: 190, height: 310), defaultStyle: <String, dynamic>{'backgroundHex': '#00000000', 'borderHex': '#FFD9B5', 'borderWidth': 1.0, 'opacity': 0.7, 'borderRadius': 24.0}),
-          MBAdvancedElementVariant(id: 'animation_pulse', groupId: 'layoutMotion', elementType: 'animation', title: 'Pulse marker', description: 'Pulse effect marker', binding: 'static.animation', defaultPosition: MBAdvancedDesignNodePosition(x: 0.78, y: 0.18, z: 50), defaultSize: MBAdvancedDesignNodeSize(width: 34, height: 34), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 10.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': '●', 'animation': 'pulse'}),
-          MBAdvancedElementVariant(id: 'animation_hover_lift', groupId: 'layoutMotion', elementType: 'animation', title: 'Hover lift', description: 'Hover effect marker', binding: 'static.animation', defaultPosition: MBAdvancedDesignNodePosition(x: 0.22, y: 0.18, z: 50), defaultSize: MBAdvancedDesignNodeSize(width: 60, height: 24), defaultStyle: <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 10.0, 'fontWeight': 'w900', 'borderRadius': 999.0, 'label': 'Hover', 'animation': 'lift'}),
         ],
       ),
       MBAdvancedElementGroup(

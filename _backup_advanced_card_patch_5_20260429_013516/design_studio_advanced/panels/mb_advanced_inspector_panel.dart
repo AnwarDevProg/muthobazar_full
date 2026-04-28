@@ -1,14 +1,12 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 right inspector panel.
+// Patch 2B right inspector panel.
 //
 // Purpose:
 // - Extends the inspector with richer controls for both the card and nodes.
-// - Adds fully synced manual numeric input beside sliders.
+// - Adds manual numeric input beside sliders.
 // - Adds inline color swatch pickers + manual hex input.
 // - Exposes more editable style props so the canvas feels more like a real
 //   design tool instead of a demo-only inspector.
-// - Rebinds all text inputs when the selected node changes.
-// - Adds MRP/old-price strike and chip-cross controls.
 
 import 'package:flutter/material.dart';
 
@@ -64,7 +62,6 @@ class MBAdvancedInspectorPanel extends StatelessWidget {
                     onUpdateDocument: onUpdateDocument,
                   )
                 : _NodeInspector(
-                    key: ValueKey<String>('node_inspector_${selectedNode.id}'),
                     node: selectedNode,
                     onUpdateNode: onUpdateNode,
                     onDeleteNode: onDeleteNode,
@@ -512,85 +509,6 @@ class _NodeInspector extends StatelessWidget {
             ),
           ],
         ),
-        if (node.elementType == 'mrp') ...<Widget>[
-          const SizedBox(height: 12),
-          _SectionCard(
-            title: 'MRP strike / chip cross',
-            subtitle: 'Old price strike appears only when sale price is lower.',
-            children: <Widget>[
-              _ToggleRow(
-                label: 'Auto strike when discounted',
-                value: _styleBool(style, 'autoStrikeWhenDiscounted', true),
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{
-                      'autoStrikeWhenDiscounted': value,
-                    }),
-                  ),
-                ),
-              ),
-              _TextInputRow(
-                label: 'Strike mode',
-                value: _styleString(
-                  style,
-                  'strikeMode',
-                  node.variantId.contains('chip') ? 'cross' : 'lineThrough',
-                ),
-                hintText: 'lineThrough / horizontal / diagonal / cross',
-                onSubmitted: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeMode': value}),
-                  ),
-                ),
-              ),
-              _ColorFieldRow(
-                label: 'Strike color',
-                value: _styleString(style, 'strikeColorHex', '#FF4A4A'),
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeColorHex': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike thickness',
-                value: _styleDouble(style, 'strikeThickness', 1.6),
-                min: 0.5,
-                max: 12,
-                decimals: 1,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeThickness': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike width factor',
-                value: _styleDouble(style, 'strikeWidthFactor', 0.92),
-                min: 0.1,
-                max: 1.4,
-                decimals: 2,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeWidthFactor': value}),
-                  ),
-                ),
-              ),
-              _NumberFieldRow(
-                label: 'Strike angle',
-                value: _styleDouble(style, 'strikeAngleDeg', -14),
-                min: -45,
-                max: 45,
-                decimals: 0,
-                onChanged: (value) => onUpdateNode(
-                  node.copyWith(
-                    style: _patchStyle(style, <String, dynamic>{'strikeAngleDeg': value}),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: 12),
         _SectionCard(
           title: 'State',
@@ -738,7 +656,6 @@ class _TextInputRow extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           TextFormField(
-            key: ValueKey<String>('${label}_${value}_${hintText ?? ''}'),
             initialValue: value,
             onFieldSubmitted: onSubmitted,
             decoration: InputDecoration(
@@ -761,7 +678,7 @@ class _TextInputRow extends StatelessWidget {
   }
 }
 
-class _NumberFieldRow extends StatefulWidget {
+class _NumberFieldRow extends StatelessWidget {
   const _NumberFieldRow({
     required this.label,
     required this.value,
@@ -779,73 +696,9 @@ class _NumberFieldRow extends StatefulWidget {
   final ValueChanged<double> onChanged;
 
   @override
-  State<_NumberFieldRow> createState() => _NumberFieldRowState();
-}
-
-class _NumberFieldRowState extends State<_NumberFieldRow> {
-  late final TextEditingController _controller;
-  var _isEditingText = false;
-
-  double get _clampedValue {
-    return widget.value.clamp(widget.min, widget.max).toDouble();
-  }
-
-  String _format(double value) => value.toStringAsFixed(widget.decimals);
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: _format(_clampedValue));
-  }
-
-  @override
-  void didUpdateWidget(covariant _NumberFieldRow oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final nextText = _format(_clampedValue);
-    if (!_isEditingText && _controller.text != nextText) {
-      _controller.value = TextEditingValue(
-        text: nextText,
-        selection: TextSelection.collapsed(offset: nextText.length),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _commitTextValue(String raw) {
-    final parsed = double.tryParse(raw.trim());
-    final nextValue = (parsed ?? _clampedValue)
-        .clamp(widget.min, widget.max)
-        .toDouble();
-    final nextText = _format(nextValue);
-    _isEditingText = false;
-    _controller.value = TextEditingValue(
-      text: nextText,
-      selection: TextSelection.collapsed(offset: nextText.length),
-    );
-    widget.onChanged(nextValue);
-  }
-
-  void _applySliderValue(double value) {
-    final nextValue = value.clamp(widget.min, widget.max).toDouble();
-    final nextText = _format(nextValue);
-    _isEditingText = false;
-    if (_controller.text != nextText) {
-      _controller.value = TextEditingValue(
-        text: nextText,
-        selection: TextSelection.collapsed(offset: nextText.length),
-      );
-    }
-    widget.onChanged(nextValue);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final clamped = _clampedValue;
+    final clamped = value.clamp(min, max).toDouble();
+    final display = clamped.toStringAsFixed(decimals);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -856,7 +709,7 @@ class _NumberFieldRowState extends State<_NumberFieldRow> {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  widget.label,
+                  label,
                   style: const TextStyle(
                     color: Color(0xFF172033),
                     fontSize: 11.5,
@@ -865,32 +718,28 @@ class _NumberFieldRowState extends State<_NumberFieldRow> {
                 ),
               ),
               SizedBox(
-                width: 76,
-                child: Focus(
-                  onFocusChange: (hasFocus) {
-                    if (!hasFocus && _isEditingText) {
-                      _commitTextValue(_controller.text);
+                width: 68,
+                child: TextFormField(
+                  initialValue: display,
+                  textAlign: TextAlign.center,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onFieldSubmitted: (raw) {
+                    final parsed = double.tryParse(raw.trim());
+                    if (parsed != null) {
+                      onChanged(parsed.clamp(min, max).toDouble());
                     }
                   },
-                  child: TextFormField(
-                    controller: _controller,
-                    textAlign: TextAlign.center,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    onTap: () => _isEditingText = true,
-                    onChanged: (_) => _isEditingText = true,
-                    onFieldSubmitted: _commitTextValue,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE0E5EF)),
-                      ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE0E5EF)),
                     ),
                   ),
                 ),
@@ -899,9 +748,9 @@ class _NumberFieldRowState extends State<_NumberFieldRow> {
           ),
           Slider(
             value: clamped,
-            min: widget.min,
-            max: widget.max,
-            onChanged: _applySliderValue,
+            min: min,
+            max: max,
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -965,7 +814,6 @@ class _ColorFieldRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: TextFormField(
-                  key: ValueKey(value),
                   initialValue: value,
                   onFieldSubmitted: onChanged,
                   decoration: InputDecoration(
@@ -1158,17 +1006,6 @@ String _styleString(Map<String, dynamic> style, String key, String fallback) {
   final value = style[key]?.toString().trim();
   if (value == null || value.isEmpty) return fallback;
   return value;
-}
-
-bool _styleBool(Map<String, dynamic> style, String key, bool fallback) {
-  final value = style[key];
-  if (value is bool) return value;
-  if (value is String) {
-    final normalized = value.trim().toLowerCase();
-    if (normalized == 'true') return true;
-    if (normalized == 'false') return false;
-  }
-  return fallback;
 }
 
 Color _hexToColor(String hex) {

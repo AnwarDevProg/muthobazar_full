@@ -1,11 +1,10 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
-import 'package:shared_ui/widgets/common/product_cards/design_studio_advanced/mb_card_design_studio_advanced_exports.dart';
 
 import '../controllers/admin_product_controller.dart';
 import 'admin_product_card_picker_dialog.dart';
@@ -968,7 +967,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                     item.titleEn.trim().isEmpty ? item.sku : item.titleEn,
                   ),
                   subtitle: Text(
-                    'enabled: ${item.isEnabled} â€¢ default: ${item.isDefault} â€¢ sort: ${item.sortOrder}',
+                    'enabled: ${item.isEnabled} • default: ${item.isDefault} • sort: ${item.sortOrder}',
                   ),
                 ),
               )
@@ -1387,7 +1386,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
             subtitle:
-            'role: ${item.role} â€¢ type: ${item.type} â€¢ primary: ${item.isPrimary} â€¢ order: ${item.sortOrder}',
+            'role: ${item.role} • type: ${item.type} • primary: ${item.isPrimary} • order: ${item.sortOrder}',
             leading: item.effectiveThumbUrl.trim().isEmpty
                 ? const Icon(Icons.image_not_supported_outlined)
                 : PreviewImage(url: item.effectiveThumbUrl),
@@ -1809,7 +1808,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.nameEn,
             subtitle:
-            'values: ${item.values.length} â€¢ variation: ${item.useForVariation} â€¢ order: ${item.sortOrder}',
+            'values: ${item.values.length} • variation: ${item.useForVariation} • order: ${item.sortOrder}',
             onEdit: () => _editAttribute(item),
             onDelete: () {
               setState(() {
@@ -2078,7 +2077,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn,
             subtitle:
-            'mode: ${item.mode} â€¢ price: ${item.price} â€¢ default: ${item.isDefault}',
+            'mode: ${item.mode} • price: ${item.price} • default: ${item.isDefault}',
             onEdit: () => _editPurchaseOption(item),
             onDelete: () {
               setState(() {
@@ -2339,49 +2338,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       _cardDesignJson = normalized.isEmpty ? null : normalized;
     });
   }
-  Future<void> _openCardDesignStudioV3Dialog(BuildContext context) async {
-    final previewProduct = _buildProductFromForm();
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final size = MediaQuery.sizeOf(dialogContext);
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 18,
-          ),
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-          ),
-          child: SizedBox(
-            width: size.width * 0.96,
-            height: size.height * 0.92,
-            child: MBCardDesignStudioAdvanced(
-              products: [previewProduct],
-              initialProductIndex: 0,
-              initialDesignJson: _cardDesignJson,
-              title: 'Product Card Design Studio V3',
-              wrapWithScaffold: false,
-              onSave: (json) {
-                Navigator.of(dialogContext).pop(json);
-              },
-            ),
-          ),
-        );
-      },
-    );
-
-    if (!mounted || result == null) {
-      return;
-    }
-
-    final normalized = result.trim();
-    setState(() {
-      _cardDesignJson = normalized.isEmpty ? null : normalized;
-    });
-  }
   Widget _buildCardDesignStudioBridgePanel(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -2445,11 +2401,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 ),
               ),
               OutlinedButton.icon(                 onPressed: () => _openCardDesignStudioV2Dialog(context),                 icon: const Icon(Icons.dashboard_customize_rounded),                 label: const Text('Open Studio V2'),               ),
-              OutlinedButton.icon(
-                onPressed: () => _openCardDesignStudioV3Dialog(context),
-                icon: const Icon(Icons.auto_awesome_motion_rounded),
-                label: const Text('Open Studio V3'),
-              ),
               if (_hasCardDesignJson)
                 OutlinedButton.icon(
                   onPressed: () {
@@ -3510,8 +3461,6 @@ Wrap(
     });
   }
 }
-
-
 
 
 

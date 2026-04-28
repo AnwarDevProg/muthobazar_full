@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 middle responsive canvas.
+// Patch 3 FIX middle responsive canvas.
 //
 // Purpose:
 // - Renders the selected product in a phone/card preview.
@@ -9,7 +9,7 @@
 // - Accepts draggable element variants from the left drawer.
 // - Allows selected nodes to be moved by mouse drag.
 //
-// Patch 6 expands render support and adds MRP strike/cross rendering.
+// Patch 2B expands render support for a much larger starter element catalog.
 
 import 'dart:math' as math;
 
@@ -633,7 +633,6 @@ class _NodeVisual extends StatelessWidget {
           scale: scale,
           fallbackColor: _fallbackTextColor(node.elementType),
           maxLines: node.variantId.contains('chip') ? 1 : 3,
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
         );
       case 'media':
         return _MediaNode(
@@ -666,7 +665,6 @@ class _NodeVisual extends StatelessWidget {
           fallbackColor: _fallbackTextColor(node.elementType),
           maxLines: 1,
           center: true,
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
         );
       case 'divider':
       case 'shape':
@@ -696,7 +694,6 @@ class _TextNode extends StatelessWidget {
     required this.fallbackColor,
     required this.maxLines,
     this.center = false,
-    this.strikeOriginalPrice = false,
   });
 
   final String text;
@@ -705,7 +702,6 @@ class _TextNode extends StatelessWidget {
   final Color fallbackColor;
   final int maxLines;
   final bool center;
-  final bool strikeOriginalPrice;
 
   @override
   Widget build(BuildContext context) {
@@ -718,32 +714,9 @@ class _TextNode extends StatelessWidget {
     final padding = background == Colors.transparent
         ? EdgeInsets.zero
         : EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 5 * scale);
-    final alignment = center ? Alignment.center : _textAlignment(style['textAlign']);
-    final strikeMode = style['strikeMode']?.toString().trim().toLowerCase();
-    final isChipLike = _isChipLikeMrpNode(node, background);
-    final usePainterStrike = strikeOriginalPrice &&
-        (isChipLike || strikeMode == 'horizontal' || strikeMode == 'diagonal' || strikeMode == 'cross');
-    final useTextStrike = strikeOriginalPrice && !usePainterStrike;
-    final textWidget = Text(
-      text,
-      maxLines: maxLines,
-      overflow: TextOverflow.ellipsis,
-      textAlign: center ? TextAlign.center : _textAlign(style['textAlign']),
-      style: TextStyle(
-        color: textColor,
-        fontSize: fontSize,
-        fontWeight: _fontWeight(style['fontWeight']),
-        height: 1.05,
-        decoration: useTextStrike ? TextDecoration.lineThrough : null,
-        decorationColor: _hexColor(style['strikeColorHex'], textColor),
-        decorationThickness: useTextStrike
-            ? _asDouble(style['strikeThickness'], 1.6).clamp(0.5, 12.0).toDouble()
-            : null,
-      ),
-    );
 
     return Container(
-      alignment: alignment,
+      alignment: center ? Alignment.center : _textAlignment(style['textAlign']),
       padding: padding,
       decoration: BoxDecoration(
         color: background,
@@ -752,95 +725,19 @@ class _TextNode extends StatelessWidget {
             ? null
             : Border.all(color: border, width: _asDouble(node.style['borderWidth'], 1.0)),
       ),
-      child: usePainterStrike
-          ? Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                Align(alignment: alignment, child: textWidget),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _MrpStrikePainter(
-                        style: style,
-                        fallbackColor: textColor,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : textWidget,
+      child: Text(
+        text,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        textAlign: center ? TextAlign.center : _textAlign(style['textAlign']),
+        style: TextStyle(
+          color: textColor,
+          fontSize: fontSize,
+          fontWeight: _fontWeight(style['fontWeight']),
+          height: 1.05,
+        ),
+      ),
     );
-  }
-}
-
-
-class _MrpStrikePainter extends CustomPainter {
-  const _MrpStrikePainter({
-    required this.style,
-    required this.fallbackColor,
-  });
-
-  final Map<String, dynamic> style;
-  final Color fallbackColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-
-    final mode = style['strikeMode']?.toString().trim().toLowerCase();
-    final effectiveMode = mode == null || mode.isEmpty ? 'cross' : mode;
-    final color = _hexColor(style['strikeColorHex'], fallbackColor).withValues(
-      alpha: _asDouble(style['strikeOpacity'], 1.0).clamp(0.0, 1.0),
-    );
-    final thickness = _asDouble(style['strikeThickness'], 1.6)
-        .clamp(0.5, 12.0)
-        .toDouble();
-    final widthFactor = _asDouble(style['strikeWidthFactor'], 0.92)
-        .clamp(0.1, 1.4)
-        .toDouble();
-    final inset = _asDouble(style['strikeInset'], 0.0).clamp(0.0, 40.0).toDouble();
-    final rawLength = math.max(0.0, size.width * widthFactor - inset * 2);
-    final lineLength = math.min(size.width + size.height, rawLength);
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    void drawCenteredLine(double angleDeg) {
-      canvas.save();
-      canvas.translate(size.width / 2, size.height / 2);
-      canvas.rotate(angleDeg * math.pi / 180.0);
-      canvas.drawLine(
-        Offset(-lineLength / 2, 0),
-        Offset(lineLength / 2, 0),
-        paint,
-      );
-      canvas.restore();
-    }
-
-    switch (effectiveMode) {
-      case 'horizontal':
-      case 'linethrough':
-      case 'lineThrough':
-        drawCenteredLine(0);
-        break;
-      case 'diagonal':
-        drawCenteredLine(_asDouble(style['strikeAngleDeg'], -14));
-        break;
-      case 'cross':
-      default:
-        final angle = _asDouble(style['strikeAngleDeg'], -14).abs();
-        drawCenteredLine(angle);
-        drawCenteredLine(-angle);
-        break;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MrpStrikePainter oldDelegate) {
-    return oldDelegate.style != style || oldDelegate.fallbackColor != fallbackColor;
   }
 }
 
@@ -1104,53 +1001,6 @@ Color _fallbackTextColor(String elementType) {
     default:
       return const Color(0xFFFF6500);
   }
-}
-
-
-bool _shouldStrikeOriginalPrice(dynamic product, MBAdvancedDesignNode node) {
-  if (node.elementType != 'mrp') return false;
-
-  final manualVisible = node.style['strikeVisible'];
-  if (manualVisible is bool) return manualVisible;
-
-  final auto = _asBool(node.style['autoStrikeWhenDiscounted'], true);
-  if (!auto) return false;
-
-  final originalPrice = _readDynamicNumber(product, 'price');
-  final salePrice = _readDynamicNumber(product, 'salePrice');
-  if (originalPrice == null || salePrice == null) return false;
-  if (originalPrice <= 0 || salePrice <= 0) return false;
-  return salePrice < originalPrice;
-}
-
-bool _isChipLikeMrpNode(MBAdvancedDesignNode node, Color background) {
-  if (node.elementType != 'mrp') return false;
-  final variant = node.variantId.toLowerCase();
-  if (variant.contains('chip') || variant.contains('pill') || variant.contains('badge')) {
-    return true;
-  }
-  final rawBg = node.style['backgroundHex']?.toString().trim();
-  return rawBg != null && rawBg.isNotEmpty && rawBg != '#00000000' && background != Colors.transparent;
-}
-
-double? _readDynamicNumber(dynamic product, String fieldName) {
-  final text = _readDynamicString(product, fieldName, '').trim();
-  if (text.isEmpty) return null;
-  final normalized = text
-      .replaceAll('৳', '')
-      .replaceAll(',', '')
-      .replaceAll(RegExp(r'[^0-9\.-]'), '')
-      .trim();
-  if (normalized.isEmpty) return null;
-  return double.tryParse(normalized);
-}
-
-bool _asBool(Object? value, bool fallback) {
-  if (value is bool) return value;
-  final text = value?.toString().trim().toLowerCase();
-  if (text == 'true') return true;
-  if (text == 'false') return false;
-  return fallback;
 }
 
 String _readDynamicString(dynamic product, String fieldName, String fallback) {

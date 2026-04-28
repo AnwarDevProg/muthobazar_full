@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 shell.
+// Patch 5 shell.
 //
 // Target layout:
 // - Left: expandable element drawer with draggable variant boxes.
@@ -316,7 +316,7 @@ class _TopBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Patch 6 active · inspector refresh + MRP strike/cross',
+                  'Patch 5 active · full catalog + synced inspector + V3-only save',
                   style: TextStyle(
                     color: Color(0xFF747B8A),
                     fontSize: 12,

@@ -1,12 +1,12 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 shell.
+// Patch 3 FIX shell.
 //
 // Target layout:
 // - Left: expandable element drawer with draggable variant boxes.
 // - Middle: responsive product-card preview canvas.
 // - Right: selected card/element inspector.
 //
-// Patch 5 scope implemented here:
+// Patch 2 scope implemented here:
 // - New separated advanced studio path: design_studio_advanced.
 // - Existing V1/V2 studio files are not modified.
 // - Current design JSON import/export via clipboard.
@@ -14,7 +14,7 @@
 // - Empty canvas/card click selects the card itself.
 // - Drag variant from left drawer into canvas creates a node.
 // - Mouse drag moves selected nodes around the canvas.
-// - Patch 5 adds full catalog, synced inspector controls, and V3-only persistence support.
+// - Patch 3 will add keyboard move/resize/delete.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -316,7 +316,7 @@ class _TopBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Patch 6 active · inspector refresh + MRP strike/cross',
+                  'Patch 3 FIX active · expanded drawers + rich inspector + keyboard edit',
                   style: TextStyle(
                     color: Color(0xFF747B8A),
                     fontSize: 12,
