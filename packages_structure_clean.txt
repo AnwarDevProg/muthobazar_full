@@ -98,6 +98,52 @@ C.
 |   |   |   +---mb_cart_item.dart
 |   |   |   +---mb_order.dart
 |   |   |   \---mb_order_item.dart
+|   |   +---product_cards
+|   |   |   +---config
+|   |   |   |   +---mb_card_accent_settings.dart
+|   |   |   |   +---mb_card_action_settings.dart
+|   |   |   |   +---mb_card_animation_settings.dart
+|   |   |   |   +---mb_card_background_settings.dart
+|   |   |   |   +---mb_card_badge_settings.dart
+|   |   |   |   +---mb_card_border_effect_settings.dart
+|   |   |   |   +---mb_card_delivery_settings.dart
+|   |   |   |   +---mb_card_family.dart
+|   |   |   |   +---mb_card_footprint.dart
+|   |   |   |   +---mb_card_indicator_settings.dart
+|   |   |   |   +---mb_card_instance_config.dart
+|   |   |   |   +---mb_card_layout_settings.dart
+|   |   |   |   +---mb_card_media_settings.dart
+|   |   |   |   +---mb_card_meta_settings.dart
+|   |   |   |   +---mb_card_price_mode.dart
+|   |   |   |   +---mb_card_price_settings.dart
+|   |   |   |   +---mb_card_progress_settings.dart
+|   |   |   |   +---mb_card_quantity_settings.dart
+|   |   |   |   +---mb_card_rating_settings.dart
+|   |   |   |   +---mb_card_render_defaults.dart
+|   |   |   |   +---mb_card_ribbon_settings.dart
+|   |   |   |   +---mb_card_settings_override.dart
+|   |   |   |   +---mb_card_stock_settings.dart
+|   |   |   |   +---mb_card_style_preset.dart
+|   |   |   |   +---mb_card_supported_settings.dart
+|   |   |   |   +---mb_card_surface_settings.dart
+|   |   |   |   +---mb_card_timer_settings.dart
+|   |   |   |   +---mb_card_typography_settings.dart
+|   |   |   |   +---mb_card_variant.dart
+|   |   |   |   +---mb_card_variant_definition.dart
+|   |   |   |   \---product_card_config.dart
+|   |   |   \---design
+|   |   |       +---mb_card_design_config.dart
+|   |   |       +---mb_card_design_family.dart
+|   |   |       +---mb_card_design_models.dart
+|   |   |       +---mb_card_design_preset.dart
+|   |   |       +---mb_card_design_registry.dart
+|   |   |       +---mb_card_design_template.dart
+|   |   |       +---mb_card_element_binding.dart
+|   |   |       +---mb_card_element_config.dart
+|   |   |       +---mb_card_element_position.dart
+|   |   |       +---mb_card_element_size.dart
+|   |   |       +---mb_card_element_style.dart
+|   |   |       \---mb_card_element_type.dart
 |   |   +---referrals
 |   |   +---reviews
 |   |   |   +---mb_review.dart
@@ -228,11 +274,100 @@ C.
 |   |   +---widgets
 |   |   |   +---common
 |   |   |   |   +---product_cards
-|   |   |   |   |   +---mb_product_card_compact.dart
-|   |   |   |   |   +---mb_product_card_deal.dart
-|   |   |   |   |   +---mb_product_card_featured.dart
-|   |   |   |   |   +---mb_product_card_renderer.dart
-|   |   |   |   |   \---mb_product_card_standard.dart
+|   |   |   |   |   +---design_engine
+|   |   |   |   |   |   +---elements
+|   |   |   |   |   |   |   +---mb_design_badge_element.dart
+|   |   |   |   |   |   |   +---mb_design_cta_element.dart
+|   |   |   |   |   |   |   +---mb_design_indicator_dots_element.dart
+|   |   |   |   |   |   |   +---mb_design_media_element.dart
+|   |   |   |   |   |   |   +---mb_design_price_element.dart
+|   |   |   |   |   |   |   \---mb_design_text_element.dart
+|   |   |   |   |   |   +---positioning
+|   |   |   |   |   |   |   \---mb_design_positioned_element.dart
+|   |   |   |   |   |   +---preview
+|   |   |   |   |   |   |   +---mb_design_card_mobile_preview_frame.dart
+|   |   |   |   |   |   |   \---mb_design_card_preview_panel.dart
+|   |   |   |   |   |   +---templates
+|   |   |   |   |   |   |   \---hero_poster_circle_diagonal_v1.dart
+|   |   |   |   |   |   +---mb_design_card_context.dart
+|   |   |   |   |   |   +---mb_design_card_default_configs.dart
+|   |   |   |   |   |   +---mb_design_card_defaults.dart
+|   |   |   |   |   |   +---mb_design_card_engine.dart
+|   |   |   |   |   |   +---mb_design_card_renderer.dart
+|   |   |   |   |   |   +---mb_design_element_runtime_style.dart
+|   |   |   |   |   |   +---mb_design_runtime_palette.dart
+|   |   |   |   |   |   +---mb_saved_design_card_config_resolver.dart
+|   |   |   |   |   |   \---mb_saved_design_product_card.dart
+|   |   |   |   |   +---design_studio
+|   |   |   |   |   |   \---mb_card_design_studio.dart
+|   |   |   |   |   +---design_studio_advanced
+|   |   |   |   |   |   +---models
+|   |   |   |   |   |   |   +---mb_advanced_card_design_document.dart
+|   |   |   |   |   |   |   \---mb_advanced_element_variant.dart
+|   |   |   |   |   |   +---panels
+|   |   |   |   |   |   |   +---mb_advanced_canvas_panel.dart
+|   |   |   |   |   |   |   +---mb_advanced_element_drawer_panel.dart
+|   |   |   |   |   |   |   \---mb_advanced_inspector_panel.dart
+|   |   |   |   |   |   +---mb_card_design_studio_advanced.dart
+|   |   |   |   |   |   \---mb_card_design_studio_advanced_exports.dart
+|   |   |   |   |   +---design_studio_v2
+|   |   |   |   |   |   +---models
+|   |   |   |   |   |   |   +---mb_design_node.dart
+|   |   |   |   |   |   |   \---mb_design_node_variant.dart
+|   |   |   |   |   |   +---panels
+|   |   |   |   |   |   |   +---mb_design_canvas_panel.dart
+|   |   |   |   |   |   |   +---mb_design_element_drawer.dart
+|   |   |   |   |   |   |   \---mb_design_inspector_panel.dart
+|   |   |   |   |   |   +---mb_card_design_studio_v2.dart
+|   |   |   |   |   |   \---mb_card_design_studio_v2_exports.dart
+|   |   |   |   |   +---system
+|   |   |   |   |   |   +---mb_card_config_resolver.dart
+|   |   |   |   |   |   +---mb_card_variant_registry.dart
+|   |   |   |   |   |   +---mb_product_card_layout_profile.dart
+|   |   |   |   |   |   +---mb_product_card_layout_resolver.dart
+|   |   |   |   |   |   \---mb_product_card_variant_router.dart
+|   |   |   |   |   +---variants
+|   |   |   |   |   |   +---mb_product_card_compact01.dart
+|   |   |   |   |   |   +---mb_product_card_compact02.dart
+|   |   |   |   |   |   +---mb_product_card_compact03.dart
+|   |   |   |   |   |   +---mb_product_card_compact04.dart
+|   |   |   |   |   |   +---mb_product_card_compact05.dart
+|   |   |   |   |   |   +---mb_product_card_featured01.dart
+|   |   |   |   |   |   +---mb_product_card_featured02.dart
+|   |   |   |   |   |   +---mb_product_card_featured03.dart
+|   |   |   |   |   |   +---mb_product_card_featured04.dart
+|   |   |   |   |   |   +---mb_product_card_featured05.dart
+|   |   |   |   |   |   +---mb_product_card_flash01.dart
+|   |   |   |   |   |   +---mb_product_card_flash02.dart
+|   |   |   |   |   |   +---mb_product_card_flash03.dart
+|   |   |   |   |   |   +---mb_product_card_flash04.dart
+|   |   |   |   |   |   +---mb_product_card_flash05.dart
+|   |   |   |   |   |   +---mb_product_card_horizontal01.dart
+|   |   |   |   |   |   +---mb_product_card_horizontal02.dart
+|   |   |   |   |   |   +---mb_product_card_horizontal03.dart
+|   |   |   |   |   |   +---mb_product_card_horizontal04.dart
+|   |   |   |   |   |   +---mb_product_card_horizontal05.dart
+|   |   |   |   |   |   +---mb_product_card_premium01.dart
+|   |   |   |   |   |   +---mb_product_card_premium02.dart
+|   |   |   |   |   |   +---mb_product_card_premium03.dart
+|   |   |   |   |   |   +---mb_product_card_premium04.dart
+|   |   |   |   |   |   +---mb_product_card_premium05.dart
+|   |   |   |   |   |   +---mb_product_card_price01.dart
+|   |   |   |   |   |   +---mb_product_card_price02.dart
+|   |   |   |   |   |   +---mb_product_card_price03.dart
+|   |   |   |   |   |   +---mb_product_card_price04.dart
+|   |   |   |   |   |   +---mb_product_card_price05.dart
+|   |   |   |   |   |   +---mb_product_card_promo01.dart
+|   |   |   |   |   |   +---mb_product_card_promo02.dart
+|   |   |   |   |   |   +---mb_product_card_promo03.dart
+|   |   |   |   |   |   +---mb_product_card_promo04.dart
+|   |   |   |   |   |   +---mb_product_card_promo05.dart
+|   |   |   |   |   |   +---mb_product_card_wide01.dart
+|   |   |   |   |   |   +---mb_product_card_wide02.dart
+|   |   |   |   |   |   +---mb_product_card_wide03.dart
+|   |   |   |   |   |   +---mb_product_card_wide04.dart
+|   |   |   |   |   |   \---mb_product_card_wide05.dart
+|   |   |   |   |   \---mb_product_card_renderer.dart
 |   |   |   |   +---mb_bottom_nav_bar.dart
 |   |   |   |   +---mb_card.dart
 |   |   |   |   +---mb_gradient_header.dart

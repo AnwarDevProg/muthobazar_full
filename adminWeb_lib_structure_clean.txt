@@ -152,15 +152,29 @@ C.
 |   +---picking
 |   +---products
 |   |   +---controllers
-|   |   |   \---admin_product_controller.dart
+|   |   |   +---admin_product_controller.dart
+|   |   |   \---admin_product_controller.dart.bak_card_config_fix_20260424_224312
 |   |   +---pages
+|   |   |   +---admin_product_card_picker_test_page.dart
 |   |   |   +---admin_product_lookup_support.dart
 |   |   |   +---admin_product_page_support.dart
 |   |   |   +---admin_products_page.dart
 |   |   |   \---admin_quarantine_products_page.dart
 |   |   +---widgets
-|   |   |   +---admin_product_card_style_selector.dart
+|   |   |   +---card_design
+|   |   |   |   \---admin_card_design_studio_dialog.dart
+|   |   |   +---card_studio
+|   |   |   |   \---admin_product_card_studio_dialog.dart
+|   |   |   +---admin_product_card_picker_dialog.dart
+|   |   |   +---admin_product_card_settings_dialog.dart
 |   |   |   +---admin_product_form_dialog.dart
+|   |   |   +---admin_product_form_dialog.dart.bak_card_studio_phase1_20260426_020520
+|   |   |   +---admin_product_form_dialog.dart.bak_fix_debug_return_20260426_020905
+|   |   |   +---admin_product_form_dialog.dart.bak_fix_missing_card_studio_method_20260426_023708
+|   |   |   +---admin_product_form_dialog.dart.bak_fix_selected_variant_debug_20260426_021221
+|   |   |   +---admin_product_form_dialog.dart.bak_save_debug_20260424_231514
+|   |   |   +---admin_product_form_dialog.dart.bak_wire_card_studio_20260426_023312
+|   |   |   +---admin_product_form_dialog_old.dart
 |   |   |   \---admin_product_form_support.dart
 |   |   \---read.md
 |   +---profile

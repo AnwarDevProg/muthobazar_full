@@ -71,13 +71,9 @@ C.
 |   |   \---widgets
 |   |       +---cart_item_tile.dart
 |   |       \---cart_section_card.dart
-|   +---categories
-|   |   +---controllers
-|   |   +---pages
-|   |   |   \---categories_page.dart
-|   |   \---widgets
 |   +---chat
 |   |   +---controllers
+|   |   +---models
 |   |   +---pages
 |   |   |   \---chat_page.dart
 |   |   \---widgets
@@ -92,12 +88,17 @@ C.
 |   |   |   +---home_overlay_controller.dart
 |   |   |   \---offer_overlay_manager.dart
 |   |   +---data
-|   |   |   \---home_dummy_data.dart
 |   |   +---pages
 |   |   |   +---home_page.dart
 |   |   |   \---offer_details_page.dart
 |   |   \---widgets
 |   |       +---sections
+|   |       |   +---gap_fillers
+|   |       |   |   +---mb_home_card_layout_profile.dart
+|   |       |   |   +---mb_home_gap_filler_models.dart
+|   |       |   |   +---mb_home_gap_filler_resolver.dart
+|   |       |   |   +---mb_home_gap_filler_widget.dart
+|   |       |   |   \---mb_home_grid_layout_tuning.dart
 |   |       |   +---mb_home_category_grid_section.dart
 |   |       |   +---mb_home_hero_banner_section.dart
 |   |       |   +---mb_home_offer_strip_section.dart
@@ -107,6 +108,7 @@ C.
 |   |       +---floating_offer_card.dart
 |   |       +---home_cache_debug_section.dart
 |   |       +---home_renderer.dart
+|   |       +---mb_home_top_bar.dart
 |   |       \---mb_offer_details_page.dart
 |   +---onboarding
 |   |   +---controllers
@@ -144,6 +146,18 @@ C.
 |   |   +---pages
 |   |   |   \---complete_profile_page.dart
 |   |   \---widgets
+|   +---store
+|   |   +---controllers
+|   |   +---data
+|   |   |   \---product_card_preview_dummy_data.dart
+|   |   +---models
+|   |   |   \---mb_store_card_preview_entry.dart
+|   |   +---pages
+|   |   |   \---store_page.dart
+|   |   \---widgets
+|   |       +---store_card_add_dialog.dart
+|   |       +---store_section_card.dart
+|   |       \---store_section_grid.dart
 |   \---wishlist
 |       +---controllers
 |       +---pages

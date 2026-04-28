@@ -85,8 +85,7 @@ C.
 |   |   |   +---admin_hard_delete_product.ts
 |   |   |   +---admin_restore_product.ts
 |   |   |   +---admin_set_product_enabled.ts
-|   |   |   +---admin_update_product.ts
-|   |   |   \---previous create.md
+|   |   |   \---admin_update_product.ts
 |   |   +---purchases
 |   |   +---services
 |   |   +---support
