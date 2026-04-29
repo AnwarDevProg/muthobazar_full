@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 middle responsive canvas.
+// Patch 8 middle responsive canvas.
 //
 // Purpose:
 // - Renders the selected product in a phone/card preview.
@@ -9,8 +9,10 @@
 // - Accepts draggable element variants from the left drawer.
 // - Allows selected nodes to be moved by mouse drag.
 //
-// Patch 6 expands render support and adds MRP strike/cross rendering.
+// Patch 8 adds card/root anchored preview sizing and real card radius clipping.
+// Patch 10.2 fixes the cardLayoutType editor button constraints and keeps preview rendering stable.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -38,6 +40,7 @@ class MBAdvancedCanvasPanel extends StatefulWidget {
     required this.onDropVariant,
     required this.onMoveNode,
     required this.onDeleteNode,
+    required this.onCardLayoutTypeChanged,
   });
 
   final dynamic product;
@@ -47,6 +50,7 @@ class MBAdvancedCanvasPanel extends StatefulWidget {
   final MBAdvancedVariantDropCallback onDropVariant;
   final MBAdvancedNodeChangedCallback onMoveNode;
   final ValueChanged<String> onDeleteNode;
+  final ValueChanged<String> onCardLayoutTypeChanged;
 
   @override
   State<MBAdvancedCanvasPanel> createState() => _MBAdvancedCanvasPanelState();
@@ -54,15 +58,21 @@ class MBAdvancedCanvasPanel extends StatefulWidget {
 
 class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
   late final FocusNode _focusNode;
+  Timer? _keyboardRepeatTimer;
+  LogicalKeyboardKey? _heldKey;
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode(debugLabel: 'MBAdvancedCardStudioCanvas');
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) _stopKeyboardRepeat();
+    });
   }
 
   @override
   void dispose() {
+    _stopKeyboardRepeat();
     _focusNode.dispose();
     super.dispose();
   }
@@ -74,7 +84,17 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) {
+    final key = event.logicalKey;
+
+    if (event is KeyUpEvent) {
+      if (_heldKey == key) {
+        _stopKeyboardRepeat();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
 
@@ -83,11 +103,11 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
       return KeyEventResult.ignored;
     }
 
-    final key = event.logicalKey;
-
     if (key == LogicalKeyboardKey.delete ||
         key == LogicalKeyboardKey.backspace) {
-      widget.onDeleteNode(selectedNode.id);
+      if (event is KeyDownEvent) {
+        widget.onDeleteNode(selectedNode.id);
+      }
       return KeyEventResult.handled;
     }
 
@@ -103,9 +123,49 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
     final keyboard = HardwareKeyboard.instance;
     final isResize = keyboard.isControlPressed || keyboard.isMetaPressed;
     final isFast = keyboard.isShiftPressed;
-    final stepPx = isFast ? 10.0 : 1.0;
 
-    if (isResize) {
+    if (event is KeyDownEvent) {
+      _applyKeyboardEdit(key, resize: isResize, fast: isFast);
+      _startKeyboardRepeat(key, resize: isResize, fast: isFast);
+    }
+
+    return KeyEventResult.handled;
+  }
+
+  void _startKeyboardRepeat(
+    LogicalKeyboardKey key, {
+    required bool resize,
+    required bool fast,
+  }) {
+    if (_heldKey == key && _keyboardRepeatTimer?.isActive == true) {
+      return;
+    }
+
+    _stopKeyboardRepeat();
+    _heldKey = key;
+    _keyboardRepeatTimer = Timer.periodic(
+      const Duration(milliseconds: 55),
+      (_) => _applyKeyboardEdit(key, resize: resize, fast: fast),
+    );
+  }
+
+  void _stopKeyboardRepeat() {
+    _keyboardRepeatTimer?.cancel();
+    _keyboardRepeatTimer = null;
+    _heldKey = null;
+  }
+
+  void _applyKeyboardEdit(
+    LogicalKeyboardKey key, {
+    required bool resize,
+    required bool fast,
+  }) {
+    final selectedNode = widget.document.selectedNode;
+    if (selectedNode == null || selectedNode.locked) return;
+
+    final stepPx = fast ? 10.0 : 1.0;
+
+    if (resize) {
       final widthDelta = key == LogicalKeyboardKey.arrowRight
           ? stepPx
           : key == LogicalKeyboardKey.arrowLeft
@@ -117,17 +177,23 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
               ? -stepPx
               : 0.0;
 
-      final nextSize = selectedNode.size.copyWith(
-        width: (selectedNode.size.width + widthDelta)
-            .clamp(selectedNode.size.minWidth, selectedNode.size.maxWidth)
-            .toDouble(),
-        height: (selectedNode.size.height + heightDelta)
-            .clamp(selectedNode.size.minHeight, selectedNode.size.maxHeight)
-            .toDouble(),
-      );
+      final nextWidth = (selectedNode.size.width + widthDelta)
+          .clamp(selectedNode.size.minWidth, selectedNode.size.maxWidth)
+          .toDouble();
+      final nextHeight = (selectedNode.size.height + heightDelta)
+          .clamp(selectedNode.size.minHeight, selectedNode.size.maxHeight)
+          .toDouble();
 
-      widget.onMoveNode(selectedNode.copyWith(size: nextSize));
-      return KeyEventResult.handled;
+      widget.onMoveNode(
+        _resizeNodeFromTopLeft(
+          selectedNode,
+          cardWidth: widget.document.cardWidth,
+          cardHeight: widget.document.cardHeight,
+          width: nextWidth,
+          height: nextHeight,
+        ),
+      );
+      return;
     }
 
     final dx = key == LogicalKeyboardKey.arrowRight
@@ -160,7 +226,6 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
         position: selectedNode.position.copyWith(x: nextX, y: nextY),
       ),
     );
-    return KeyEventResult.handled;
   }
 
   @override
@@ -177,70 +242,281 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
               const _CanvasHeader(),
               Expanded(
                 child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cardWidth = math.min(
-                      widget.document.cardWidth,
-                      math.max(180.0, constraints.maxWidth - 72),
-                    );
-                    final scale = cardWidth / widget.document.cardWidth;
-                    final cardHeight = widget.document.cardHeight * scale;
+                  builder: (context, outerConstraints) {
+                    const halfWidthPreset = 192.0;
+                    const fullWidthPreset = 392.0;
+                    const defaultHeight = 380.0;
 
-                    return Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            _DevicePreviewFrame(
-                              child: _CanvasDropTarget(
-                                cardWidth: cardWidth,
-                                cardHeight: cardHeight,
-                                onDropVariant: (variant, normalizedPosition) {
-                                  widget.onDropVariant(
-                                    variant,
-                                    normalizedPosition,
-                                  );
-                                  _requestCanvasFocus();
-                                },
-                                child: SizedBox(
-                                  width: cardWidth,
-                                  height: cardHeight,
-                                  child: _EditableCardCanvas(
-                                    product: widget.product,
-                                    document: widget.document,
-                                    scale: scale,
-                                    onSelectCard: () {
-                                      widget.onSelectCard();
-                                      _requestCanvasFocus();
-                                    },
-                                    onSelectNode: (nodeId) {
-                                      widget.onSelectNode(nodeId);
-                                      _requestCanvasFocus();
-                                    },
-                                    onMoveNode: widget.onMoveNode,
+                    final stageDesignWidth = math.max(
+                      fullWidthPreset,
+                      widget.document.cardWidth,
+                    );
+                    final stageDesignHeight = math.max(
+                      defaultHeight,
+                      widget.document.cardHeight,
+                    );
+
+                    return Column(
+                      children: <Widget>[
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, previewConstraints) {
+                              final availableStageWidth = math.max(
+                                180.0,
+                                previewConstraints.maxWidth - 72,
+                              );
+                              final availableStageHeight = math.max(
+                                220.0,
+                                previewConstraints.maxHeight - 44,
+                              );
+                              final scale = math.min(
+                                1.0,
+                                math.min(
+                                  availableStageWidth / stageDesignWidth,
+                                  availableStageHeight / stageDesignHeight,
+                                ),
+                              );
+
+                              final stageWidth = stageDesignWidth * scale;
+                              final stageHeight = stageDesignHeight * scale;
+                              final cardWidth = widget.document.cardWidth * scale;
+                              final cardHeight = widget.document.cardHeight * scale;
+
+                              return Center(
+                                child: _DevicePreviewFrame(
+                                  child: SizedBox(
+                                    width: stageWidth,
+                                    height: stageHeight,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: <Widget>[
+                                        Positioned(
+                                          left: 0,
+                                          top: 0,
+                                          width: cardWidth,
+                                          height: cardHeight,
+                                          child: _CanvasDropTarget(
+                                            cardWidth: cardWidth,
+                                            cardHeight: cardHeight,
+                                            onDropVariant: (variant, normalizedPosition) {
+                                              widget.onDropVariant(
+                                                variant,
+                                                normalizedPosition,
+                                              );
+                                              _requestCanvasFocus();
+                                            },
+                                            child: SizedBox(
+                                              width: cardWidth,
+                                              height: cardHeight,
+                                              child: _EditableCardCanvas(
+                                                product: widget.product,
+                                                document: widget.document,
+                                                scale: scale,
+                                                onSelectCard: () {
+                                                  widget.onSelectCard();
+                                                  _requestCanvasFocus();
+                                                },
+                                                onSelectNode: (nodeId) {
+                                                  widget.onSelectNode(nodeId);
+                                                  _requestCanvasFocus();
+                                                },
+                                                onMoveNode: widget.onMoveNode,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: _StageAnchorHint(
+                                            visible: widget.document.isCardSelected,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              'Canvas: ${widget.document.cardWidth.toStringAsFixed(0)} × ${widget.document.cardHeight.toStringAsFixed(0)} px · ${widget.document.nodes.length} node(s) · Arrow move · Ctrl+Arrow resize · Delete removes',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xFF747B8A),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                              );
+                            },
+                          ),
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                'Canvas: ${widget.document.cardWidth.toStringAsFixed(0)} x ${widget.document.cardHeight.toStringAsFixed(0)} px | Preview slot: ${stageDesignWidth.toStringAsFixed(0)} x ${stageDesignHeight.toStringAsFixed(0)} px | ${widget.document.nodes.length} nodes',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF747B8A),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: math.min(560, math.max(320, outerConstraints.maxWidth - 96)),
+                                child: _CardLayoutTypeEditor(
+                                  value: widget.document.cardLayoutType,
+                                  onChanged: widget.onCardLayoutTypeChanged,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CardLayoutTypeEditor extends StatefulWidget {
+  const _CardLayoutTypeEditor({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_CardLayoutTypeEditor> createState() => _CardLayoutTypeEditorState();
+}
+
+class _CardLayoutTypeEditorState extends State<_CardLayoutTypeEditor> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CardLayoutTypeEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value && _controller.text != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _commit() {
+    final value = _controller.text.trim();
+    if (value.isEmpty) return;
+    widget.onChanged(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6E8EF)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 14,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Text(
+              'cardLayoutType',
+              style: TextStyle(
+                color: Color(0xFFFF6500),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'This value is written to product.cardLayoutType when copying/saving this V3 design.',
+              style: TextStyle(
+                color: Color(0xFF747B8A),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    onSubmitted: (_) => _commit(),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'hero_poster_circle_diagonal_v1',
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE0E5EF)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 96,
+                  height: 40,
+                  child: TextButton(
+                    onPressed: () {
+                      _controller.text = 'hero_poster_circle_diagonal_v1';
+                      _commit();
+                    },
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(96, 40),
+                      maximumSize: const Size(96, 40),
+                    ),
+                    child: const Text('Suggested'),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 82,
+                  height: 40,
+                  child: ElevatedButton(
+                    onPressed: _commit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6500),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(82, 40),
+                      maximumSize: const Size(82, 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -261,8 +537,8 @@ class _CanvasHeader extends StatelessWidget {
           bottom: BorderSide(color: Color(0xFFE6E8EF)),
         ),
       ),
-      child: const Row(
-        children: <Widget>[
+      child: Row(
+        children: const <Widget>[
           Icon(
             Icons.phone_android_rounded,
             color: Color(0xFFFF6500),
@@ -279,8 +555,41 @@ class _CanvasHeader extends StatelessWidget {
               ),
             ),
           ),
+          SizedBox(
+            width: 260,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color(0xFFF7F8FB),
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+                border: Border.fromBorderSide(BorderSide(color: Color(0xFFE6E8EF))),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.history_rounded, size: 16, color: Color(0xFFFF6500)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Previous config: Current product design',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Color(0xFF747B8A),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF747B8A)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 14),
           Text(
-            'Drop · mouse move · arrows move · Ctrl+arrows resize',
+            'Drop | Mouse move | Arrow move | Ctrl+Arrow resize',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -314,9 +623,35 @@ class _DevicePreviewFrame extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: child,
+      child: child,
+    );
+  }
+}
+
+class _StageAnchorHint extends StatelessWidget {
+  const _StageAnchorHint({required this.visible});
+
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF).withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFE0C4)),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text(
+          'Card anchors: left/top fixed',
+          style: TextStyle(
+            color: Color(0xFFFF6500),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ),
     );
   }
@@ -346,7 +681,7 @@ class _CanvasDropTargetState extends State<_CanvasDropTarget> {
   Widget build(BuildContext context) {
     return DragTarget<MBAdvancedElementVariant>(
       key: _targetKey,
-      onWillAcceptWithDetails: (details) => !details.data.isCardVariant,
+      onWillAcceptWithDetails: (details) => true,
       onAcceptWithDetails: (details) {
         final renderObject = _targetKey.currentContext?.findRenderObject();
         if (renderObject is! RenderBox) return;
@@ -458,45 +793,55 @@ class _EditableCardCanvas extends StatelessWidget {
     final scaledCardWidth = document.cardWidth * scale;
     final scaledCardHeight = document.cardHeight * scale;
 
+    final cardRadius = document.borderRadius * scale;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onSelectCard,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[background, background2],
+      child: ClipRRect(
+        key: ValueKey<String>('card_radius_${document.borderRadius.toStringAsFixed(2)}'),
+        borderRadius: BorderRadius.circular(cardRadius),
+        clipBehavior: Clip.antiAlias,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[background, background2],
+            ),
+            borderRadius: BorderRadius.circular(cardRadius),
           ),
-          borderRadius: BorderRadius.circular(document.borderRadius * scale),
-          border: Border.all(
-            color: selectedCard ? const Color(0xFF172033) : Colors.transparent,
-            width: selectedCard ? 2 : 0,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(document.borderRadius * scale),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _SubtleGridPainter(),
-                ),
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(cardRadius),
+              border: Border.all(
+                color: selectedCard ? const Color(0xFF172033) : Colors.transparent,
+                width: selectedCard ? 2 : 0,
               ),
-              for (final node in sortedNodes)
-                if (node.visible)
-                  _CanvasNodeWidget(
-                    product: product,
-                    node: node,
-                    selected: document.selectedNodeId == node.id,
-                    scale: scale,
-                    cardWidth: scaledCardWidth,
-                    cardHeight: scaledCardHeight,
-                    onSelect: () => onSelectNode(node.id),
-                    onMoveNode: onMoveNode,
+            ),
+            child: Stack(
+              clipBehavior: Clip.hardEdge,
+              children: <Widget>[
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _SubtleGridPainter(),
                   ),
-            ],
+                ),
+                for (final node in sortedNodes)
+                  if (node.visible)
+                    _CanvasNodeWidget(
+                      product: product,
+                      node: node,
+                      selected: document.selectedNodeId == node.id,
+                      scale: scale,
+                      cardWidth: scaledCardWidth,
+                      cardHeight: scaledCardHeight,
+                      onSelect: () => onSelectNode(node.id),
+                      onMoveNode: onMoveNode,
+                    ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1001,10 +1346,10 @@ String _resolveNodeText(dynamic product, MBAdvancedDesignNode node) {
       fallback = 'Vegetables';
       break;
     case 'price':
-      fallback = '৳120';
+      fallback = '\u09F3120';
       break;
     case 'mrp':
-      fallback = '৳150';
+      fallback = '\u09F3150';
       break;
     case 'discount':
       fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '25% OFF';
@@ -1057,7 +1402,7 @@ String _resolveNodeText(dynamic product, MBAdvancedDesignNode node) {
       fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Qty 1';
       break;
     case 'priceBadge':
-      fallback = '৳120';
+      fallback = '\u09F3120';
       break;
     case 'promoBadge':
       fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Promo';
@@ -1137,7 +1482,7 @@ double? _readDynamicNumber(dynamic product, String fieldName) {
   final text = _readDynamicString(product, fieldName, '').trim();
   if (text.isEmpty) return null;
   final normalized = text
-      .replaceAll('৳', '')
+      .replaceAll('\u09F3', '')
       .replaceAll(',', '')
       .replaceAll(RegExp(r'[^0-9\.-]'), '')
       .trim();
@@ -1210,14 +1555,14 @@ String _readPrice(dynamic product, String fallback) {
 
 String _formatPrice(String value) {
   final text = value.trim();
-  if (text.isEmpty) return '৳120';
-  if (text.startsWith('৳')) return text;
+  if (text.isEmpty) return '\u09F3120';
+  if (text.startsWith('\u09F3')) return text;
   final number = num.tryParse(text);
   if (number == null) return text;
   final formatted = number == number.roundToDouble()
       ? number.toInt().toString()
       : number.toStringAsFixed(2);
-  return '৳$formatted';
+  return '\u09F3$formatted';
 }
 
 Alignment _textAlignment(Object? value) {
@@ -1276,6 +1621,29 @@ Color _hexColor(Object? value, Color fallback) {
 double _asDouble(Object? value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
+}
+
+
+MBAdvancedDesignNode _resizeNodeFromTopLeft(
+  MBAdvancedDesignNode node, {
+  required double cardWidth,
+  required double cardHeight,
+  required double width,
+  required double height,
+}) {
+  final safeCardWidth = math.max(1.0, cardWidth);
+  final safeCardHeight = math.max(1.0, cardHeight);
+  final oldLeft = node.position.x - node.size.width / safeCardWidth / 2;
+  final oldTop = node.position.y - node.size.height / safeCardHeight / 2;
+  final nextHalfWidth = width / safeCardWidth / 2;
+  final nextHalfHeight = height / safeCardHeight / 2;
+  final nextX = _clampDouble(oldLeft + nextHalfWidth, nextHalfWidth, 1.0 - nextHalfWidth);
+  final nextY = _clampDouble(oldTop + nextHalfHeight, nextHalfHeight, 1.0 - nextHalfHeight);
+
+  return node.copyWith(
+    position: node.position.copyWith(x: nextX, y: nextY),
+    size: node.size.copyWith(width: width, height: height),
+  );
 }
 
 double _clampDouble(double value, double min, double max) {

@@ -121,15 +121,27 @@ function familyIdFromVariantId(variantId) {
         return "promo";
     if (variantId.startsWith("flash"))
         return "flash_sale";
+    if (isValidAdvancedCardLayoutId(variantId))
+        return "advanced_v3";
     throw new https_1.HttpsError("invalid-argument", `Invalid card variant id: ${variantId}`);
+}
+function isValidAdvancedCardLayoutId(value) {
+    const advancedLayoutIds = new Set([
+        "advanced_v3",
+        "hero_poster_circle",
+        "hero_poster_circle_diagonal_v1",
+        "orange_gradient_poster_v1",
+        "advanced_orange_phone_card_v1",
+    ]);
+    return advancedLayoutIds.has(value);
 }
 function normalizeCardVariantId(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
     if (normalized.length === 0) {
         return "compact01";
     }
-    if (!isValidNewCardVariantId(normalized)) {
-        throw new https_1.HttpsError("invalid-argument", `Invalid card variant id: ${normalized}. Use exact new variant ids like compact01, horizontal03, wide02, promo05.`);
+    if (!isValidNewCardVariantId(normalized) && !isValidAdvancedCardLayoutId(normalized)) {
+        throw new https_1.HttpsError("invalid-argument", `Invalid card variant id: ${normalized}. Use legacy ids like compact01, horizontal03, wide02, promo05, or V3 ids like hero_poster_circle_diagonal_v1 when cardDesignJson is provided.`);
     }
     return normalized;
 }

@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 2 model layer.
+// Patch 9 model layer.
 //
 // Purpose:
 // - Stores the new node-based editable product-card design JSON.
@@ -13,6 +13,7 @@
 // - JSON import/export.
 // - Click selection support.
 // - Safe position updates for drag/drop and mouse movement.
+// - Patch 9 adds responsive/fixed resize mode for card-level resizing.
 
 import 'dart:convert';
 
@@ -237,13 +238,15 @@ class MBAdvancedCardDesignDocument {
   const MBAdvancedCardDesignDocument({
     this.version = 20,
     this.type = 'muthobazar_card_design_advanced_v2',
-    this.templateId = 'advanced_orange_phone_card_v1',
-    this.designFamilyId = 'advanced_freeform_phone_card',
+    this.templateId = 'hero_poster_circle_diagonal_v1',
+    this.designFamilyId = 'hero_poster_circle',
     this.selectedNodeId,
     this.layout = const <String, dynamic>{
       'cardWidth': 240.0,
       'cardHeight': 380.0,
       'borderRadius': 28.0,
+      'resizeMode': 'responsive',
+      'lockElementsToCard': true,
     },
     this.palette = const <String, dynamic>{
       'presetId': 'orangeGradient',
@@ -319,6 +322,28 @@ class MBAdvancedCardDesignDocument {
   double get borderRadius => _asDouble(layout['borderRadius'], 28)
       .clamp(0.0, 80.0)
       .toDouble();
+
+  String get resizeMode {
+    final rawMode = _asString(
+      layout['resizeMode'],
+      _asBool(layout['lockElementsToCard'], true) ? 'responsive' : 'fixed',
+    ).trim().toLowerCase();
+    return rawMode == 'fixed' ? 'fixed' : 'responsive';
+  }
+
+  bool get lockElementsToCard => resizeMode != 'fixed';
+
+  String get cardLayoutType {
+    final metadataValue = _asString(metadata['cardLayoutType'], '').trim();
+    if (metadataValue.isNotEmpty) return metadataValue;
+    final layoutValue = _asString(layout['cardLayoutType'], '').trim();
+    if (layoutValue.isNotEmpty) return layoutValue;
+    final templateValue = templateId.trim();
+    if (templateValue.isNotEmpty && templateValue != 'advanced_orange_phone_card_v1') {
+      return templateValue;
+    }
+    return 'hero_poster_circle_diagonal_v1';
+  }
 
   MBAdvancedDesignNode? get selectedNode {
     final id = selectedNodeId;
@@ -414,11 +439,123 @@ class MBAdvancedCardDesignDocument {
     Map<String, dynamic> patch,
   ) {
     return copyWith(
-      layout: <String, dynamic>{
+      layout: _safeLayout(<String, dynamic>{
         ...layout,
         ...patch,
-      },
+      }),
       clearSelectedNodeId: true,
+    );
+  }
+
+  MBAdvancedCardDesignDocument updateResizeMode({
+    required bool lockElementsToCard,
+  }) {
+    return updateLayout(<String, dynamic>{
+      'resizeMode': lockElementsToCard ? 'responsive' : 'fixed',
+      'lockElementsToCard': lockElementsToCard,
+    });
+  }
+
+  MBAdvancedCardDesignDocument updateCardLayoutType(String value) {
+    final normalized = _normalizeCardLayoutType(value);
+    return copyWith(
+      templateId: normalized,
+      designFamilyId: _designFamilyFromLayoutType(normalized),
+      layout: _safeLayout(<String, dynamic>{
+        ...layout,
+        'cardLayoutType': normalized,
+      }),
+      metadata: _cleanMap(<String, dynamic>{
+        ...metadata,
+        'cardLayoutType': normalized,
+      }),
+    );
+  }
+
+  MBAdvancedCardDesignDocument ensureCardLayoutType() {
+    return updateCardLayoutType(cardLayoutType);
+  }
+
+  MBAdvancedCardDesignDocument lockElementsResponsive() {
+    final normalizedLayoutType = cardLayoutType;
+    if (lockElementsToCard) {
+      return updateCardLayoutType(normalizedLayoutType);
+    }
+    return copyWith(
+      templateId: normalizedLayoutType,
+      designFamilyId: _designFamilyFromLayoutType(normalizedLayoutType),
+      layout: _safeLayout(<String, dynamic>{
+        ...layout,
+        'resizeMode': 'responsive',
+        'lockElementsToCard': true,
+        'cardLayoutType': normalizedLayoutType,
+      }),
+      metadata: _cleanMap(<String, dynamic>{
+        ...metadata,
+        'cardLayoutType': normalizedLayoutType,
+      }),
+    );
+  }
+
+  MBAdvancedCardDesignDocument resizeCardLayout({
+    double? cardWidth,
+    double? cardHeight,
+    double? borderRadius,
+  }) {
+    final oldWidth = this.cardWidth;
+    final oldHeight = this.cardHeight;
+    final nextWidth = (cardWidth ?? oldWidth).clamp(160.0, 420.0).toDouble();
+    final nextHeight = (cardHeight ?? oldHeight).clamp(220.0, 760.0).toDouble();
+    final nextRadius = (borderRadius ?? this.borderRadius).clamp(0.0, 80.0).toDouble();
+
+    final nextLayout = _safeLayout(<String, dynamic>{
+      ...layout,
+      'cardWidth': nextWidth,
+      'cardHeight': nextHeight,
+      'borderRadius': nextRadius,
+    });
+
+    if (lockElementsToCard || oldWidth <= 0 || oldHeight <= 0) {
+      return copyWith(layout: nextLayout, clearSelectedNodeId: true);
+    }
+
+    final adjustedNodes = <MBAdvancedDesignNode>[
+      for (final node in nodes)
+        _keepNodeVisualPosition(
+          node,
+          oldWidth: oldWidth,
+          oldHeight: oldHeight,
+          nextWidth: nextWidth,
+          nextHeight: nextHeight,
+        ),
+    ];
+
+    return copyWith(
+      layout: nextLayout,
+      nodes: adjustedNodes,
+      clearSelectedNodeId: true,
+    );
+  }
+
+  static MBAdvancedDesignNode _keepNodeVisualPosition(
+    MBAdvancedDesignNode node, {
+    required double oldWidth,
+    required double oldHeight,
+    required double nextWidth,
+    required double nextHeight,
+  }) {
+    final oldCenterX = node.position.x * oldWidth;
+    final oldCenterY = node.position.y * oldHeight;
+    final halfWidth = nextWidth <= 0 ? 0.0 : (node.size.width / nextWidth) / 2;
+    final halfHeight = nextHeight <= 0 ? 0.0 : (node.size.height / nextHeight) / 2;
+    final nextX = (oldCenterX / nextWidth)
+        .clamp(halfWidth.clamp(0.0, 0.5), 1.0 - halfWidth.clamp(0.0, 0.5))
+        .toDouble();
+    final nextY = (oldCenterY / nextHeight)
+        .clamp(halfHeight.clamp(0.0, 0.5), 1.0 - halfHeight.clamp(0.0, 0.5))
+        .toDouble();
+    return node.copyWith(
+      position: node.position.copyWith(x: nextX, y: nextY),
     );
   }
 
@@ -436,18 +573,25 @@ class MBAdvancedCardDesignDocument {
 
   Map<String, dynamic> toMap() {
     final safeNodes = _normalizeNodes(nodes);
+    final normalizedLayoutType = cardLayoutType;
     return <String, dynamic>{
       'version': version,
       'type': type,
-      'templateId': templateId,
-      'designFamilyId': designFamilyId,
+      'templateId': normalizedLayoutType,
+      'designFamilyId': _designFamilyFromLayoutType(normalizedLayoutType),
       if (selectedNodeId != null) 'selectedNodeId': selectedNodeId,
-      'layout': _cleanMap(layout),
+      'layout': _cleanMap(<String, dynamic>{
+        ...layout,
+        'cardLayoutType': normalizedLayoutType,
+      }),
       'palette': _cleanMap(palette),
       'nodes': <Map<String, dynamic>>[
         for (final node in safeNodes) node.toMap(),
       ],
-      if (metadata.isNotEmpty) 'metadata': _cleanMap(metadata),
+      'metadata': _cleanMap(<String, dynamic>{
+        ...metadata,
+        'cardLayoutType': normalizedLayoutType,
+      }),
     };
   }
 
@@ -484,10 +628,10 @@ class MBAdvancedCardDesignDocument {
       return MBAdvancedCardDesignDocument(
         version: _asInt(map['version'], 20),
         type: _asString(map['type'], 'muthobazar_card_design_advanced_v2'),
-        templateId: _asString(map['templateId'], 'advanced_orange_phone_card_v1'),
+        templateId: _normalizeCardLayoutType(_asString(map['templateId'], 'hero_poster_circle_diagonal_v1')),
         designFamilyId: _asString(
           map['designFamilyId'],
-          'advanced_freeform_phone_card',
+          'hero_poster_circle',
         ),
         selectedNodeId: _safeSelectedNodeId(
           _asNullableString(map['selectedNodeId']),
@@ -615,10 +759,10 @@ class MBAdvancedCardDesignDocument {
     return MBAdvancedCardDesignDocument(
       version: 20,
       type: 'muthobazar_card_design_advanced_v2',
-      templateId: _asString(map['templateId'], 'advanced_migrated_v1'),
+      templateId: _normalizeCardLayoutType(_asString(map['templateId'], 'hero_poster_circle_diagonal_v1')),
       designFamilyId: _asString(
         map['designFamilyId'],
-        'advanced_freeform_phone_card',
+        'hero_poster_circle',
       ),
       layout: _safeLayout(_asStringMap(map['layout'])),
       palette: _cleanMap(_asStringMap(map['palette'])),
@@ -953,12 +1097,43 @@ class MBAdvancedCardDesignDocument {
 
   static Map<String, dynamic> _safeLayout(Map<String, dynamic> value) {
     final cleaned = _cleanMap(value);
+    final rawMode = _asString(
+      cleaned['resizeMode'],
+      _asBool(cleaned['lockElementsToCard'], true) ? 'responsive' : 'fixed',
+    ).trim().toLowerCase();
+    final resizeMode = rawMode == 'fixed' ? 'fixed' : 'responsive';
+    final lockElementsToCard = resizeMode != 'fixed';
+
     return <String, dynamic>{
       'cardWidth': _asDouble(cleaned['cardWidth'], 240).clamp(160.0, 420.0),
       'cardHeight': _asDouble(cleaned['cardHeight'], 380).clamp(220.0, 760.0),
       'borderRadius': _asDouble(cleaned['borderRadius'], 28).clamp(0.0, 80.0),
+      'resizeMode': resizeMode,
+      'lockElementsToCard': lockElementsToCard,
     };
   }
+}
+
+String _normalizeCardLayoutType(String? value) {
+  final raw = value?.trim() ?? '';
+  if (raw.isEmpty || raw == 'advanced_orange_phone_card_v1') {
+    return 'hero_poster_circle_diagonal_v1';
+  }
+  return raw
+      .replaceAll(' ', '_')
+      .replaceAll(RegExp(r'[^A-Za-z0-9_\-]'), '')
+      .toLowerCase();
+}
+
+String _designFamilyFromLayoutType(String layoutType) {
+  final value = layoutType.trim().toLowerCase();
+  if (value.contains('compact')) return 'compact';
+  if (value.contains('horizontal')) return 'horizontal';
+  if (value.contains('wide')) return 'wide';
+  if (value.contains('promo')) return 'promo';
+  if (value.contains('poster')) return 'hero_poster_circle';
+  if (value.contains('circle')) return 'hero_poster_circle';
+  return 'advanced_v3';
 }
 
 Map<String, dynamic> _asStringMap(Object? value) {

@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 shell.
+// Patch 10.1 shell.
 //
 // Target layout:
 // - Left: expandable element drawer with draggable variant boxes.
@@ -14,7 +14,9 @@
 // - Empty canvas/card click selects the card itself.
 // - Drag variant from left drawer into canvas creates a node.
 // - Mouse drag moves selected nodes around the canvas.
-// - Patch 5 adds full catalog, synced inspector controls, and V3-only persistence support.
+// - Patch 8 fixes card/root anchored resize and live radius rendering.
+// - Patch 9 adds responsive/fixed element lock and auto-lock on copy/save/close.
+// - Patch 10.1 restores preview layout while keeping cardLayoutType visible.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -91,6 +93,7 @@ class _MBCardDesignStudioAdvancedState
           onProductChanged: widget.products.isEmpty
               ? null
               : (index) => setState(() => _productIndex = index),
+          onClose: _closeStudio,
         ),
         Expanded(
           child: Row(
@@ -113,6 +116,7 @@ class _MBCardDesignStudioAdvancedState
                 onDropVariant: _dropVariantOnCanvas,
                 onMoveNode: _updateNode,
                 onDeleteNode: _deleteNode,
+                onCardLayoutTypeChanged: _updateCardLayoutType,
               ),
               MBAdvancedInspectorPanel(
                 document: _document,
@@ -211,6 +215,16 @@ class _MBCardDesignStudioAdvancedState
     });
   }
 
+  void _updateCardLayoutType(String value) {
+    setState(() {
+      _document = _document.updateCardLayoutType(value);
+    });
+  }
+
+  MBAdvancedCardDesignDocument _finalizedDocument() {
+    return _document.lockElementsResponsive().ensureCardLayoutType();
+  }
+
   int _nextLayerZ() {
     if (_document.nodes.isEmpty) return 20;
     final maxZ = _document.nodes
@@ -220,10 +234,14 @@ class _MBCardDesignStudioAdvancedState
   }
 
   Future<void> _copyJson() async {
-    await Clipboard.setData(ClipboardData(text: _document.toPrettyJson()));
+    final lockedDocument = _finalizedDocument();
+    if (!identical(lockedDocument, _document)) {
+      setState(() => _document = lockedDocument);
+    }
+    await Clipboard.setData(ClipboardData(text: lockedDocument.toPrettyJson()));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Advanced design JSON copied')),
+      const SnackBar(content: Text('Advanced design JSON copied with cardLayoutType')),
     );
   }
 
@@ -249,11 +267,23 @@ class _MBCardDesignStudioAdvancedState
   }
 
   void _saveDesign() {
-    final json = _document.toPrettyJson();
+    final lockedDocument = _finalizedDocument();
+    if (!identical(lockedDocument, _document)) {
+      setState(() => _document = lockedDocument);
+    }
+    final json = lockedDocument.toPrettyJson();
     widget.onSave?.call(json);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Advanced design JSON ready for saving')),
+      const SnackBar(content: Text('Advanced design JSON ready for saving with cardLayoutType')),
     );
+  }
+
+  void _closeStudio() {
+    final lockedDocument = _finalizedDocument();
+    if (!identical(lockedDocument, _document)) {
+      setState(() => _document = lockedDocument);
+    }
+    Navigator.of(context).maybePop();
   }
 }
 
@@ -264,6 +294,7 @@ class _TopBar extends StatelessWidget {
     required this.selectedProductIndex,
     required this.products,
     required this.onProductChanged,
+    required this.onClose,
   });
 
   final String title;
@@ -271,6 +302,7 @@ class _TopBar extends StatelessWidget {
   final int selectedProductIndex;
   final List<dynamic> products;
   final ValueChanged<int>? onProductChanged;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +348,7 @@ class _TopBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Patch 6 active · inspector refresh + MRP strike/cross',
+                  'Patch 10.2 active - layout editor constraint fix',
                   style: TextStyle(
                     color: Color(0xFF747B8A),
                     fontSize: 12,
@@ -359,6 +391,16 @@ class _TopBar extends StatelessWidget {
                 },
               ),
             ),
+          const SizedBox(width: 12),
+          TextButton.icon(
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: const Text('Close'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFFF6500),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
         ],
       ),
     );

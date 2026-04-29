@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+﻿import * as admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 
@@ -123,11 +123,24 @@ function familyIdFromVariantId(variantId: string): string {
   if (variantId.startsWith("featured")) return "featured";
   if (variantId.startsWith("promo")) return "promo";
   if (variantId.startsWith("flash")) return "flash_sale";
+  if (isValidAdvancedCardLayoutId(variantId)) return "advanced_v3";
 
   throw new HttpsError(
     "invalid-argument",
     `Invalid card variant id: ${variantId}`,
   );
+}
+
+function isValidAdvancedCardLayoutId(value: string): boolean {
+  const advancedLayoutIds = new Set<string>([
+    "advanced_v3",
+    "hero_poster_circle",
+    "hero_poster_circle_diagonal_v1",
+    "orange_gradient_poster_v1",
+    "advanced_orange_phone_card_v1",
+  ]);
+
+  return advancedLayoutIds.has(value);
 }
 
 function normalizeCardVariantId(value: unknown): string {
@@ -137,10 +150,10 @@ function normalizeCardVariantId(value: unknown): string {
     return "compact01";
   }
 
-  if (!isValidNewCardVariantId(normalized)) {
+  if (!isValidNewCardVariantId(normalized) && !isValidAdvancedCardLayoutId(normalized)) {
     throw new HttpsError(
       "invalid-argument",
-      `Invalid card variant id: ${normalized}. Use exact new variant ids like compact01, horizontal03, wide02, promo05.`,
+      `Invalid card variant id: ${normalized}. Use legacy ids like compact01, horizontal03, wide02, promo05, or V3 ids like hero_poster_circle_diagonal_v1 when cardDesignJson is provided.`,
     );
   }
 

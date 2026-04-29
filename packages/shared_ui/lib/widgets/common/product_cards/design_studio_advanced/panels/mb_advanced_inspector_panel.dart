@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 6 right inspector panel.
+// Patch 9 right inspector panel.
 //
 // Purpose:
 // - Extends the inspector with richer controls for both the card and nodes.
@@ -9,6 +9,8 @@
 //   design tool instead of a demo-only inspector.
 // - Rebinds all text inputs when the selected node changes.
 // - Adds MRP/old-price strike and chip-cross controls.
+// - Adds card width presets and anchored node resizing.
+// - Adds responsive/fixed card resize mode for element locking.
 
 import 'package:flutter/material.dart';
 
@@ -65,6 +67,7 @@ class MBAdvancedInspectorPanel extends StatelessWidget {
                   )
                 : _NodeInspector(
                     key: ValueKey<String>('node_inspector_${selectedNode.id}'),
+                    document: document,
                     node: selectedNode,
                     onUpdateNode: onUpdateNode,
                     onDeleteNode: onDeleteNode,
@@ -128,7 +131,7 @@ class _InspectorHeader extends StatelessWidget {
                 Text(
                   isCardSelected
                       ? 'Layout, colors, radius and surface tuning'
-                      : '${node!.elementType} · ${node!.variantId}',
+                      : '${node!.elementType} - ${node!.variantId}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -214,8 +217,37 @@ class _CardInspector extends StatelessWidget {
       children: <Widget>[
         _SectionCard(
           title: 'Card layout',
-          subtitle: 'Editable with slider + manual value box.',
+          subtitle: 'Resize mode controls how elements respond to card size changes.',
           children: <Widget>[
+            _ToggleRow(
+              label: 'Lock elements to card size',
+              value: document.lockElementsToCard,
+              onChanged: (value) => onUpdateDocument(
+                document.updateResizeMode(lockElementsToCard: value),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                'ON: elements follow card size. OFF: card resizes while existing elements keep their visual position.',
+                style: TextStyle(
+                  color: Color(0xFF747B8A),
+                  fontSize: 10.5,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            _WidthPresetRow(
+              currentWidth: document.cardWidth,
+              onHalf: () => onUpdateDocument(
+                document.resizeCardLayout(cardWidth: 192.0),
+              ),
+              onFull: () => onUpdateDocument(
+                document.resizeCardLayout(cardWidth: 392.0),
+              ),
+            ),
+            const SizedBox(height: 8),
             _NumberFieldRow(
               label: 'Width',
               value: document.cardWidth,
@@ -223,7 +255,7 @@ class _CardInspector extends StatelessWidget {
               max: 420,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
-                document.updateLayout(<String, dynamic>{'cardWidth': value}),
+                document.resizeCardLayout(cardWidth: value),
               ),
             ),
             _NumberFieldRow(
@@ -233,7 +265,7 @@ class _CardInspector extends StatelessWidget {
               max: 760,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
-                document.updateLayout(<String, dynamic>{'cardHeight': value}),
+                document.resizeCardLayout(cardHeight: value),
               ),
             ),
             _NumberFieldRow(
@@ -243,7 +275,7 @@ class _CardInspector extends StatelessWidget {
               max: 80,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
-                document.updateLayout(<String, dynamic>{'borderRadius': value}),
+                document.resizeCardLayout(borderRadius: value),
               ),
             ),
           ],
@@ -284,11 +316,14 @@ class _CardInspector extends StatelessWidget {
 
 class _NodeInspector extends StatelessWidget {
   const _NodeInspector({
+    super.key,
+    required this.document,
     required this.node,
     required this.onUpdateNode,
     required this.onDeleteNode,
   });
 
+  final MBAdvancedCardDesignDocument document;
   final MBAdvancedDesignNode node;
   final ValueChanged<MBAdvancedDesignNode> onUpdateNode;
   final ValueChanged<String> onDeleteNode;
@@ -377,7 +412,13 @@ class _NodeInspector extends StatelessWidget {
               max: 360,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
-                node.copyWith(size: node.size.copyWith(width: value)),
+                _resizeNodeFromTopLeft(
+                  node,
+                  cardWidth: document.cardWidth,
+                  cardHeight: document.cardHeight,
+                  width: value,
+                  height: node.size.height,
+                ),
               ),
             ),
             _NumberFieldRow(
@@ -387,7 +428,13 @@ class _NodeInspector extends StatelessWidget {
               max: 360,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
-                node.copyWith(size: node.size.copyWith(height: value)),
+                _resizeNodeFromTopLeft(
+                  node,
+                  cardWidth: document.cardWidth,
+                  cardHeight: document.cardHeight,
+                  width: node.size.width,
+                  height: value,
+                ),
               ),
             ),
           ],
@@ -614,6 +661,84 @@ class _NodeInspector extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+
+class _WidthPresetRow extends StatelessWidget {
+  const _WidthPresetRow({
+    required this.currentWidth,
+    required this.onHalf,
+    required this.onFull,
+  });
+
+  final double currentWidth;
+  final VoidCallback onHalf;
+  final VoidCallback onFull;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _PresetButton(
+            label: 'Half width',
+            active: (currentWidth - 192.0).abs() < 1.0,
+            onTap: onHalf,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _PresetButton(
+            label: 'Full width',
+            active: (currentWidth - 392.0).abs() < 1.0,
+            onTap: onFull,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PresetButton extends StatelessWidget {
+  const _PresetButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: active ? const Color(0xFFFF6500) : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: active ? const Color(0xFFFF6500) : const Color(0xFFE0E5EF),
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: active ? Colors.white : const Color(0xFF172033),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1139,6 +1264,36 @@ class _DangerButton extends StatelessWidget {
       ),
     );
   }
+}
+
+
+MBAdvancedDesignNode _resizeNodeFromTopLeft(
+  MBAdvancedDesignNode node, {
+  required double cardWidth,
+  required double cardHeight,
+  required double width,
+  required double height,
+}) {
+  final safeCardWidth = cardWidth <= 0 ? 1.0 : cardWidth;
+  final safeCardHeight = cardHeight <= 0 ? 1.0 : cardHeight;
+  final oldLeft = node.position.x - node.size.width / safeCardWidth / 2;
+  final oldTop = node.position.y - node.size.height / safeCardHeight / 2;
+  final nextHalfWidth = width / safeCardWidth / 2;
+  final nextHalfHeight = height / safeCardHeight / 2;
+  final nextX = _clampDouble(oldLeft + nextHalfWidth, nextHalfWidth, 1.0 - nextHalfWidth);
+  final nextY = _clampDouble(oldTop + nextHalfHeight, nextHalfHeight, 1.0 - nextHalfHeight);
+
+  return node.copyWith(
+    position: node.position.copyWith(x: nextX, y: nextY),
+    size: node.size.copyWith(width: width, height: height),
+  );
+}
+
+double _clampDouble(double value, double min, double max) {
+  if (max < min) return min;
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
 }
 
 Map<String, dynamic> _patchStyle(

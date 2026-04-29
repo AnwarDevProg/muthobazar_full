@@ -5,8 +5,7 @@
 // - Three-panel studio left side.
 // - Expandable drawers for a much larger starter catalog (35+ starter variants).
 // - Each drawer contains a boxed list/grid of variants.
-// - Patch 2 supports direct drag from drawer to canvas.
-// - Click-to-add/apply remains available for quick testing.
+// - Patch 7 uses drag-only insertion: click opens/keeps focus but never adds to canvas.
 
 import 'package:flutter/material.dart';
 
@@ -54,11 +53,8 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
                   productTitle: productTitle,
                   productSubtitle: productSubtitle,
                   onTapVariant: (variant) {
-                    if (variant.isCardVariant) {
-                      onApplyCardVariant(variant);
-                    } else {
-                      onAddVariant(variant);
-                    }
+                    // Drag-only behavior. Clicking a drawer item must not add
+                    // or apply anything to the canvas.
                   },
                 );
               },
@@ -108,7 +104,7 @@ class _DrawerHeader extends StatelessWidget {
           ),
           SizedBox(height: 4),
           Text(
-            'Patch 2B: expandable drawers with a larger starter catalog. Drag to canvas or click to add.',
+            'Patch 7: drag items to the canvas. Simple click does not add.',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -227,7 +223,7 @@ class _VariantBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
+          onTap: null,
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -274,8 +270,6 @@ class _VariantBox extends StatelessWidget {
         ),
       ),
     );
-
-    if (variant.isCardVariant) return box;
 
     return Draggable<MBAdvancedElementVariant>(
       data: variant,
@@ -561,7 +555,7 @@ class _PreviewPrice extends StatelessWidget {
           border: Border.all(color: const Color(0xFFFFD6BA)),
         ),
         child: const Text(
-          '৳120',
+          '\u09F3120',
           style: TextStyle(
             color: Color(0xFFFF6500),
             fontSize: 11,
