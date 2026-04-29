@@ -173,6 +173,8 @@ C.
 |   |   |   +---admin_invite_repository.dart
 |   |   |   +---admin_offer_repository.dart
 |   |   |   +---admin_product_repository.dart
+|   |   |   +---admin_product_repository.dart.bak_remove_legacy_card_cleanup_20260429_015235
+|   |   |   +---admin_product_repository.dart.bak_remove_legacy_card_cleanup_line_20260429_015415
 |   |   |   +---admin_promo_repository.dart
 |   |   |   +---admin_setup_repository.dart
 |   |   |   +---admin_user_repository.dart

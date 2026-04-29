@@ -48,6 +48,32 @@ C.
 |       |   \---mb_advanced_inspector_panel.dart
 |       +---mb_card_design_studio_advanced.dart
 |       \---mb_card_design_studio_advanced_exports.dart
++---_backup_advanced_card_patch_4_connect_v3_20260429_005134
+|   \---admin_product_form_dialog.dart
++---_backup_advanced_card_patch_5_20260429_013516
+|   +---design_studio_advanced
+|   |   +---models
+|   |   |   +---mb_advanced_card_design_document.dart
+|   |   |   \---mb_advanced_element_variant.dart
+|   |   +---panels
+|   |   |   +---mb_advanced_canvas_panel.dart
+|   |   |   +---mb_advanced_element_drawer_panel.dart
+|   |   |   \---mb_advanced_inspector_panel.dart
+|   |   +---mb_card_design_studio_advanced.dart
+|   |   \---mb_card_design_studio_advanced_exports.dart
+|   +---admin_product_repository.dart
+|   \---mb_product.dart
++---_backup_advanced_card_patch_6_20260429_021740
+|   \---design_studio_advanced
+|       +---models
+|       |   +---mb_advanced_card_design_document.dart
+|       |   \---mb_advanced_element_variant.dart
+|       +---panels
+|       |   +---mb_advanced_canvas_panel.dart
+|       |   +---mb_advanced_element_drawer_panel.dart
+|       |   \---mb_advanced_inspector_panel.dart
+|       +---mb_card_design_studio_advanced.dart
+|       \---mb_card_design_studio_advanced_exports.dart
 +---_wrong_shared_ui_from_patch_1_20260428_230847
 |   \---lib
 |       \---widgets
@@ -350,6 +376,7 @@ C.
 |   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_fix_missing_card_studio_method_20260426_023708
 |   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_fix_selected_variant_debug_20260426_021221
 |   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_save_debug_20260424_231514
+|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_v3_button_20260429_005725
 |   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_wire_card_studio_20260426_023312
 |   |   |   |   |   |   +---admin_product_form_dialog_old.dart
 |   |   |   |   |   |   \---admin_product_form_support.dart
@@ -1479,6 +1506,8 @@ C.
 |   |   |   |   +---admin_invite_repository.dart
 |   |   |   |   +---admin_offer_repository.dart
 |   |   |   |   +---admin_product_repository.dart
+|   |   |   |   +---admin_product_repository.dart.bak_remove_legacy_card_cleanup_20260429_015235
+|   |   |   |   +---admin_product_repository.dart.bak_remove_legacy_card_cleanup_line_20260429_015415
 |   |   |   |   +---admin_promo_repository.dart
 |   |   |   |   +---admin_setup_repository.dart
 |   |   |   |   +---admin_user_repository.dart
