@@ -1,101 +1,103 @@
-import 'package:flutter/material.dart';
-import 'package:shared_models/shared_models.dart';
-import 'package:shared_ui/widgets/common/product_cards/design_studio/mb_card_design_studio.dart';
+﻿// MuthoBazar customer app chat placeholder.
+// This page is intentionally paused while Home page rendering is finalized.
 
-// MuthoBazar Chat Design Lab Host
-// -------------------------------
-// The full design studio shell now lives in shared_ui:
-// packages/shared_ui/lib/widgets/common/product_cards/design_studio/mb_card_design_studio.dart
-//
-// This page only provides temporary sample products for customer-app preview.
-// Later, Admin Product Card Studio can reuse the same MBCardDesignStudio widget
-// with real product data.
+import 'package:flutter/material.dart';
 
 class ChatPage extends StatelessWidget {
-  const ChatPage({
-    super.key,
-  });
+  const ChatPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MBCardDesignStudio(
-      products: _sampleProducts,
-      title: 'MuthoBazar Card Lab',
+    return const _CustomerPlaceholderPage(
+      icon: Icons.chat_bubble_rounded,
+      title: 'Chat',
+      message: 'Chat page is paused for now. We are focusing on the Home page.',
     );
   }
+}
 
-  static final List<MBProduct> _sampleProducts = <MBProduct>[
-    _sampleProduct(
-      id: 'lab_sport_shoes',
-      title: 'SPORT SHOES',
-      subtitle: 'Soft running shoes with lightweight comfort and daily wear feel.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900',
-      price: 1690,
-      salePrice: 1290,
-      categoryName: 'Sports',
-      brandName: 'Runner',
-    ),
-    _sampleProduct(
-      id: 'lab_red_onion',
-      title: 'Red Onion',
-      subtitle: 'Fresh selected local onion for daily cooking and family meals.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=900',
-      price: 120,
-      salePrice: 95,
-      categoryName: 'Grocery',
-      brandName: 'Mutho Fresh',
-    ),
-    _sampleProduct(
-      id: 'lab_perfume',
-      title: 'Premium Perfume',
-      subtitle:
-          'Long-lasting fragrance with elegant bottle design and refined notes.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1541643600914-78b084683601?w=900',
-      price: 2450,
-      salePrice: 1990,
-      categoryName: 'Beauty',
-      brandName: 'Aura',
-    ),
-  ];
+class _CustomerPlaceholderPage extends StatelessWidget {
+  const _CustomerPlaceholderPage({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
-  static MBProduct _sampleProduct({
-    required String id,
-    required String title,
-    required String subtitle,
-    required String imageUrl,
-    required double price,
-    required double salePrice,
-    required String categoryName,
-    required String brandName,
-  }) {
-    return MBProduct.fromMap(
-      <String, dynamic>{
-        'id': id,
-        'titleEn': title,
-        'titleBn': title,
-        'shortDescriptionEn': subtitle,
-        'descriptionEn': subtitle,
-        'thumbnailUrl': imageUrl,
-        'imageUrl': imageUrl,
-        'images': <String>[imageUrl],
-        'price': price,
-        'salePrice': salePrice,
-        'effectivePrice': salePrice,
-        'hasDiscount': salePrice < price,
-        'categoryNameEn': categoryName,
-        'categoryNameBn': categoryName,
-        'brandNameEn': brandName,
-        'brandNameBn': brandName,
-        'stockStatus': 'stocked',
-        'isActive': true,
-        'isPublished': true,
-        'unit': 'pcs',
-        'rating': 4.6,
-        'reviewCount': 124,
-      },
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FC),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFFF8A00),
+                          Color(0xFFFF6500),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF151922),
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: const Color(0xFF667085),
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
