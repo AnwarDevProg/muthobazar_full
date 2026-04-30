@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 9 model layer.
 //
 // Purpose:
@@ -14,15 +14,12 @@
 // - Click selection support.
 // - Safe position updates for drag/drop and mouse movement.
 // - Patch 9 adds responsive/fixed resize mode for card-level resizing.
-// Patch 12.4 lowers the allowed card height minimum from 220 to 180.
-// Patch 12.5 uses shared responsive grid resolver constants.
 
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-
-import '../../system/mb_responsive_card_grid_resolver.dart';@immutable
+@immutable
 class MBAdvancedDesignNodePosition {
   const MBAdvancedDesignNodePosition({
     required this.x,
@@ -245,7 +242,7 @@ class MBAdvancedCardDesignDocument {
     this.designFamilyId = 'hero_poster_circle',
     this.selectedNodeId,
     this.layout = const <String, dynamic>{
-      'cardWidth': MBResponsiveCardGridResolver.halfWidthDesignPx,
+      'cardWidth': 240.0,
       'cardHeight': 380.0,
       'borderRadius': 28.0,
       'resizeMode': 'responsive',
@@ -315,11 +312,11 @@ class MBAdvancedCardDesignDocument {
   bool get isCardSelected => selectedNodeId == null;
 
   double get cardWidth => _asDouble(layout['cardWidth'], 240)
-      .clamp(MBResponsiveCardGridResolver.minCardWidthPx, MBResponsiveCardGridResolver.maxCardWidthPx)
+      .clamp(160.0, 420.0)
       .toDouble();
 
   double get cardHeight => _asDouble(layout['cardHeight'], 380)
-      .clamp(MBResponsiveCardGridResolver.minCardHeightPx, MBResponsiveCardGridResolver.maxCardHeightPx)
+      .clamp(220.0, 760.0)
       .toDouble();
 
   double get borderRadius => _asDouble(layout['borderRadius'], 28)
@@ -507,8 +504,8 @@ class MBAdvancedCardDesignDocument {
   }) {
     final oldWidth = this.cardWidth;
     final oldHeight = this.cardHeight;
-    final nextWidth = (cardWidth ?? oldWidth).clamp(MBResponsiveCardGridResolver.minCardWidthPx, MBResponsiveCardGridResolver.maxCardWidthPx).toDouble();
-    final nextHeight = (cardHeight ?? oldHeight).clamp(MBResponsiveCardGridResolver.minCardHeightPx, MBResponsiveCardGridResolver.maxCardHeightPx).toDouble();
+    final nextWidth = (cardWidth ?? oldWidth).clamp(160.0, 420.0).toDouble();
+    final nextHeight = (cardHeight ?? oldHeight).clamp(220.0, 760.0).toDouble();
     final nextRadius = (borderRadius ?? this.borderRadius).clamp(0.0, 80.0).toDouble();
 
     final nextLayout = _safeLayout(<String, dynamic>{
@@ -1108,8 +1105,8 @@ class MBAdvancedCardDesignDocument {
     final lockElementsToCard = resizeMode != 'fixed';
 
     return <String, dynamic>{
-      'cardWidth': _asDouble(cleaned['cardWidth'], 240).clamp(MBResponsiveCardGridResolver.minCardWidthPx, MBResponsiveCardGridResolver.maxCardWidthPx),
-      'cardHeight': _asDouble(cleaned['cardHeight'], 380).clamp(MBResponsiveCardGridResolver.minCardHeightPx, MBResponsiveCardGridResolver.maxCardHeightPx),
+      'cardWidth': _asDouble(cleaned['cardWidth'], 240).clamp(160.0, 420.0),
+      'cardHeight': _asDouble(cleaned['cardHeight'], 380).clamp(220.0, 760.0),
       'borderRadius': _asDouble(cleaned['borderRadius'], 28).clamp(0.0, 80.0),
       'resizeMode': resizeMode,
       'lockElementsToCard': lockElementsToCard,
@@ -1201,6 +1198,3 @@ bool _asBool(Object? value, bool fallback) {
   if (normalized == 'false') return false;
   return fallback;
 }
-
-
-

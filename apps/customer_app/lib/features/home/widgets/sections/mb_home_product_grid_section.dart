@@ -1,12 +1,14 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_ui/shared_ui.dart';
-import 'package:shared_ui/widgets/common/product_cards/mb_product_card_renderer.dart';
-import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_layout_resolver.dart';
 
+import 'package:shared_ui/widgets/common/product_cards/mb_product_card_renderer.dart';
+
+import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_layout_resolver.dart';
+
+import 'package:shared_ui/widgets/common/product_cards/system/mb_responsive_card_grid_resolver.dart';
 // MB Home Product Grid Section
 // ----------------------------
 // Patch 11.9: Adaptive gap filler widgets.
@@ -1052,3 +1054,5 @@ String _tryReadString(Object? Function() reader, {String fallback = ''}) {
     return fallback;
   }
 }
+
+

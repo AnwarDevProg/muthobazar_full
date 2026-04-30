@@ -1,6 +1,5 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
-// Patch 12.4 adds preview-only contrast-safe text colors.
 //
 // Purpose:
 // - Uses the data-driven V12 element catalog.
@@ -503,17 +502,13 @@ class _PreviewText extends StatelessWidget {
       fallback: variant.title,
     );
     final background = _hexColor(variant.defaultStyle['backgroundHex'], Colors.transparent);
+    final textColor = _hexColor(
+      variant.defaultStyle['textColorHex'],
+      background == Colors.transparent ? const Color(0xFF172033) : const Color(0xFFFF6500),
+    );
     final isChip = background != Colors.transparent ||
         variant.id.contains('chip') ||
         variant.id.contains('badge');
-    final textColor = _drawerPreviewReadableTextColor(
-      requested: variant.defaultStyle['textColorHex'],
-      previewSurface: background == Colors.transparent ? Colors.white : background,
-      hasElementBackground: isChip,
-      fallback: background == Colors.transparent
-          ? const Color(0xFF172033)
-          : const Color(0xFFFF6500),
-    );
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -558,13 +553,9 @@ class _PreviewPillOrText extends StatelessWidget {
       fallback: variant.title,
     );
     final background = _hexColor(variant.defaultStyle['backgroundHex'], Colors.transparent);
-    final textColor = _drawerPreviewReadableTextColor(
-      requested: variant.defaultStyle['textColorHex'],
-      previewSurface: background == Colors.transparent ? Colors.white : background,
-      hasElementBackground: background != Colors.transparent,
-      fallback: background == Colors.transparent
-          ? const Color(0xFFFF6500)
-          : const Color(0xFF151922),
+    final textColor = _hexColor(
+      variant.defaultStyle['textColorHex'],
+      background == Colors.transparent ? const Color(0xFFFF6500) : const Color(0xFF151922),
     );
     final isIcon = variant.elementType == 'wishlist' ||
         variant.elementType == 'compare' ||
@@ -714,37 +705,6 @@ class _ImageFallback extends StatelessWidget {
   }
 }
 
-
-Color _drawerPreviewReadableTextColor({
-  required Object? requested,
-  required Color previewSurface,
-  required bool hasElementBackground,
-  required Color fallback,
-}) {
-  final raw = requested?.toString().trim();
-
-  if (raw == null ||
-      raw.isEmpty ||
-      raw == '#00000000' ||
-      raw.toLowerCase() == 'transparent') {
-    return fallback;
-  }
-
-  final requestedColor = _hexColor(raw, fallback);
-  final surfaceBrightness = ThemeData.estimateBrightnessForColor(previewSurface);
-  final textBrightness = ThemeData.estimateBrightnessForColor(requestedColor);
-  final sameBrightness = surfaceBrightness == textBrightness;
-
-  if (!sameBrightness || hasElementBackground) {
-    return requestedColor;
-  }
-
-  if (surfaceBrightness == Brightness.light) {
-    return const Color(0xFF172033);
-  }
-
-  return Colors.white;
-}
 Color _hexColor(Object? value, Color fallback) {
   final raw = value?.toString().trim();
   if (raw == null || raw.isEmpty || raw == '#00000000') return fallback;
@@ -763,4 +723,3 @@ double _asDouble(Object? value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
-

@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 10.3 shell.
 //
 // Target layout:
@@ -101,9 +101,7 @@ class _MBCardDesignStudioAdvancedState
               MBAdvancedElementDrawerPanel(
                 productTitle: _productTitle(_product),
                 productSubtitle: _productSubtitle(_product),
-                
-          previewProduct: _product,
-onAddVariant: _addVariant,
+                onAddVariant: _addVariant,
                 onApplyCardVariant: _applyCardVariant,
               ),
               MBAdvancedCanvasPanel(
@@ -455,4 +453,3 @@ String _readDynamicString(dynamic product, String fieldName, String fallback) {
 
   return fallback;
 }
-

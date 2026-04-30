@@ -1,5 +1,5 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
-// Patch 12.2 right inspector panel.
+// MuthoBazar Advanced Product Card Design Studio
+// Patch 9 right inspector panel.
 //
 // Purpose:
 // - Extends the inspector with richer controls for both the card and nodes.
@@ -11,13 +11,12 @@
 // - Adds MRP/old-price strike and chip-cross controls.
 // - Adds card width presets and anchored node resizing.
 // - Adds responsive/fixed card resize mode for element locking.
-// - Patch 12.2 adds element-type-specific inspector control sections.
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_card_design_document.dart';
-import '../../system/mb_responsive_card_grid_resolver.dart';
-import '../../system/mb_responsive_card_grid_resolver.dart';class MBAdvancedInspectorPanel extends StatelessWidget {
+import '../models/mb_advanced_card_design_document.dart';
+
+class MBAdvancedInspectorPanel extends StatelessWidget {
   const MBAdvancedInspectorPanel({
     super.key,
     required this.document,
@@ -242,25 +241,28 @@ class _CardInspector extends StatelessWidget {
             _WidthPresetRow(
               currentWidth: document.cardWidth,
               onHalf: () => onUpdateDocument(
-                document.resizeCardLayout(cardWidth: MBResponsiveCardGridResolver.halfWidthDesignPx),
+                document.resizeCardLayout(cardWidth: 192.0),
               ),
               onFull: () => onUpdateDocument(
-                document.resizeCardLayout(cardWidth: MBResponsiveCardGridResolver.fullWidthDesignPx),
+                document.resizeCardLayout(cardWidth: 392.0),
               ),
             ),
             const SizedBox(height: 8),
             _NumberFieldRow(
               label: 'Width',
               value: document.cardWidth,
-              min: MBResponsiveCardGridResolver.minCardWidthPx,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              min: 160,
+              max: 420,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
                 document.resizeCardLayout(cardWidth: value),
               ),
             ),
-            min: MBResponsiveCardGridResolver.minCardHeightPx,
-              max: MBResponsiveCardGridResolver.maxCardHeightPx,
+            _NumberFieldRow(
+              label: 'Height',
+              value: document.cardHeight,
+              min: 220,
+              max: 760,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
                 document.resizeCardLayout(cardHeight: value),
@@ -335,7 +337,7 @@ class _NodeInspector extends StatelessWidget {
       children: <Widget>[
         _SectionCard(
           title: 'Element',
-          subtitle: 'Identity, binding, and variant-level settings.',
+          subtitle: 'Identity and variant-level settings.',
           children: <Widget>[
             _ReadOnlyInfoRow(label: 'Node ID', value: node.id),
             _ReadOnlyInfoRow(label: 'Element type', value: node.elementType),
@@ -348,13 +350,13 @@ class _NodeInspector extends StatelessWidget {
             _TextInputRow(
               label: 'Binding',
               value: node.binding,
-              hintText: 'product.titleEn / product.finalPrice / static.badge',
+              hintText: 'product.titleEn / static.badge',
               onSubmitted: (value) => onUpdateNode(node.copyWith(binding: value)),
             ),
             _TextInputRow(
               label: 'Label / text',
               value: _styleString(style, 'label', _styleString(style, 'text', '')),
-              hintText: 'optional manual label override',
+              hintText: 'override label',
               onSubmitted: (value) => onUpdateNode(
                 node.copyWith(style: _patchStyle(style, <String, dynamic>{'label': value})),
               ),
@@ -364,7 +366,7 @@ class _NodeInspector extends StatelessWidget {
         const SizedBox(height: 12),
         _SectionCard(
           title: 'Position',
-          subtitle: 'Normalized position on the card. Layer Z controls overlap priority.',
+          subtitle: 'Normalized position on the card.',
           children: <Widget>[
             _NumberFieldRow(
               label: 'X',
@@ -401,13 +403,13 @@ class _NodeInspector extends StatelessWidget {
         const SizedBox(height: 12),
         _SectionCard(
           title: 'Size',
-          subtitle: 'Direct element footprint control. Resize keeps top-left anchored.',
+          subtitle: 'Direct element footprint control.',
           children: <Widget>[
             _NumberFieldRow(
               label: 'Width',
               value: node.size.width,
               min: 8,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              max: 360,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
                 _resizeNodeFromTopLeft(
@@ -423,7 +425,7 @@ class _NodeInspector extends StatelessWidget {
               label: 'Height',
               value: node.size.height,
               min: 4,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              max: 360,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
                 _resizeNodeFromTopLeft(
@@ -439,8 +441,8 @@ class _NodeInspector extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _SectionCard(
-          title: 'Common style',
-          subtitle: 'Core controls shared by most design elements.',
+          title: 'Style',
+          subtitle: 'Common style props shared by many nodes.',
           children: <Widget>[
             _NumberFieldRow(
               label: 'Font size',
@@ -459,7 +461,9 @@ class _NodeInspector extends StatelessWidget {
               max: 999,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderRadius': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'borderRadius': value}),
+                ),
               ),
             ),
             _NumberFieldRow(
@@ -473,13 +477,13 @@ class _NodeInspector extends StatelessWidget {
               ),
             ),
             _NumberFieldRow(
-              label: 'Border width',
-              value: _styleDouble(style, 'borderWidth', 1),
+              label: 'Ring width',
+              value: _styleDouble(style, 'ringWidth', 0),
               min: 0,
-              max: 16,
+              max: 24,
               decimals: 1,
               onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderWidth': value})),
+                node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
               ),
             ),
           ],
@@ -493,44 +497,44 @@ class _NodeInspector extends StatelessWidget {
               label: 'Text',
               value: _styleString(style, 'textColorHex', '#FF6500'),
               onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'textColorHex': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'textColorHex': value}),
+                ),
               ),
             ),
             _ColorFieldRow(
               label: 'Background',
               value: _styleString(style, 'backgroundHex', '#FFFFFF'),
               onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'backgroundHex': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'backgroundHex': value}),
+                ),
               ),
             ),
             _ColorFieldRow(
               label: 'Border',
               value: _styleString(style, 'borderHex', '#00000000'),
               onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderHex': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'borderHex': value}),
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         _SectionCard(
-          title: 'Text / variant-specific',
-          subtitle: 'Useful for text, chips, badges, buttons, and labels.',
+          title: 'Variant-specific',
+          subtitle: 'Extra fields useful for chips, badges and special text.',
           children: <Widget>[
             _TextInputRow(
               label: 'Prefix text',
               value: _styleString(style, 'prefixText', ''),
               hintText: 'ex: MRP ',
               onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'prefixText': value})),
-              ),
-            ),
-            _TextInputRow(
-              label: 'Suffix text',
-              value: _styleString(style, 'suffixText', ''),
-              hintText: 'ex: /kg',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'suffixText': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'prefixText': value}),
+                ),
               ),
             ),
             _TextInputRow(
@@ -538,7 +542,9 @@ class _NodeInspector extends StatelessWidget {
               value: _styleString(style, 'textAlign', 'center'),
               hintText: 'left / center / right',
               onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'textAlign': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'textAlign': value}),
+                ),
               ),
             ),
             _TextInputRow(
@@ -546,13 +552,92 @@ class _NodeInspector extends StatelessWidget {
               value: _styleString(style, 'fontWeight', 'w800'),
               hintText: 'w400 - w900',
               onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'fontWeight': value})),
+                node.copyWith(
+                  style: _patchStyle(style, <String, dynamic>{'fontWeight': value}),
+                ),
               ),
             ),
           ],
         ),
-        ..._buildTypeSpecificSections(style),
-        if (node.elementType == 'mrp') ..._buildMrpStrikeSection(style),
+        if (node.elementType == 'mrp') ...<Widget>[
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: 'MRP strike / chip cross',
+            subtitle: 'Old price strike appears only when sale price is lower.',
+            children: <Widget>[
+              _ToggleRow(
+                label: 'Auto strike when discounted',
+                value: _styleBool(style, 'autoStrikeWhenDiscounted', true),
+                onChanged: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{
+                      'autoStrikeWhenDiscounted': value,
+                    }),
+                  ),
+                ),
+              ),
+              _TextInputRow(
+                label: 'Strike mode',
+                value: _styleString(
+                  style,
+                  'strikeMode',
+                  node.variantId.contains('chip') ? 'cross' : 'lineThrough',
+                ),
+                hintText: 'lineThrough / horizontal / diagonal / cross',
+                onSubmitted: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{'strikeMode': value}),
+                  ),
+                ),
+              ),
+              _ColorFieldRow(
+                label: 'Strike color',
+                value: _styleString(style, 'strikeColorHex', '#FF4A4A'),
+                onChanged: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{'strikeColorHex': value}),
+                  ),
+                ),
+              ),
+              _NumberFieldRow(
+                label: 'Strike thickness',
+                value: _styleDouble(style, 'strikeThickness', 1.6),
+                min: 0.5,
+                max: 12,
+                decimals: 1,
+                onChanged: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{'strikeThickness': value}),
+                  ),
+                ),
+              ),
+              _NumberFieldRow(
+                label: 'Strike width factor',
+                value: _styleDouble(style, 'strikeWidthFactor', 0.92),
+                min: 0.1,
+                max: 1.4,
+                decimals: 2,
+                onChanged: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{'strikeWidthFactor': value}),
+                  ),
+                ),
+              ),
+              _NumberFieldRow(
+                label: 'Strike angle',
+                value: _styleDouble(style, 'strikeAngleDeg', -14),
+                min: -45,
+                max: 45,
+                decimals: 0,
+                onChanged: (value) => onUpdateNode(
+                  node.copyWith(
+                    style: _patchStyle(style, <String, dynamic>{'strikeAngleDeg': value}),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         _SectionCard(
           title: 'State',
@@ -578,468 +663,6 @@ class _NodeInspector extends StatelessWidget {
       ],
     );
   }
-
-  List<Widget> _buildTypeSpecificSections(Map<String, dynamic> style) {
-    switch (node.elementType) {
-      case 'title':
-      case 'subtitle':
-      case 'description':
-      case 'brand':
-      case 'category':
-      case 'delivery':
-      case 'unit':
-      case 'feature':
-      case 'savingText':
-      case 'ribbon':
-        return _buildTextElementSections(style);
-      case 'media':
-      case 'imageOverlay':
-        return _buildMediaElementSections(style);
-      case 'price':
-      case 'priceBadge':
-      case 'discount':
-      case 'badge':
-      case 'promoBadge':
-      case 'flashBadge':
-      case 'timer':
-      case 'rating':
-      case 'stock':
-      case 'quantity':
-        return _buildPriceBadgePromoSections(style);
-      case 'cta':
-      case 'secondaryCta':
-        return _buildCtaElementSections(style);
-      case 'wishlist':
-      case 'compare':
-      case 'share':
-      case 'icon':
-        return _buildIconElementSections(style);
-      case 'progress':
-      case 'dots':
-        return _buildProgressIndicatorSections(style);
-      case 'divider':
-      case 'shape':
-      case 'panel':
-      case 'border':
-      case 'effect':
-      case 'shadow':
-      case 'spacing':
-      case 'animation':
-        return _buildShapeEffectSections(style);
-      default:
-        return const <Widget>[];
-    }
-  }
-
-  List<Widget> _buildTextElementSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Text controls',
-        subtitle: 'Controls only useful for title, subtitle, brand, category and text-like elements.',
-        children: <Widget>[
-          _NumberFieldRow(
-            label: 'Max lines',
-            value: _styleDouble(style, 'maxLines', node.elementType == 'title' ? 2 : 3),
-            min: 1,
-            max: 6,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'maxLines': value.round()})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Line height',
-            value: _styleDouble(style, 'lineHeight', 1.05),
-            min: 0.8,
-            max: 2,
-            decimals: 2,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'lineHeight': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Letter spacing',
-            value: _styleDouble(style, 'letterSpacing', 0),
-            min: -2,
-            max: 6,
-            decimals: 1,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'letterSpacing': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Padding X',
-            value: _styleDouble(style, 'paddingX', 0),
-            min: 0,
-            max: 32,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'paddingX': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Padding Y',
-            value: _styleDouble(style, 'paddingY', 0),
-            min: 0,
-            max: 24,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'paddingY': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildMediaElementSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Media controls',
-        subtitle: 'Image binding, fit, alignment, ring, crop and shadow controls.',
-        children: <Widget>[
-          _TextInputRow(
-            label: 'Image fit',
-            value: _styleString(style, 'imageFit', 'cover'),
-            hintText: 'cover / contain / fill / fitWidth / fitHeight',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageFit': value})),
-            ),
-          ),
-          _TextInputRow(
-            label: 'Image alignment',
-            value: _styleString(style, 'imageAlignment', 'center'),
-            hintText: 'center / topCenter / bottomCenter / left / right',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageAlignment': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Image scale',
-            value: _styleDouble(style, 'imageScale', 1),
-            min: 0.5,
-            max: 3,
-            decimals: 2,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageScale': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Ring width',
-            value: _styleDouble(style, 'ringWidth', 0),
-            min: 0,
-            max: 28,
-            decimals: 1,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Shadow blur',
-            value: _styleDouble(style, 'shadowBlur', 18),
-            min: 0,
-            max: 48,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowBlur': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Shadow Y',
-            value: _styleDouble(style, 'shadowOffsetY', 10),
-            min: -12,
-            max: 32,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowOffsetY': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildPriceBadgePromoSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Price / badge / promo controls',
-        subtitle: 'Controls for price badges, discount chips, timers, ratings and stock labels.',
-        children: <Widget>[
-          _TextInputRow(
-            label: 'Currency symbol',
-            value: _styleString(style, 'currencySymbol', 'à§³'),
-            hintText: 'à§³ / Tk / BDT',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'currencySymbol': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Decimal digits',
-            value: _styleDouble(style, 'decimalDigits', 0),
-            min: 0,
-            max: 2,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'decimalDigits': value.round()})),
-            ),
-          ),
-          _ToggleRow(
-            label: 'Auto discount label',
-            value: _styleBool(style, 'autoDiscountLabel', node.elementType == 'discount'),
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'autoDiscountLabel': value})),
-            ),
-          ),
-          _TextInputRow(
-            label: 'Icon text',
-            value: _styleString(style, 'iconText', ''),
-            hintText: 'ex: âš¡ / â˜… / %',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'iconText': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildCtaElementSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'CTA controls',
-        subtitle: 'Action button behavior and button-style tuning.',
-        children: <Widget>[
-          _TextInputRow(
-            label: 'Action type',
-            value: _styleString(style, 'actionType', node.binding == 'action.details' ? 'details' : 'buy'),
-            hintText: 'buy / addToCart / details / wishlist',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'actionType': value})),
-            ),
-          ),
-          _TextInputRow(
-            label: 'Icon name',
-            value: _styleString(style, 'iconName', ''),
-            hintText: 'cart / bolt / eye / plus',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'iconName': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Padding X',
-            value: _styleDouble(style, 'paddingX', 10),
-            min: 0,
-            max: 40,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'paddingX': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Padding Y',
-            value: _styleDouble(style, 'paddingY', 5),
-            min: 0,
-            max: 24,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'paddingY': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildIconElementSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Icon controls',
-        subtitle: 'Wishlist, compare, share and custom icon tuning.',
-        children: <Widget>[
-          _TextInputRow(
-            label: 'Icon name',
-            value: _styleString(style, 'iconName', node.elementType),
-            hintText: 'heart / compare / share / star',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'iconName': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Icon size',
-            value: _styleDouble(style, 'iconSize', 18),
-            min: 8,
-            max: 64,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'iconSize': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Hit padding',
-            value: _styleDouble(style, 'hitPadding', 0),
-            min: 0,
-            max: 28,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'hitPadding': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildProgressIndicatorSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Progress / indicator controls',
-        subtitle: 'Progress bar, stock bar and indicator dots controls.',
-        children: <Widget>[
-          _NumberFieldRow(
-            label: 'Progress',
-            value: _styleDouble(style, 'progress', 0.72),
-            min: 0,
-            max: 1,
-            decimals: 2,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'progress': value})),
-            ),
-          ),
-          _ColorFieldRow(
-            label: 'Fill',
-            value: _styleString(style, 'fillHex', '#FF6500'),
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'fillHex': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Dot count',
-            value: _styleDouble(style, 'dotCount', 3),
-            min: 1,
-            max: 8,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'dotCount': value.round()})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildShapeEffectSections(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'Shape / effect controls',
-        subtitle: 'Panel, divider, border, glow, shadow, spacing and animation placeholders.',
-        children: <Widget>[
-          _NumberFieldRow(
-            label: 'Effect strength',
-            value: _styleDouble(style, 'effectStrength', 0.5),
-            min: 0,
-            max: 1,
-            decimals: 2,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'effectStrength': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Blur',
-            value: _styleDouble(style, 'blur', 0),
-            min: 0,
-            max: 48,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'blur': value})),
-            ),
-          ),
-          _TextInputRow(
-            label: 'Effect mode',
-            value: _styleString(style, 'effectMode', node.elementType),
-            hintText: 'glow / wave / flame / electric / pulse',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'effectMode': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<Widget> _buildMrpStrikeSection(Map<String, dynamic> style) {
-    return <Widget>[
-      const SizedBox(height: 12),
-      _SectionCard(
-        title: 'MRP strike / chip cross',
-        subtitle: 'Old price strike appears only when sale price is lower unless manually forced.',
-        children: <Widget>[
-          _ToggleRow(
-            label: 'Auto strike when discounted',
-            value: _styleBool(style, 'autoStrikeWhenDiscounted', true),
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'autoStrikeWhenDiscounted': value})),
-            ),
-          ),
-          _TextInputRow(
-            label: 'Strike mode',
-            value: _styleString(
-              style,
-              'strikeMode',
-              node.variantId.contains('chip') ? 'cross' : 'lineThrough',
-            ),
-            hintText: 'lineThrough / horizontal / diagonal / cross',
-            onSubmitted: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'strikeMode': value})),
-            ),
-          ),
-          _ColorFieldRow(
-            label: 'Strike color',
-            value: _styleString(style, 'strikeColorHex', '#FF4A4A'),
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'strikeColorHex': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Strike thickness',
-            value: _styleDouble(style, 'strikeThickness', 1.6),
-            min: 0.5,
-            max: 12,
-            decimals: 1,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'strikeThickness': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Strike width factor',
-            value: _styleDouble(style, 'strikeWidthFactor', 0.92),
-            min: 0.1,
-            max: 1.4,
-            decimals: 2,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'strikeWidthFactor': value})),
-            ),
-          ),
-          _NumberFieldRow(
-            label: 'Strike angle',
-            value: _styleDouble(style, 'strikeAngleDeg', -14),
-            min: -45,
-            max: 45,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'strikeAngleDeg': value})),
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
 }
 
 
@@ -1061,7 +684,7 @@ class _WidthPresetRow extends StatelessWidget {
         Expanded(
           child: _PresetButton(
             label: 'Half width',
-            active: (currentWidth - MBResponsiveCardGridResolver.halfWidthDesignPx).abs() < 1.0,
+            active: (currentWidth - 192.0).abs() < 1.0,
             onTap: onHalf,
           ),
         ),
@@ -1069,7 +692,7 @@ class _WidthPresetRow extends StatelessWidget {
         Expanded(
           child: _PresetButton(
             label: 'Full width',
-            active: (currentWidth - MBResponsiveCardGridResolver.fullWidthDesignPx).abs() < 1.0,
+            active: (currentWidth - 392.0).abs() < 1.0,
             onTap: onFull,
           ),
         ),
@@ -1711,13 +1334,3 @@ Color _hexToColor(String hex) {
   if (buffer.length != 8) return const Color(0xFFFF6500);
   return Color(int.tryParse(buffer.toString(), radix: 16) ?? 0xFFFF6500);
 }
-
-
-
-
-
-
-
-
-
-

@@ -1,17 +1,14 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
-// Patch 12.1 left element drawer.
-// Patch 12.4 adds preview-only contrast-safe text colors.
+// MuthoBazar Advanced Product Card Design Studio
+// Patch 2 left element drawer.
 //
 // Purpose:
-// - Uses the data-driven V12 element catalog.
-// - Shows current product-data previews in drawer items.
-// - Keeps drag-only insertion: clicking a drawer item does not add anything.
-// - Keeps the existing MBAdvancedElementVariant drag/drop contract.
+// - Three-panel studio left side.
+// - Expandable drawers for a much larger starter catalog (35+ starter variants).
+// - Each drawer contains a boxed list/grid of variants.
+// - Patch 7 uses drag-only insertion: click opens/keeps focus but never adds to canvas.
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_binding_resolver.dart';
-import '../models/mb_advanced_element_catalog_v12.dart';
 import '../models/mb_advanced_element_variant.dart';
 
 class MBAdvancedElementDrawerPanel extends StatelessWidget {
@@ -19,49 +16,21 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
     super.key,
     required this.productTitle,
     required this.productSubtitle,
-    this.previewProduct,
-    this.previewBrand,
-    this.previewCategory,
-    this.previewVariation,
-    this.previewPurchaseOption,
     required this.onAddVariant,
     required this.onApplyCardVariant,
   });
 
   final String productTitle;
   final String productSubtitle;
-  final dynamic previewProduct;
-  final dynamic previewBrand;
-  final dynamic previewCategory;
-  final dynamic previewVariation;
-  final dynamic previewPurchaseOption;
   final ValueChanged<MBAdvancedElementVariant> onAddVariant;
   final ValueChanged<MBAdvancedElementVariant> onApplyCardVariant;
 
   @override
   Widget build(BuildContext context) {
-    final groups = MBAdvancedElementCatalogV12.groups();
-    final previewContext = MBAdvancedPreviewContext(
-      product: previewProduct ??
-          <String, dynamic>{
-            'titleEn': productTitle,
-            'shortDescriptionEn': productSubtitle,
-            'price': 120,
-            'salePrice': 99,
-            'thumbnailUrl': '',
-          },
-      brand: previewBrand,
-      category: previewCategory,
-      selectedVariation: previewVariation,
-      selectedPurchaseOption: previewPurchaseOption,
-      fallbackTitle: productTitle.trim().isEmpty ? 'Product title' : productTitle,
-      fallbackSubtitle: productSubtitle.trim().isEmpty
-          ? 'Fresh product detail'
-          : productSubtitle,
-    );
+    final groups = MBAdvancedElementCatalog.groups();
 
     return Container(
-      width: 322,
+      width: 304,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -81,13 +50,11 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
                 final group = groups[index];
                 return _ElementGroupTile(
                   group: group,
-                  previewContext: previewContext,
-                  initiallyExpanded: index < 3 ||
-                      group.id == 'media' ||
-                      group.id == 'price',
-                  onTapVariant: (_) {
-                    // Patch 12.1 keeps drawer click as safe/no-op.
-                    // Drag to canvas is the only way to insert a node.
+                  productTitle: productTitle,
+                  productSubtitle: productSubtitle,
+                  onTapVariant: (variant) {
+                    // Drag-only behavior. Clicking a drawer item must not add
+                    // or apply anything to the canvas.
                   },
                 );
               },
@@ -137,7 +104,7 @@ class _DrawerHeader extends StatelessWidget {
           ),
           SizedBox(height: 4),
           Text(
-            'Patch 12.1: product-aware catalog previews. Drag items to the canvas.',
+            'Patch 7: drag items to the canvas. Simple click does not add.',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -153,14 +120,14 @@ class _DrawerHeader extends StatelessWidget {
 class _ElementGroupTile extends StatelessWidget {
   const _ElementGroupTile({
     required this.group,
-    required this.previewContext,
-    required this.initiallyExpanded,
+    required this.productTitle,
+    required this.productSubtitle,
     required this.onTapVariant,
   });
 
   final MBAdvancedElementGroup group;
-  final MBAdvancedPreviewContext previewContext;
-  final bool initiallyExpanded;
+  final String productTitle;
+  final String productSubtitle;
   final ValueChanged<MBAdvancedElementVariant> onTapVariant;
 
   @override
@@ -180,39 +147,20 @@ class _ElementGroupTile extends StatelessWidget {
           ],
         ),
         child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          data: Theme.of(context).copyWith(
+            dividerColor: Colors.transparent,
+          ),
           child: ExpansionTile(
             tilePadding: const EdgeInsets.symmetric(horizontal: 12),
             childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
-            initiallyExpanded: initiallyExpanded,
-            title: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    group.title,
-                    style: const TextStyle(
-                      color: Color(0xFF172033),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF2E8),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${group.variants.length}',
-                    style: const TextStyle(
-                      color: Color(0xFFFF6500),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
+            initiallyExpanded: group.id == 'card' || group.id == 'title' || group.id == 'subtitle',
+            title: Text(
+              group.title,
+              style: const TextStyle(
+                color: Color(0xFF172033),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             subtitle: Text(
               group.subtitle,
@@ -238,7 +186,8 @@ class _ElementGroupTile extends StatelessWidget {
                     for (final variant in group.variants)
                       _VariantBox(
                         variant: variant,
-                        previewContext: previewContext,
+                        productTitle: productTitle,
+                        productSubtitle: productSubtitle,
                         onTap: () => onTapVariant(variant),
                       ),
                   ],
@@ -255,18 +204,20 @@ class _ElementGroupTile extends StatelessWidget {
 class _VariantBox extends StatelessWidget {
   const _VariantBox({
     required this.variant,
-    required this.previewContext,
+    required this.productTitle,
+    required this.productSubtitle,
     required this.onTap,
   });
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
+  final String productTitle;
+  final String productSubtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final box = SizedBox(
-      width: 134,
+      width: 118,
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -287,7 +238,8 @@ class _VariantBox extends StatelessWidget {
                   height: 48,
                   child: _VariantPreview(
                     variant: variant,
-                    previewContext: previewContext,
+                    productTitle: productTitle,
+                    productSubtitle: productSubtitle,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -323,9 +275,13 @@ class _VariantBox extends StatelessWidget {
       data: variant,
       feedback: _VariantDragFeedback(
         variant: variant,
-        previewContext: previewContext,
+        productTitle: productTitle,
+        productSubtitle: productSubtitle,
       ),
-      childWhenDragging: Opacity(opacity: 0.45, child: box),
+      childWhenDragging: Opacity(
+        opacity: 0.45,
+        child: box,
+      ),
       child: MouseRegion(
         cursor: SystemMouseCursors.grab,
         child: box,
@@ -337,18 +293,20 @@ class _VariantBox extends StatelessWidget {
 class _VariantDragFeedback extends StatelessWidget {
   const _VariantDragFeedback({
     required this.variant,
-    required this.previewContext,
+    required this.productTitle,
+    required this.productSubtitle,
   });
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
+  final String productTitle;
+  final String productSubtitle;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 148,
+        width: 136,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -370,7 +328,8 @@ class _VariantDragFeedback extends StatelessWidget {
               height: 42,
               child: _VariantPreview(
                 variant: variant,
-                previewContext: previewContext,
+                productTitle: productTitle,
+                productSubtitle: productSubtitle,
               ),
             ),
             const SizedBox(height: 8),
@@ -394,65 +353,36 @@ class _VariantDragFeedback extends StatelessWidget {
 class _VariantPreview extends StatelessWidget {
   const _VariantPreview({
     required this.variant,
-    required this.previewContext,
+    required this.productTitle,
+    required this.productSubtitle,
   });
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
+  final String productTitle;
+  final String productSubtitle;
 
   @override
   Widget build(BuildContext context) {
     switch (variant.elementType) {
       case 'card':
         return _PreviewCardShape(variant: variant);
-      case 'media':
-        return _PreviewMedia(variant: variant, previewContext: previewContext);
-      case 'price':
-      case 'mrp':
-      case 'discount':
-      case 'badge':
-      case 'promoBadge':
-      case 'flashBadge':
-      case 'timer':
-      case 'rating':
-      case 'stock':
-      case 'delivery':
-      case 'unit':
-      case 'quantity':
-      case 'feature':
-      case 'savingText':
-      case 'ribbon':
-      case 'cta':
-      case 'secondaryCta':
-      case 'wishlist':
-      case 'compare':
-      case 'share':
-      case 'animation':
-        return _PreviewPillOrText(
-          variant: variant,
-          previewContext: previewContext,
-        );
-      case 'divider':
-      case 'shape':
-      case 'panel':
-      case 'imageOverlay':
-      case 'progress':
-      case 'dots':
-      case 'border':
-      case 'effect':
-      case 'shadow':
-      case 'spacing':
-        return _PreviewVisualShape(variant: variant);
       case 'title':
+        return _PreviewTitle(variant: variant, productTitle: productTitle);
       case 'subtitle':
-      case 'description':
-      case 'brand':
-      case 'category':
-      default:
-        return _PreviewText(
+        return _PreviewSubtitle(
           variant: variant,
-          previewContext: previewContext,
+          productSubtitle: productSubtitle,
         );
+      case 'media':
+        return _PreviewMedia(variant: variant);
+      case 'price':
+        return _PreviewPrice(variant: variant);
+      case 'cta':
+        return _PreviewCta(variant: variant);
+      case 'badge':
+        return _PreviewBadge(variant: variant);
+      default:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -472,13 +402,11 @@ class _PreviewCardShape extends StatelessWidget {
       variant.cardPalettePatch['backgroundHex2'],
       const Color(0xFFFF9A3D),
     );
-    final width = _asDouble(variant.cardLayoutPatch['cardWidth'], 185) >= 300 ? 108.0 : 56.0;
-
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        width: width,
-        height: 48,
+        width: variant.id == 'card_compact_row' ? 92 : 54,
+        height: variant.id == 'card_compact_row' ? 38 : 48,
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: <Color>[background, background2]),
           borderRadius: BorderRadius.circular(12),
@@ -489,52 +417,43 @@ class _PreviewCardShape extends StatelessWidget {
   }
 }
 
-class _PreviewText extends StatelessWidget {
-  const _PreviewText({required this.variant, required this.previewContext});
+class _PreviewTitle extends StatelessWidget {
+  const _PreviewTitle({required this.variant, required this.productTitle});
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
+  final String productTitle;
 
   @override
   Widget build(BuildContext context) {
-    final text = MBAdvancedBindingResolver.resolveText(
-      previewContext,
-      variant.binding,
-      fallback: variant.title,
+    final isChip = variant.id.contains('chip');
+    final textColor = _hexColor(
+      variant.defaultStyle['textColorHex'],
+      const Color(0xFFFF6500),
     );
-    final background = _hexColor(variant.defaultStyle['backgroundHex'], Colors.transparent);
-    final isChip = background != Colors.transparent ||
-        variant.id.contains('chip') ||
-        variant.id.contains('badge');
-    final textColor = _drawerPreviewReadableTextColor(
-      requested: variant.defaultStyle['textColorHex'],
-      previewSurface: background == Colors.transparent ? Colors.white : background,
-      hasElementBackground: isChip,
-      fallback: background == Colors.transparent
-          ? const Color(0xFF172033)
-          : const Color(0xFFFF6500),
+    final background = _hexColor(
+      variant.defaultStyle['backgroundHex'],
+      Colors.transparent,
     );
+    final title = productTitle.trim().isEmpty ? 'Product title' : productTitle;
 
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 118),
+        constraints: const BoxConstraints(maxWidth: 104),
         padding: isChip
-            ? const EdgeInsets.symmetric(horizontal: 9, vertical: 6)
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 7)
             : EdgeInsets.zero,
         decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(
-            _asDouble(variant.defaultStyle['borderRadius'], 999),
-          ),
+          color: isChip ? background : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
-          text,
+          title,
           maxLines: isChip ? 1 : 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: textColor,
-            fontSize: isChip ? 10 : 11.5,
+            color: isChip ? textColor : const Color(0xFF172033),
+            fontSize: isChip ? 10 : 12,
             fontWeight: FontWeight.w900,
             height: 1.05,
           ),
@@ -544,56 +463,36 @@ class _PreviewText extends StatelessWidget {
   }
 }
 
-class _PreviewPillOrText extends StatelessWidget {
-  const _PreviewPillOrText({required this.variant, required this.previewContext});
+class _PreviewSubtitle extends StatelessWidget {
+  const _PreviewSubtitle({required this.variant, required this.productSubtitle});
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
+  final String productSubtitle;
 
   @override
   Widget build(BuildContext context) {
-    final text = MBAdvancedBindingResolver.resolveText(
-      previewContext,
-      variant.binding,
-      fallback: variant.title,
-    );
-    final background = _hexColor(variant.defaultStyle['backgroundHex'], Colors.transparent);
-    final textColor = _drawerPreviewReadableTextColor(
-      requested: variant.defaultStyle['textColorHex'],
-      previewSurface: background == Colors.transparent ? Colors.white : background,
-      hasElementBackground: background != Colors.transparent,
-      fallback: background == Colors.transparent
-          ? const Color(0xFFFF6500)
-          : const Color(0xFF151922),
-    );
-    final isIcon = variant.elementType == 'wishlist' ||
-        variant.elementType == 'compare' ||
-        variant.elementType == 'share' ||
-        variant.elementType == 'animation';
-    final width = isIcon ? 36.0 : 82.0;
-    final height = isIcon ? 36.0 : 30.0;
-
+    final isChip = variant.id.contains('chip');
+    final text = productSubtitle.trim().isEmpty ? 'Fresh product detail' : productSubtitle;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        width: width,
-        height: height,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
+        width: isChip ? 98 : 106,
+        padding: isChip
+            ? const EdgeInsets.symmetric(horizontal: 9, vertical: 6)
+            : EdgeInsets.zero,
         decoration: BoxDecoration(
-          color: background == Colors.transparent ? Colors.white : background,
+          color: isChip ? const Color(0xFFFFF5EC) : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFFFD6BA)),
         ),
         child: Text(
           text,
-          maxLines: 1,
+          maxLines: isChip ? 1 : 2,
           overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
           style: TextStyle(
-            color: textColor,
-            fontSize: isIcon ? 15 : 10.5,
-            fontWeight: FontWeight.w900,
+            color: isChip ? const Color(0xFFB84300) : const Color(0xFF747B8A),
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+            height: 1.15,
           ),
         ),
       ),
@@ -602,28 +501,22 @@ class _PreviewPillOrText extends StatelessWidget {
 }
 
 class _PreviewMedia extends StatelessWidget {
-  const _PreviewMedia({required this.variant, required this.previewContext});
+  const _PreviewMedia({required this.variant});
 
   final MBAdvancedElementVariant variant;
-  final MBAdvancedPreviewContext previewContext;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
-      previewContext,
-      variant.binding,
-    );
-    final isCircle = _asDouble(variant.defaultStyle['borderRadius'], 0) >= 500;
-
+    final isCircle = variant.id.contains('circle');
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        width: isCircle ? 48 : 62,
-        height: isCircle ? 48 : 42,
-        padding: EdgeInsets.all(_asDouble(variant.defaultStyle['ringWidth'], 4) * 0.45),
+        width: isCircle ? 46 : 54,
+        height: isCircle ? 46 : 40,
         decoration: BoxDecoration(
-          color: _hexColor(variant.defaultStyle['borderHex'], Colors.white),
+          color: const Color(0xFFFFF0E6),
           borderRadius: BorderRadius.circular(isCircle ? 999 : 14),
+          border: Border.all(color: Colors.white, width: 4),
           boxShadow: const <BoxShadow>[
             BoxShadow(
               color: Color(0x18000000),
@@ -632,135 +525,121 @@ class _PreviewMedia extends StatelessWidget {
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(isCircle ? 999 : 10),
-          child: imageUrl.isEmpty
-              ? const _ImageFallback()
-              : Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const _ImageFallback(),
-                ),
+        child: const Icon(
+          Icons.image_rounded,
+          color: Color(0xFFFF6500),
+          size: 18,
         ),
       ),
     );
   }
 }
 
-class _PreviewVisualShape extends StatelessWidget {
-  const _PreviewVisualShape({required this.variant});
+class _PreviewPrice extends StatelessWidget {
+  const _PreviewPrice({required this.variant});
 
   final MBAdvancedElementVariant variant;
 
   @override
   Widget build(BuildContext context) {
-    final color = _hexColor(
-      variant.defaultStyle['backgroundHex'],
-      const Color(0xFFFF6500),
-    ).withValues(
-      alpha: _asDouble(variant.defaultStyle['opacity'], 0.35).clamp(0.0, 1.0),
-    );
-
-    if (variant.elementType == 'progress') {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: Container(
-            width: 98,
-            height: 10,
-            color: const Color(0xFFFFE2CC),
-            alignment: Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: _asDouble(variant.defaultStyle['progress'], 0.72),
-              child: Container(color: const Color(0xFFFF6500)),
-            ),
-          ),
-        ),
-      );
-    }
-
+    final isCircle = variant.id.contains('circle');
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        width: variant.elementType == 'divider' ? 112 : 62,
-        height: variant.elementType == 'divider' ? 4 : 38,
+        width: isCircle ? 48 : 76,
+        height: isCircle ? 48 : 30,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(
-            _asDouble(variant.defaultStyle['borderRadius'], 18),
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(color: const Color(0xFFFFD6BA)),
+        ),
+        child: const Text(
+          '\u09F3120',
+          style: TextStyle(
+            color: Color(0xFFFF6500),
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
   }
 }
 
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
+class _PreviewCta extends StatelessWidget {
+  const _PreviewCta({required this.variant});
+
+  final MBAdvancedElementVariant variant;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFFFF0E6),
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.image_rounded,
-        color: Color(0xFFFF6500),
-        size: 18,
+    final isOutline = variant.id.contains('outline');
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 70,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isOutline ? Colors.white : const Color(0xFF151922),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isOutline ? const Color(0xFFFF6500) : const Color(0xFF151922),
+          ),
+        ),
+        child: Text(
+          isOutline ? 'View' : 'Buy',
+          style: TextStyle(
+            color: isOutline ? const Color(0xFFFF6500) : Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ),
     );
   }
 }
 
+class _PreviewBadge extends StatelessWidget {
+  const _PreviewBadge({required this.variant});
 
-Color _drawerPreviewReadableTextColor({
-  required Object? requested,
-  required Color previewSurface,
-  required bool hasElementBackground,
-  required Color fallback,
-}) {
-  final raw = requested?.toString().trim();
+  final MBAdvancedElementVariant variant;
 
-  if (raw == null ||
-      raw.isEmpty ||
-      raw == '#00000000' ||
-      raw.toLowerCase() == 'transparent') {
-    return fallback;
+  @override
+  Widget build(BuildContext context) {
+    final isDark = variant.id.contains('dark');
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: 68,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF151922) : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0xFFFFD6BA)),
+        ),
+        child: Text(
+          isDark ? 'SAVE' : 'HOT',
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFFFF6500),
+            fontSize: 10.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
   }
-
-  final requestedColor = _hexColor(raw, fallback);
-  final surfaceBrightness = ThemeData.estimateBrightnessForColor(previewSurface);
-  final textBrightness = ThemeData.estimateBrightnessForColor(requestedColor);
-  final sameBrightness = surfaceBrightness == textBrightness;
-
-  if (!sameBrightness || hasElementBackground) {
-    return requestedColor;
-  }
-
-  if (surfaceBrightness == Brightness.light) {
-    return const Color(0xFF172033);
-  }
-
-  return Colors.white;
 }
+
 Color _hexColor(Object? value, Color fallback) {
   final raw = value?.toString().trim();
-  if (raw == null || raw.isEmpty || raw == '#00000000') return fallback;
-
+  if (raw == null || raw.isEmpty) return fallback;
   var hex = raw.replaceAll('#', '').toUpperCase();
   if (hex.length == 6) hex = 'FF$hex';
   if (hex.length != 8) return fallback;
-
   final parsed = int.tryParse(hex, radix: 16);
   if (parsed == null) return fallback;
-
   return Color(parsed);
 }
-
-double _asDouble(Object? value, double fallback) {
-  if (value is num) return value.toDouble();
-  return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
-}
-

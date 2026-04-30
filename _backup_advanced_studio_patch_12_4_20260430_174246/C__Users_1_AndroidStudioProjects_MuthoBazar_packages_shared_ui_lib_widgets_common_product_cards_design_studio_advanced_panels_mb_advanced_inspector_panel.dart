@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.2 right inspector panel.
 //
 // Purpose:
@@ -15,9 +15,9 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_card_design_document.dart';
-import '../../system/mb_responsive_card_grid_resolver.dart';
-import '../../system/mb_responsive_card_grid_resolver.dart';class MBAdvancedInspectorPanel extends StatelessWidget {
+import '../models/mb_advanced_card_design_document.dart';
+
+class MBAdvancedInspectorPanel extends StatelessWidget {
   const MBAdvancedInspectorPanel({
     super.key,
     required this.document,
@@ -242,25 +242,28 @@ class _CardInspector extends StatelessWidget {
             _WidthPresetRow(
               currentWidth: document.cardWidth,
               onHalf: () => onUpdateDocument(
-                document.resizeCardLayout(cardWidth: MBResponsiveCardGridResolver.halfWidthDesignPx),
+                document.resizeCardLayout(cardWidth: 192.0),
               ),
               onFull: () => onUpdateDocument(
-                document.resizeCardLayout(cardWidth: MBResponsiveCardGridResolver.fullWidthDesignPx),
+                document.resizeCardLayout(cardWidth: 392.0),
               ),
             ),
             const SizedBox(height: 8),
             _NumberFieldRow(
               label: 'Width',
               value: document.cardWidth,
-              min: MBResponsiveCardGridResolver.minCardWidthPx,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              min: 160,
+              max: 420,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
                 document.resizeCardLayout(cardWidth: value),
               ),
             ),
-            min: MBResponsiveCardGridResolver.minCardHeightPx,
-              max: MBResponsiveCardGridResolver.maxCardHeightPx,
+            _NumberFieldRow(
+              label: 'Height',
+              value: document.cardHeight,
+              min: 220,
+              max: 760,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
                 document.resizeCardLayout(cardHeight: value),
@@ -407,7 +410,7 @@ class _NodeInspector extends StatelessWidget {
               label: 'Width',
               value: node.size.width,
               min: 8,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              max: 420,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
                 _resizeNodeFromTopLeft(
@@ -423,7 +426,7 @@ class _NodeInspector extends StatelessWidget {
               label: 'Height',
               value: node.size.height,
               min: 4,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
+              max: 420,
               decimals: 0,
               onChanged: (value) => onUpdateNode(
                 _resizeNodeFromTopLeft(
@@ -770,8 +773,8 @@ class _NodeInspector extends StatelessWidget {
         children: <Widget>[
           _TextInputRow(
             label: 'Currency symbol',
-            value: _styleString(style, 'currencySymbol', 'à§³'),
-            hintText: 'à§³ / Tk / BDT',
+            value: _styleString(style, 'currencySymbol', '৳'),
+            hintText: '৳ / Tk / BDT',
             onSubmitted: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'currencySymbol': value})),
             ),
@@ -796,7 +799,7 @@ class _NodeInspector extends StatelessWidget {
           _TextInputRow(
             label: 'Icon text',
             value: _styleString(style, 'iconText', ''),
-            hintText: 'ex: âš¡ / â˜… / %',
+            hintText: 'ex: ⚡ / ★ / %',
             onSubmitted: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'iconText': value})),
             ),
@@ -1061,7 +1064,7 @@ class _WidthPresetRow extends StatelessWidget {
         Expanded(
           child: _PresetButton(
             label: 'Half width',
-            active: (currentWidth - MBResponsiveCardGridResolver.halfWidthDesignPx).abs() < 1.0,
+            active: (currentWidth - 192.0).abs() < 1.0,
             onTap: onHalf,
           ),
         ),
@@ -1069,7 +1072,7 @@ class _WidthPresetRow extends StatelessWidget {
         Expanded(
           child: _PresetButton(
             label: 'Full width',
-            active: (currentWidth - MBResponsiveCardGridResolver.fullWidthDesignPx).abs() < 1.0,
+            active: (currentWidth - 392.0).abs() < 1.0,
             onTap: onFull,
           ),
         ),
@@ -1711,13 +1714,4 @@ Color _hexToColor(String hex) {
   if (buffer.length != 8) return const Color(0xFFFF6500);
   return Color(int.tryParse(buffer.toString(), radix: 16) ?? 0xFFFF6500);
 }
-
-
-
-
-
-
-
-
-
 
