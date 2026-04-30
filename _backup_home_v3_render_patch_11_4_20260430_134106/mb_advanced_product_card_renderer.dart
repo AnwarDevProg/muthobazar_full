@@ -1,4 +1,4 @@
-﻿// File: mb_advanced_product_card_renderer.dart
+// File: mb_advanced_product_card_renderer.dart
 //
 // Advanced Product Card Runtime Renderer
 // --------------------------------------
@@ -933,72 +933,6 @@ class _V3DesignNode {
   String get textAlign => readString('textAlign', fallback: 'left');
 }
 
-
-BoxFit _imageFitFromString(String source, {required BoxFit fallback}) {
-  switch (source.trim().toLowerCase()) {
-    case 'contain':
-      return BoxFit.contain;
-    case 'fill':
-      return BoxFit.fill;
-    case 'fitwidth':
-    case 'fit_width':
-      return BoxFit.fitWidth;
-    case 'fitheight':
-    case 'fit_height':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaledown':
-    case 'scale_down':
-      return BoxFit.scaleDown;
-    case 'cover':
-    case '':
-      return BoxFit.cover;
-    default:
-      return fallback;
-  }
-}
-
-Alignment _imageAlignmentFromString(
-  String source, {
-  required Alignment fallback,
-}) {
-  switch (source.trim().toLowerCase()) {
-    case 'top':
-    case 'topcenter':
-    case 'top_center':
-      return Alignment.topCenter;
-    case 'bottom':
-    case 'bottomcenter':
-    case 'bottom_center':
-      return Alignment.bottomCenter;
-    case 'left':
-    case 'centerleft':
-    case 'center_left':
-      return Alignment.centerLeft;
-    case 'right':
-    case 'centerright':
-    case 'center_right':
-      return Alignment.centerRight;
-    case 'topleft':
-    case 'top_left':
-      return Alignment.topLeft;
-    case 'topright':
-    case 'top_right':
-      return Alignment.topRight;
-    case 'bottomleft':
-    case 'bottom_left':
-      return Alignment.bottomLeft;
-    case 'bottomright':
-    case 'bottom_right':
-      return Alignment.bottomRight;
-    case 'center':
-    case '':
-      return Alignment.center;
-    default:
-      return fallback;
-  }
-}
 String _resolveNodeText(MBProduct product, _V3DesignNode node) {
   final styleLabel = node.readString('label');
   if (styleLabel.isNotEmpty) return styleLabel;
@@ -1009,7 +943,7 @@ String _resolveNodeText(MBProduct product, _V3DesignNode node) {
     case 'product.titleEn':
       return _tryReadString(() => (product as dynamic).titleEn, fallback: 'Product');
     case 'product.titleBn':
-      return _tryReadString(() => (product as dynamic).titleBn, fallback: 'à¦ªà¦£à§à¦¯');
+      return _tryReadString(() => (product as dynamic).titleBn, fallback: 'পণ্য');
     case 'product.shortDescriptionEn':
       return _tryReadString(() => (product as dynamic).shortDescriptionEn, fallback: '');
     case 'product.shortDescriptionBn':
@@ -1034,7 +968,7 @@ String _resolveNodeText(MBProduct product, _V3DesignNode node) {
     case 'product.deliveryHint':
       return 'Fast delivery';
     case 'product.rating':
-      return 'â˜… â˜… â˜… â˜… â˜†(128)';
+      return '★ ★ ★ ★ ☆(128)';
     case 'static.discount':
       return _discountLabel(product);
     case 'action.buy':
@@ -1123,7 +1057,7 @@ String _discountLabel(MBProduct product) {
 
 String _formatCurrency(num value) {
   final number = value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
-  return 'à§³$number';
+  return '৳$number';
 }
 
 Map<String, dynamic> _stringKeyedMap(Object? source) {
@@ -1229,5 +1163,4 @@ Alignment _alignmentFromTextAlign(String source) {
       return Alignment.centerLeft;
   }
 }
-
 

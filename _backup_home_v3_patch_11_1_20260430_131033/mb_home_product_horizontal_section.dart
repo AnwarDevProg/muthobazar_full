@@ -8,11 +8,7 @@ import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_la
 
 // MB Home Product Horizontal Section
 // ----------------------------------
-// Direct V3 node-render horizontal product list.
-//
-// V3 cardDesignJson products are rendered through MBProductCardRenderer only.
-// The old saved-design wrapper is intentionally skipped so Home shows exactly
-// the nodes saved by Studio V3.
+// Saved-design-aware horizontal product list.
 
 class MBHomeProductHorizontalSection extends StatelessWidget {
   const MBHomeProductHorizontalSection({
@@ -42,10 +38,10 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
 
     final listHeight = itemSizes
         .map((size) => size.height)
-        .fold<double>(220, (previous, current) => current > previous
+        .fold<double>(260, (previous, current) => current > previous
             ? current
             : previous)
-        .clamp(180, 440)
+        .clamp(240, 440)
         .toDouble();
 
     return Column(
@@ -70,15 +66,22 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
               return SizedBox(
                 width: size.width,
                 height: size.height,
-                child: MBProductCardRenderer(
+                child: MBSavedDesignProductCard(
                   product: product,
-                  contextType: _isFullWidthProduct(product)
-                      ? MBProductCardRenderContext.featured
-                      : MBProductCardRenderContext.grid,
-                  featuredHeight:
-                      _isFullWidthProduct(product) ? size.height : null,
+                  fitInsideParent: false,
                   onTap: () => onProductTap?.call(product),
-                  onAddToCartTap: () => onAddToCart?.call(product),
+                  onPrimaryCtaTap: () => onAddToCart?.call(product),
+                  onSecondaryCtaTap: () => onAddToCart?.call(product),
+                  fallback: MBProductCardRenderer(
+                    product: product,
+                    contextType: _isFullWidthProduct(product)
+                        ? MBProductCardRenderContext.featured
+                        : MBProductCardRenderContext.grid,
+                    featuredHeight:
+                        _isFullWidthProduct(product) ? size.height : null,
+                    onTap: () => onProductTap?.call(product),
+                    onAddToCartTap: () => onAddToCart?.call(product),
+                  ),
                 ),
               );
             },
@@ -96,8 +99,7 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
 
   double _widthForProduct(BuildContext context, MBProduct product) {
     if (product.hasCardDesignJson) {
-      final metrics = _SavedDesignLayoutMetrics.fromJson(product.cardDesignJson);
-      return metrics.savedCardWidth.clamp(150, 220).toDouble();
+      return 190;
     }
 
     if (!_isFullWidthProduct(product)) {
@@ -127,10 +129,6 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
   }
 
   bool _isFullWidthProduct(MBProduct product) {
-    if (product.hasCardDesignJson) {
-      return false;
-    }
-
     final config = product.effectiveCardConfig.normalized();
     return config.variant.isFullWidth;
   }
@@ -139,43 +137,41 @@ class MBHomeProductHorizontalSection extends StatelessWidget {
 class _SavedDesignLayoutMetrics {
   const _SavedDesignLayoutMetrics({
     required this.savedCardWidth,
-    required this.savedCardHeight,
     required this.aspectRatio,
-    this.minHeight,
-    this.maxHeight,
+    required this.minHeight,
+    required this.maxHeight,
   });
 
   final double savedCardWidth;
-  final double savedCardHeight;
   final double aspectRatio;
-  final double? minHeight;
-  final double? maxHeight;
+  final double minHeight;
+  final double maxHeight;
 
   factory _SavedDesignLayoutMetrics.fromJson(String? rawJson) {
     final layout = _readLayoutMap(rawJson);
 
     final savedCardWidth = _readDouble(
       layout['cardWidth'],
-      fallback: 185,
-    ).clamp(80, 800).toDouble();
+      fallback: 220,
+    ).clamp(120, 420).toDouble();
 
-    final savedCardHeight = _readDouble(
-      layout['cardHeight'],
-      fallback: 255,
-    ).clamp(80, 1200).toDouble();
+    final aspectRatio = _readDouble(
+      layout['aspectRatio'],
+      fallback: 0.56,
+    ).clamp(0.35, 1.25).toDouble();
 
-    final explicitAspectRatio = _readNullableDouble(layout['aspectRatio']);
-    final aspectRatio = (explicitAspectRatio ??
-            (savedCardWidth / savedCardHeight))
-        .clamp(0.25, 2.5)
-        .toDouble();
+    final minHeight = _readDouble(
+      layout['minHeight'],
+      fallback: 430,
+    ).clamp(120, 900).toDouble();
 
-    final minHeight = _readNullableDouble(layout['minHeight']);
-    final maxHeight = _readNullableDouble(layout['maxHeight']);
+    final maxHeight = _readDouble(
+      layout['maxHeight'],
+      fallback: 520,
+    ).clamp(minHeight, 1200).toDouble();
 
     return _SavedDesignLayoutMetrics(
       savedCardWidth: savedCardWidth,
-      savedCardHeight: savedCardHeight,
       aspectRatio: aspectRatio,
       minHeight: minHeight,
       maxHeight: maxHeight,
@@ -184,18 +180,14 @@ class _SavedDesignLayoutMetrics {
 
   double heightForWidth(double runtimeWidth) {
     final safeWidth = runtimeWidth.clamp(80, 800).toDouble();
-    final rawHeight = safeWidth / aspectRatio;
-
-    if (minHeight == null && maxHeight == null) {
-      return rawHeight.clamp(80, 1400).toDouble();
-    }
-
     final scale = (safeWidth / savedCardWidth).clamp(0.35, 2.5).toDouble();
-    final scaledMinHeight = (minHeight ?? savedCardHeight) * scale;
-    final scaledMaxHeight = (maxHeight ?? savedCardHeight) * scale;
 
-    final safeMin = scaledMinHeight.clamp(80, 1400).toDouble();
-    final safeMax = scaledMaxHeight.clamp(safeMin, 1600).toDouble();
+    final rawHeight = safeWidth / aspectRatio;
+    final scaledMinHeight = minHeight * scale;
+    final scaledMaxHeight = maxHeight * scale;
+
+    final safeMin = scaledMinHeight.clamp(80, 1200).toDouble();
+    final safeMax = scaledMaxHeight.clamp(safeMin, 1400).toDouble();
 
     return rawHeight.clamp(safeMin, safeMax).toDouble();
   }
@@ -238,15 +230,5 @@ class _SavedDesignLayoutMetrics {
     }
 
     return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
-  }
-
-  static double? _readNullableDouble(Object? value) {
-    if (value is num) {
-      return value.toDouble();
-    }
-
-    final raw = value?.toString().trim();
-    if (raw == null || raw.isEmpty) return null;
-    return double.tryParse(raw);
   }
 }

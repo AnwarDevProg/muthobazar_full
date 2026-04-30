@@ -1,5 +1,5 @@
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 10.3 shell.
+// Patch 10.1 shell.
 //
 // Target layout:
 // - Left: expandable element drawer with draggable variant boxes.
@@ -16,7 +16,7 @@
 // - Mouse drag moves selected nodes around the canvas.
 // - Patch 8 fixes card/root anchored resize and live radius rendering.
 // - Patch 9 adds responsive/fixed element lock and auto-lock on copy/save/close.
-// - Patch 10.3 shows true card-only preview while keeping cardLayoutType visible.
+// - Patch 10.1 restores preview layout while keeping cardLayoutType visible.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -348,7 +348,7 @@ class _TopBar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Patch 10.3 active - true card-only preview',
+                  'Patch 10.2 active - layout editor constraint fix',
                   style: TextStyle(
                     color: Color(0xFF747B8A),
                     fontSize: 12,

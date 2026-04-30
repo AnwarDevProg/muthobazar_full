@@ -1,8 +1,8 @@
-﻿// File: mb_advanced_product_card_renderer.dart
+// File: mb_advanced_product_card_renderer.dart
 //
 // Advanced Product Card Runtime Renderer
 // --------------------------------------
-// Patch 11.3: V3 media/background exact parity.
+// Patch 11.2: Studio/Home V3 render parity.
 //
 // Purpose:
 // - Render product.cardDesignJson directly in customer Home/product cards.
@@ -565,34 +565,15 @@ class _MediaNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = _resolveImageUrl(product);
     final border = node.readColor('borderHex', fallback: Colors.white);
-    final ringWidth = node.readDouble('ringWidth', fallback: 0).clamp(0, 24).toDouble();
-    final rawRadius = node.readDouble('borderRadius', fallback: 24).clamp(0, 999).toDouble();
-    final isCircleLike = rawRadius >= 500 || node.variantId.contains('circle');
-
-    // Important:
-    // Studio V3 treats media_circle_ring as a rounded-rect/oval frame based on
-    // the saved node width/height. Do not use BoxShape.circle here, because for
-    // non-square nodes it creates a different crop than the Studio preview.
-    final effectiveRadius = isCircleLike
-        ? math.min(node.width, node.height) / 2
-        : rawRadius;
-
-    final innerRadius = math.max(0.0, effectiveRadius - ringWidth);
-    final imageInset = ringWidth > 0 ? math.max(1.0, ringWidth * 0.36) : 0.0;
-    final imageFit = _boxFitFromString(
-      node.readString(
-        'imageFit',
-        fallback: isCircleLike ? 'contain' : 'cover',
-      ),
-    );
+    final ringWidth = node.readDouble('ringWidth', fallback: 0);
+    final radius = node.readDouble('borderRadius', fallback: 24);
+    final isCircle = radius >= 500 || node.variantId.contains('circle');
 
     final image = imageUrl.isEmpty
         ? const ColoredBox(color: Color(0xFFFFEFE3))
         : Image.network(
             imageUrl,
-            fit: imageFit,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const ColoredBox(
               color: Color(0xFFFFEFE3),
               child: Center(
@@ -605,10 +586,11 @@ class _MediaNode extends StatelessWidget {
             ),
           );
 
-    return DecoratedBox(
+    final decoratedImage = DecoratedBox(
       decoration: BoxDecoration(
-        color: node.readColor('backgroundHex', fallback: Colors.white),
-        borderRadius: BorderRadius.circular(effectiveRadius),
+        color: Colors.white,
+        borderRadius: isCircle ? null : BorderRadius.circular(radius),
+        shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
         border: ringWidth > 0
             ? Border.all(
                 color: border,
@@ -624,16 +606,19 @@ class _MediaNode extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(imageInset),
+        padding: EdgeInsets.all(ringWidth > 0 ? math.max(1, ringWidth * 0.36) : 0),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(innerRadius),
-          child: ColoredBox(
-            color: Colors.white,
-            child: Center(child: image),
-          ),
+          borderRadius: BorderRadius.circular(isCircle ? 999 : math.max(0, radius - ringWidth)),
+          child: image,
         ),
       ),
     );
+
+    if (isCircle) {
+      return ClipOval(child: decoratedImage);
+    }
+
+    return decoratedImage;
   }
 }
 
@@ -933,72 +918,6 @@ class _V3DesignNode {
   String get textAlign => readString('textAlign', fallback: 'left');
 }
 
-
-BoxFit _imageFitFromString(String source, {required BoxFit fallback}) {
-  switch (source.trim().toLowerCase()) {
-    case 'contain':
-      return BoxFit.contain;
-    case 'fill':
-      return BoxFit.fill;
-    case 'fitwidth':
-    case 'fit_width':
-      return BoxFit.fitWidth;
-    case 'fitheight':
-    case 'fit_height':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaledown':
-    case 'scale_down':
-      return BoxFit.scaleDown;
-    case 'cover':
-    case '':
-      return BoxFit.cover;
-    default:
-      return fallback;
-  }
-}
-
-Alignment _imageAlignmentFromString(
-  String source, {
-  required Alignment fallback,
-}) {
-  switch (source.trim().toLowerCase()) {
-    case 'top':
-    case 'topcenter':
-    case 'top_center':
-      return Alignment.topCenter;
-    case 'bottom':
-    case 'bottomcenter':
-    case 'bottom_center':
-      return Alignment.bottomCenter;
-    case 'left':
-    case 'centerleft':
-    case 'center_left':
-      return Alignment.centerLeft;
-    case 'right':
-    case 'centerright':
-    case 'center_right':
-      return Alignment.centerRight;
-    case 'topleft':
-    case 'top_left':
-      return Alignment.topLeft;
-    case 'topright':
-    case 'top_right':
-      return Alignment.topRight;
-    case 'bottomleft':
-    case 'bottom_left':
-      return Alignment.bottomLeft;
-    case 'bottomright':
-    case 'bottom_right':
-      return Alignment.bottomRight;
-    case 'center':
-    case '':
-      return Alignment.center;
-    default:
-      return fallback;
-  }
-}
 String _resolveNodeText(MBProduct product, _V3DesignNode node) {
   final styleLabel = node.readString('label');
   if (styleLabel.isNotEmpty) return styleLabel;
@@ -1009,7 +928,7 @@ String _resolveNodeText(MBProduct product, _V3DesignNode node) {
     case 'product.titleEn':
       return _tryReadString(() => (product as dynamic).titleEn, fallback: 'Product');
     case 'product.titleBn':
-      return _tryReadString(() => (product as dynamic).titleBn, fallback: 'à¦ªà¦£à§à¦¯');
+      return _tryReadString(() => (product as dynamic).titleBn, fallback: 'পণ্য');
     case 'product.shortDescriptionEn':
       return _tryReadString(() => (product as dynamic).shortDescriptionEn, fallback: '');
     case 'product.shortDescriptionBn':
@@ -1034,7 +953,7 @@ String _resolveNodeText(MBProduct product, _V3DesignNode node) {
     case 'product.deliveryHint':
       return 'Fast delivery';
     case 'product.rating':
-      return 'â˜… â˜… â˜… â˜… â˜†(128)';
+      return '★ ★ ★ ★ ☆(128)';
     case 'static.discount':
       return _discountLabel(product);
     case 'action.buy':
@@ -1074,29 +993,6 @@ String _resolveImageUrl(MBProduct product) {
   return '';
 }
 
-BoxFit _boxFitFromString(String source) {
-  switch (source.trim().toLowerCase()) {
-    case 'fill':
-      return BoxFit.fill;
-    case 'cover':
-      return BoxFit.cover;
-    case 'fitwidth':
-    case 'fit_width':
-      return BoxFit.fitWidth;
-    case 'fitheight':
-    case 'fit_height':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaledown':
-    case 'scale_down':
-      return BoxFit.scaleDown;
-    case 'contain':
-    default:
-      return BoxFit.contain;
-  }
-}
-
 num _readFinalPrice(MBProduct product) {
   final sale = _tryReadNum(() => (product as dynamic).salePrice);
   if (sale != null && sale > 0) return sale;
@@ -1123,7 +1019,7 @@ String _discountLabel(MBProduct product) {
 
 String _formatCurrency(num value) {
   final number = value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
-  return 'à§³$number';
+  return '৳$number';
 }
 
 Map<String, dynamic> _stringKeyedMap(Object? source) {
@@ -1229,5 +1125,3 @@ Alignment _alignmentFromTextAlign(String source) {
       return Alignment.centerLeft;
   }
 }
-
-

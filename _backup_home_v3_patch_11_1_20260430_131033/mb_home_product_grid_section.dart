@@ -9,16 +9,16 @@ import 'package:shared_ui/widgets/common/product_cards/system/mb_product_card_la
 
 // MB Home Product Grid Section
 // ----------------------------
-// V3 cardDesignJson direct-render Home grid.
+// Saved-design-aware Home grid.
 //
 // Rules:
 // - Shuffle products once when a fresh product list arrives.
 // - Half-width cards are paired two per row.
-// - Full-width legacy cards render as full rows.
-// - V3 cards render directly through MBProductCardRenderer so only saved
-//   cardDesignJson nodes appear. No old saved-design/template wrapper is used.
-// - V3 card height is calculated from layout.cardWidth/layout.cardHeight.
-// - Blank/filler gap blocks are disabled for a cleaner Home page.
+// - Full-width cards render as full rows.
+// - If a saved design exists, card height comes from saved cardDesignJson,
+//   scaled against the current runtime cell width.
+// - If no saved design exists, old MBProductCardRenderer layout profile is used.
+// - Small remaining gaps in a half pair are filled with a subtle filler block.
 
 class MBHomeProductGridSection extends StatefulWidget {
   const MBHomeProductGridSection({
@@ -254,7 +254,7 @@ class _ProductCardFlow extends StatelessWidget {
 
       return SizedBox(
         height: height,
-        child: _HomeProductCard(
+        child: _SavedAwareCard(
           product: fullWidthProduct,
           featured: true,
           featuredHeight: height,
@@ -275,8 +275,6 @@ class _ProductCardFlow extends StatelessWidget {
   }
 
   bool _isFullWidthProduct(MBProduct product) {
-    // V3 full-width templates will be enabled later via explicit layout metadata.
-    // For now all V3 cardDesignJson products are treated as half-width Home cards.
     if (product.hasCardDesignJson) {
       return false;
     }
@@ -318,6 +316,7 @@ class _HalfWidthPairRow extends StatelessWidget {
             child: _HalfCardSlot(
               product: first,
               cardHeight: firstHeight,
+              fillerHeight: 0,
               onProductTap: onProductTap,
               onAddToCart: onAddToCart,
             ),
@@ -333,6 +332,10 @@ class _HalfWidthPairRow extends StatelessWidget {
       width: halfWidth,
     );
 
+    final rowHeight = max(firstHeight, secondHeight);
+    final firstFiller = max(0.0, rowHeight - firstHeight);
+    final secondFiller = max(0.0, rowHeight - secondHeight);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -340,6 +343,7 @@ class _HalfWidthPairRow extends StatelessWidget {
           child: _HalfCardSlot(
             product: first,
             cardHeight: firstHeight,
+            fillerHeight: firstFiller,
             onProductTap: onProductTap,
             onAddToCart: onAddToCart,
           ),
@@ -349,6 +353,7 @@ class _HalfWidthPairRow extends StatelessWidget {
           child: _HalfCardSlot(
             product: second!,
             cardHeight: secondHeight,
+            fillerHeight: secondFiller,
             onProductTap: onProductTap,
             onAddToCart: onAddToCart,
           ),
@@ -362,31 +367,54 @@ class _HalfCardSlot extends StatelessWidget {
   const _HalfCardSlot({
     required this.product,
     required this.cardHeight,
+    required this.fillerHeight,
     this.onProductTap,
     this.onAddToCart,
   });
 
   final MBProduct product;
   final double cardHeight;
+  final double fillerHeight;
   final void Function(MBProduct product)? onProductTap;
   final void Function(MBProduct product)? onAddToCart;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: cardHeight,
-      child: _HomeProductCard(
-        product: product,
-        onProductTap: onProductTap,
-        onAddToCart: onAddToCart,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: cardHeight,
+          child: _SavedAwareCard(
+            product: product,
+            onProductTap: onProductTap,
+            onAddToCart: onAddToCart,
+          ),
+        ),
+        if (fillerHeight > 8)
+          Container(
+            height: fillerHeight,
+            margin: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFFF7A00).withValues(alpha: 0.12),
+                  const Color(0xFFFF7A00).withValues(alpha: 0.04),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          )
+        else if (fillerHeight > 0)
+          SizedBox(height: fillerHeight),
+      ],
     );
   }
 }
 
-class _HomeProductCard extends StatelessWidget {
-  const _HomeProductCard({
+class _SavedAwareCard extends StatelessWidget {
+  const _SavedAwareCard({
     required this.product,
     this.featured = false,
     this.featuredHeight,
@@ -402,14 +430,21 @@ class _HomeProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MBProductCardRenderer(
+    return MBSavedDesignProductCard(
       product: product,
-      contextType: featured
-          ? MBProductCardRenderContext.featured
-          : MBProductCardRenderContext.grid,
-      featuredHeight: featured ? featuredHeight : null,
+      fitInsideParent: false,
       onTap: () => onProductTap?.call(product),
-      onAddToCartTap: () => onAddToCart?.call(product),
+      onPrimaryCtaTap: () => onAddToCart?.call(product),
+      onSecondaryCtaTap: () => onAddToCart?.call(product),
+      fallback: MBProductCardRenderer(
+        product: product,
+        contextType: featured
+            ? MBProductCardRenderContext.featured
+            : MBProductCardRenderContext.grid,
+        featuredHeight: featured ? featuredHeight : null,
+        onTap: () => onProductTap?.call(product),
+        onAddToCartTap: () => onAddToCart?.call(product),
+      ),
     );
   }
 }
@@ -442,43 +477,41 @@ class _CardRuntimeHeightResolver {
 class _SavedDesignLayoutMetrics {
   const _SavedDesignLayoutMetrics({
     required this.savedCardWidth,
-    required this.savedCardHeight,
     required this.aspectRatio,
-    this.minHeight,
-    this.maxHeight,
+    required this.minHeight,
+    required this.maxHeight,
   });
 
   final double savedCardWidth;
-  final double savedCardHeight;
   final double aspectRatio;
-  final double? minHeight;
-  final double? maxHeight;
+  final double minHeight;
+  final double maxHeight;
 
   factory _SavedDesignLayoutMetrics.fromJson(String? rawJson) {
     final layout = _readLayoutMap(rawJson);
 
     final savedCardWidth = _readDouble(
       layout['cardWidth'],
-      fallback: 185,
-    ).clamp(80, 800).toDouble();
+      fallback: 220,
+    ).clamp(120, 420).toDouble();
 
-    final savedCardHeight = _readDouble(
-      layout['cardHeight'],
-      fallback: 255,
-    ).clamp(80, 1200).toDouble();
+    final aspectRatio = _readDouble(
+      layout['aspectRatio'],
+      fallback: 0.56,
+    ).clamp(0.35, 1.25).toDouble();
 
-    final explicitAspectRatio = _readNullableDouble(layout['aspectRatio']);
-    final aspectRatio = (explicitAspectRatio ??
-            (savedCardWidth / savedCardHeight))
-        .clamp(0.25, 2.5)
-        .toDouble();
+    final minHeight = _readDouble(
+      layout['minHeight'],
+      fallback: 430,
+    ).clamp(120, 900).toDouble();
 
-    final minHeight = _readNullableDouble(layout['minHeight']);
-    final maxHeight = _readNullableDouble(layout['maxHeight']);
+    final maxHeight = _readDouble(
+      layout['maxHeight'],
+      fallback: 520,
+    ).clamp(minHeight, 1200).toDouble();
 
     return _SavedDesignLayoutMetrics(
       savedCardWidth: savedCardWidth,
-      savedCardHeight: savedCardHeight,
       aspectRatio: aspectRatio,
       minHeight: minHeight,
       maxHeight: maxHeight,
@@ -487,18 +520,14 @@ class _SavedDesignLayoutMetrics {
 
   double heightForWidth(double runtimeWidth) {
     final safeWidth = runtimeWidth.clamp(80, 800).toDouble();
-    final rawHeight = safeWidth / aspectRatio;
-
-    if (minHeight == null && maxHeight == null) {
-      return rawHeight.clamp(80, 1400).toDouble();
-    }
-
     final scale = (safeWidth / savedCardWidth).clamp(0.35, 2.5).toDouble();
-    final scaledMinHeight = (minHeight ?? savedCardHeight) * scale;
-    final scaledMaxHeight = (maxHeight ?? savedCardHeight) * scale;
 
-    final safeMin = scaledMinHeight.clamp(80, 1400).toDouble();
-    final safeMax = scaledMaxHeight.clamp(safeMin, 1600).toDouble();
+    final rawHeight = safeWidth / aspectRatio;
+    final scaledMinHeight = minHeight * scale;
+    final scaledMaxHeight = maxHeight * scale;
+
+    final safeMin = scaledMinHeight.clamp(80, 1200).toDouble();
+    final safeMax = scaledMaxHeight.clamp(safeMin, 1400).toDouble();
 
     return rawHeight.clamp(safeMin, safeMax).toDouble();
   }
@@ -541,16 +570,6 @@ class _SavedDesignLayoutMetrics {
     }
 
     return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
-  }
-
-  static double? _readNullableDouble(Object? value) {
-    if (value is num) {
-      return value.toDouble();
-    }
-
-    final raw = value?.toString().trim();
-    if (raw == null || raw.isEmpty) return null;
-    return double.tryParse(raw);
   }
 }
 

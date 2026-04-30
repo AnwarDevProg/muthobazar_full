@@ -10,7 +10,7 @@
 // - Allows selected nodes to be moved by mouse drag.
 //
 // Patch 8 adds card/root anchored preview sizing and real card radius clipping.
-// Patch 10.3 hides the visible preview-slot shell and shows the true card-only preview.
+// Patch 10.2 fixes the cardLayoutType editor button constraints and keeps preview rendering stable.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -247,13 +247,14 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                     const fullWidthPreset = 392.0;
                     const defaultHeight = 380.0;
 
-                    // Patch 10.3: the preview stage must match the actual card.
-                    // The larger white slot was useful for debugging card anchoring,
-                    // but it made the studio look like the white slot was part of
-                    // the product card. Keep the math simple here: render the true
-                    // card only, then place the cardLayoutType editor below it.
-                    final stageDesignWidth = widget.document.cardWidth;
-                    final stageDesignHeight = widget.document.cardHeight;
+                    final stageDesignWidth = math.max(
+                      fullWidthPreset,
+                      widget.document.cardWidth,
+                    );
+                    final stageDesignHeight = math.max(
+                      defaultHeight,
+                      widget.document.cardHeight,
+                    );
 
                     return Column(
                       children: <Widget>[
@@ -266,7 +267,7 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                               );
                               final availableStageHeight = math.max(
                                 220.0,
-                                previewConstraints.maxHeight - 24,
+                                previewConstraints.maxHeight - 44,
                               );
                               final scale = math.min(
                                 1.0,
@@ -345,7 +346,7 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
                               Text(
-                                'Card: ${widget.document.cardWidth.toStringAsFixed(0)} x ${widget.document.cardHeight.toStringAsFixed(0)} px | ${widget.document.nodes.length} nodes | true card-only preview',
+                                'Canvas: ${widget.document.cardWidth.toStringAsFixed(0)} x ${widget.document.cardHeight.toStringAsFixed(0)} px | Preview slot: ${stageDesignWidth.toStringAsFixed(0)} x ${stageDesignHeight.toStringAsFixed(0)} px | ${widget.document.nodes.length} nodes',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Color(0xFF747B8A),
@@ -608,17 +609,17 @@ class _DevicePreviewFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Patch 10.3: do not draw a large white preview slot around the card.
-    // The design surface itself is the card; the surrounding panel is only
-    // workspace. A soft shadow keeps the preview visible without implying
-    // an extra card container.
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        boxShadow: <BoxShadow>[
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: const Color(0xFFE2E6EF)),
+        boxShadow: const <BoxShadow>[
           BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 24,
-            offset: Offset(0, 16),
+            color: Color(0x1A000000),
+            blurRadius: 30,
+            offset: Offset(0, 18),
           ),
         ],
       ),
