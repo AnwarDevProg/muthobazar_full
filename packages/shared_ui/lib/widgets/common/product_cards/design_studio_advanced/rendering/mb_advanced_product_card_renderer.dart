@@ -1,29 +1,31 @@
-﻿// File: mb_advanced_product_card_renderer.dart
+// File: mb_advanced_product_card_renderer.dart
 //
 // Advanced Product Card Runtime Renderer
 // --------------------------------------
-// Patch 11.3: V3 media/background exact parity.
+// Patch 11.5: Shared Studio V3 render core for Home/runtime cards.
 //
 // Purpose:
 // - Render product.cardDesignJson directly in customer Home/product cards.
-// - Treat the saved V3 node JSON as the single visual source of truth.
-// - Match Studio V3 preview more closely by using the same design-size stage,
-//   scaled with a FittedBox instead of rebuilding a different template.
-// - Render only the nodes saved in cardDesignJson; no legacy/default badges are
-//   injected by this runtime renderer.
+// - Align runtime rendering with Studio V3 canvas rendering.
+// - Use MBAdvancedCardDesignDocument and MBAdvancedDesignNode instead of a
+//   separate runtime-only parser/model.
+// - Remove the runtime-only poster/wave painter that made Home look different
+//   from Studio V3.
+// - Render only saved V3 nodes; no legacy/default badges are injected.
 //
 // Notes:
 // - Higher z is rendered on top.
-// - Card width/height are read from layout.cardWidth/cardHeight.
-// - The card is clipped to the saved card radius.
-// - The orange poster background is painted here so Home and Studio do not use
-//   the old saved-design/template renderer.
+// - Card width/height/radius are read from the same document model as Studio V3.
+// - Node positioning, clamping, media rendering, text rendering, strike behavior,
+//   and subtle grid are intentionally matched to mb_advanced_canvas_panel.dart.
 
 import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:shared_models/shared_models.dart';
+
+import '../models/mb_advanced_card_design_document.dart';
 
 class MBAdvancedProductCardRenderer extends StatelessWidget {
   const MBAdvancedProductCardRenderer({
@@ -62,13 +64,13 @@ class MBAdvancedProductCardRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final design = _V3CardDesign.tryParse(designJson);
-    if (design == null) {
+    final document = MBAdvancedCardDesignDocument.fromJson(designJson);
+    if (document.nodes.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return LayoutBuilder(
-      builder: (_, _) {
+      builder: (_, constraints) {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
@@ -77,11 +79,11 @@ class MBAdvancedProductCardRenderer extends StatelessWidget {
               fit: BoxFit.contain,
               alignment: Alignment.center,
               child: SizedBox(
-                width: design.cardWidth,
-                height: design.cardHeight,
-                child: _RuntimeCardStage(
+                width: document.cardWidth,
+                height: document.cardHeight,
+                child: _RuntimeCardCanvas(
                   product: product,
-                  design: design,
+                  document: document,
                   onAddToCartTap: onAddToCartTap,
                   trailingOverlay: trailingOverlay,
                 ),
@@ -94,71 +96,71 @@ class MBAdvancedProductCardRenderer extends StatelessWidget {
   }
 }
 
-class _RuntimeCardStage extends StatelessWidget {
-  const _RuntimeCardStage({
+class _RuntimeCardCanvas extends StatelessWidget {
+  const _RuntimeCardCanvas({
     required this.product,
-    required this.design,
+    required this.document,
     this.onAddToCartTap,
     this.trailingOverlay,
   });
 
-  final MBProduct product;
-  final _V3CardDesign design;
+  final dynamic product;
+  final MBAdvancedCardDesignDocument document;
   final VoidCallback? onAddToCartTap;
   final Widget? trailingOverlay;
 
   @override
   Widget build(BuildContext context) {
-    final sortedNodes = <_V3DesignNode>[
-      ...design.nodes.where((node) => node.visible),
-    ]..sort((a, b) => a.z.compareTo(b.z));
-
-    final radius = BorderRadius.circular(design.borderRadius);
+    final background = _hexColor(
+      document.palette['backgroundHex'],
+      const Color(0xFFFF6500),
+    );
+    final background2 = _hexColor(
+      document.palette['backgroundHex2'],
+      const Color(0xFFFF9A3D),
+    );
+    final sortedNodes = <MBAdvancedDesignNode>[...document.nodes]
+      ..sort((a, b) => a.position.z.compareTo(b.position.z));
+    final cardRadius = document.borderRadius;
 
     return ClipRRect(
-      borderRadius: radius,
+      key: ValueKey<String>('runtime_card_radius_${document.borderRadius.toStringAsFixed(2)}'),
+      borderRadius: BorderRadius.circular(cardRadius),
+      clipBehavior: Clip.antiAlias,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: [
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[background, background2],
+          ),
+          borderRadius: BorderRadius.circular(cardRadius),
+          boxShadow: const <BoxShadow>[
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              color: Color(0x14000000),
+              blurRadius: 24,
+              offset: Offset(0, 16),
             ),
           ],
         ),
         child: Stack(
           clipBehavior: Clip.hardEdge,
-          children: [
+          children: <Widget>[
             Positioned.fill(
               child: CustomPaint(
-                painter: _V3HeroPosterBackgroundPainter(
-                  background1: _parseColor(
-                    design.palette['backgroundHex'],
-                    fallback: const Color(0xFFFF6500),
-                  ),
-                  background2: _parseColor(
-                    design.palette['backgroundHex2'],
-                    fallback: const Color(0xFFFF9A3D),
-                  ),
-                  surface: _parseColor(
-                    design.palette['surfaceHex'],
-                    fallback: Colors.white,
-                  ),
-                ),
+                painter: _SubtleGridPainter(),
               ),
             ),
             for (final node in sortedNodes)
-              _PositionedRuntimeNode(
-                product: product,
-                node: node,
-                cardWidth: design.cardWidth,
-                cardHeight: design.cardHeight,
-                onAddToCartTap: onAddToCartTap,
-              ),
-            if (trailingOverlay != null)
-              Positioned.fill(child: trailingOverlay!),
+              if (node.visible)
+                _RuntimeNodeWidget(
+                  product: product,
+                  node: node,
+                  cardWidth: document.cardWidth,
+                  cardHeight: document.cardHeight,
+                  onAddToCartTap: onAddToCartTap,
+                ),
+            if (trailingOverlay != null) Positioned.fill(child: trailingOverlay!),
           ],
         ),
       ),
@@ -166,138 +168,8 @@ class _RuntimeCardStage extends StatelessWidget {
   }
 }
 
-class _V3HeroPosterBackgroundPainter extends CustomPainter {
-  const _V3HeroPosterBackgroundPainter({
-    required this.background1,
-    required this.background2,
-    required this.surface,
-  });
-
-  final Color background1;
-  final Color background2;
-  final Color surface;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-
-    final backgroundPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [background1, background2],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(rect);
-    canvas.drawRect(rect, backgroundPaint);
-
-    _drawSubtleGrid(canvas, size);
-    _drawPosterHighlights(canvas, size);
-  }
-
-  void _drawSubtleGrid(Canvas canvas, Size size) {
-    final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.055)
-      ..strokeWidth = 0.7;
-
-    const gap = 14.0;
-
-    for (double x = gap; x < size.width; x += gap) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-
-    for (double y = gap; y < size.height; y += gap) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-  }
-
-  void _drawPosterHighlights(Canvas canvas, Size size) {
-    final softCirclePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.13)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(
-      Offset(size.width * 0.98, size.height * 0.18),
-      size.width * 0.34,
-      softCirclePaint,
-    );
-
-    canvas.drawCircle(
-      Offset(size.width * 0.10, size.height * 0.20),
-      size.width * 0.28,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.06)
-        ..style = PaintingStyle.fill,
-    );
-
-    // Cream wave used in the Studio V3 hero poster design. It intentionally
-    // stays mostly in the middle area, leaving enough orange in the lower area
-    // so saved white subtitle nodes remain readable in Home.
-    final wavePath = Path()
-      ..moveTo(0, size.height * 0.56)
-      ..cubicTo(
-        size.width * 0.18,
-        size.height * 0.50,
-        size.width * 0.30,
-        size.height * 0.46,
-        size.width * 0.48,
-        size.height * 0.49,
-      )
-      ..cubicTo(
-        size.width * 0.70,
-        size.height * 0.53,
-        size.width * 0.82,
-        size.height * 0.47,
-        size.width,
-        size.height * 0.42,
-      )
-      ..lineTo(size.width, size.height * 0.66)
-      ..cubicTo(
-        size.width * 0.78,
-        size.height * 0.72,
-        size.width * 0.50,
-        size.height * 0.72,
-        0,
-        size.height * 0.72,
-      )
-      ..close();
-
-    canvas.drawPath(
-      wavePath,
-      Paint()
-        ..color = surface.withValues(alpha: 0.90)
-        ..style = PaintingStyle.fill,
-    );
-
-    final lowerGlow = Rect.fromLTWH(
-      0,
-      size.height * 0.66,
-      size.width,
-      size.height * 0.34,
-    );
-
-    canvas.drawRect(
-      lowerGlow,
-      Paint()
-        ..shader = LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.03),
-            background2.withValues(alpha: 0.10),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ).createShader(lowerGlow),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _V3HeroPosterBackgroundPainter oldDelegate) {
-    return oldDelegate.background1 != background1 ||
-        oldDelegate.background2 != background2 ||
-        oldDelegate.surface != surface;
-  }
-}
-
-class _PositionedRuntimeNode extends StatelessWidget {
-  const _PositionedRuntimeNode({
+class _RuntimeNodeWidget extends StatelessWidget {
+  const _RuntimeNodeWidget({
     required this.product,
     required this.node,
     required this.cardWidth,
@@ -305,19 +177,26 @@ class _PositionedRuntimeNode extends StatelessWidget {
     this.onAddToCartTap,
   });
 
-  final MBProduct product;
-  final _V3DesignNode node;
+  final dynamic product;
+  final MBAdvancedDesignNode node;
   final double cardWidth;
   final double cardHeight;
   final VoidCallback? onAddToCartTap;
 
   @override
   Widget build(BuildContext context) {
-    final width = node.width.clamp(1, cardWidth * 2).toDouble();
-    final height = node.height.clamp(1, cardHeight * 2).toDouble();
-
-    final left = (node.x * cardWidth) - (width / 2);
-    final top = (node.y * cardHeight) - (height / 2);
+    final width = node.size.width;
+    final height = node.size.height;
+    final left = _clampDouble(
+      node.position.x * cardWidth - width / 2,
+      0,
+      math.max(0, cardWidth - width),
+    );
+    final top = _clampDouble(
+      node.position.y * cardHeight - height / 2,
+      0,
+      math.max(0, cardHeight - height),
+    );
 
     return Positioned(
       left: left,
@@ -325,9 +204,10 @@ class _PositionedRuntimeNode extends StatelessWidget {
       width: width,
       height: height,
       child: ClipRect(
-        child: _RuntimeNodeContent(
+        child: _NodeVisual(
           product: product,
           node: node,
+          scale: 1,
           onAddToCartTap: onAddToCartTap,
         ),
       ),
@@ -335,72 +215,92 @@ class _PositionedRuntimeNode extends StatelessWidget {
   }
 }
 
-class _RuntimeNodeContent extends StatelessWidget {
-  const _RuntimeNodeContent({
+class _NodeVisual extends StatelessWidget {
+  const _NodeVisual({
     required this.product,
     required this.node,
+    required this.scale,
     this.onAddToCartTap,
   });
 
-  final MBProduct product;
-  final _V3DesignNode node;
+  final dynamic product;
+  final MBAdvancedDesignNode node;
+  final double scale;
   final VoidCallback? onAddToCartTap;
 
   @override
   Widget build(BuildContext context) {
     switch (node.elementType) {
-      case 'media':
-      case 'product_image':
-        return _MediaNode(product: product, node: node);
-      case 'cta':
-      case 'main_cta':
-      case 'secondary_cta':
-        return _ButtonNode(
-          label: _resolveNodeText(product, node),
-          node: node,
-          onTap: onAddToCartTap,
-        );
-      case 'price':
-      case 'final_price':
-        return _PillNode(
-          label: _resolveNodeText(product, node),
-          node: node,
-          emphasize: true,
-        );
-      case 'mrp':
-      case 'old_price':
-      case 'original_price':
-        return _MrpNode(product: product, node: node);
-      case 'discount':
-      case 'badge':
-      case 'promo_badge':
-      case 'flash_badge':
-      case 'stock':
-      case 'delivery':
-      case 'unit':
-      case 'timer':
-      case 'rating':
-      case 'brand':
-      case 'category':
-        return _PillOrTextNode(product: product, node: node);
-      case 'progress':
-      case 'stock_progress':
-        return _ProgressNode(node: node);
-      case 'wishlist':
-      case 'compare':
-      case 'share':
-        return _IconCircleNode(node: node);
-      case 'dots':
-      case 'indicator_dots':
-        return _DotsNode(node: node);
       case 'title':
       case 'subtitle':
-      case 'description':
-      default:
+      case 'brand':
+      case 'category':
+      case 'delivery':
+      case 'unit':
+      case 'feature':
+      case 'savingText':
+      case 'ribbon':
         return _TextNode(
           text: _resolveNodeText(product, node),
           node: node,
+          scale: scale,
+          fallbackColor: _fallbackTextColor(node.elementType),
+          maxLines: node.variantId.contains('chip') ? 1 : 3,
+          strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
         );
+      case 'media':
+        return _MediaNode(
+          imageUrl: _resolveBinding(product, node.binding, ''),
+          node: node,
+          scale: scale,
+        );
+      case 'price':
+      case 'mrp':
+      case 'discount':
+      case 'badge':
+      case 'timer':
+      case 'rating':
+      case 'stock':
+      case 'quantity':
+      case 'wishlist':
+      case 'compare':
+      case 'share':
+      case 'icon':
+      case 'priceBadge':
+      case 'promoBadge':
+      case 'flashBadge':
+      case 'secondaryCta':
+      case 'animation':
+      case 'cta':
+        return GestureDetector(
+          behavior: node.elementType == 'cta' ? HitTestBehavior.opaque : HitTestBehavior.deferToChild,
+          onTap: node.elementType == 'cta' ? onAddToCartTap : null,
+          child: _TextNode(
+            text: _resolveNodeText(product, node),
+            node: node,
+            scale: scale,
+            fallbackColor: _fallbackTextColor(node.elementType),
+            maxLines: 1,
+            center: true,
+            strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
+          ),
+        );
+      case 'divider':
+      case 'shape':
+      case 'panel':
+      case 'imageOverlay':
+      case 'progress':
+      case 'dots':
+      case 'border':
+      case 'effect':
+      case 'shadow':
+      case 'spacing':
+        return _ShapeNode(
+          node: node,
+          scale: scale,
+        );
+      default:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -409,825 +309,649 @@ class _TextNode extends StatelessWidget {
   const _TextNode({
     required this.text,
     required this.node,
+    required this.scale,
+    required this.fallbackColor,
+    required this.maxLines,
+    this.center = false,
+    this.strikeOriginalPrice = false,
   });
 
   final String text;
-  final _V3DesignNode node;
+  final MBAdvancedDesignNode node;
+  final double scale;
+  final Color fallbackColor;
+  final int maxLines;
+  final bool center;
+  final bool strikeOriginalPrice;
 
   @override
   Widget build(BuildContext context) {
-    final fontSize = node.readDouble('fontSize', fallback: 12);
-    final lineHeight = (fontSize * 1.15).clamp(8.0, 32.0);
-    final maxLines = math.max(1, (node.height / lineHeight).floor());
-
-    return Align(
-      alignment: _alignmentFromTextAlign(node.textAlign),
-      child: Text(
-        text,
-        maxLines: maxLines,
-        overflow: TextOverflow.ellipsis,
-        textAlign: _textAlignFromString(node.textAlign),
-        style: TextStyle(
-          color: node.readColor('textColorHex', fallback: Colors.white),
-          fontSize: fontSize,
-          fontWeight: _fontWeightFromString(node.readString('fontWeight')),
-          height: 1.05,
-          letterSpacing: node.readDouble('letterSpacing', fallback: 0),
-        ),
+    final style = node.style;
+    final background = _hexColor(style['backgroundHex'], Colors.transparent);
+    final border = _hexColor(style['borderHex'], Colors.transparent);
+    final textColor = _hexColor(style['textColorHex'], fallbackColor);
+    final radius = _asDouble(style['borderRadius'], 0) * scale;
+    final fontSize = _asDouble(style['fontSize'], 13) * scale;
+    final padding = background == Colors.transparent
+        ? EdgeInsets.zero
+        : EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 5 * scale);
+    final alignment = center ? Alignment.center : _textAlignment(style['textAlign']);
+    final strikeMode = style['strikeMode']?.toString().trim().toLowerCase();
+    final isChipLike = _isChipLikeMrpNode(node, background);
+    final usePainterStrike = strikeOriginalPrice &&
+        (isChipLike ||
+            strikeMode == 'horizontal' ||
+            strikeMode == 'diagonal' ||
+            strikeMode == 'cross');
+    final useTextStrike = strikeOriginalPrice && !usePainterStrike;
+    final textWidget = Text(
+      text,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      textAlign: center ? TextAlign.center : _textAlign(style['textAlign']),
+      style: TextStyle(
+        color: textColor,
+        fontSize: fontSize,
+        fontWeight: _fontWeight(style['fontWeight']),
+        height: 1.05,
+        decoration: useTextStrike ? TextDecoration.lineThrough : null,
+        decorationColor: _hexColor(style['strikeColorHex'], textColor),
+        decorationThickness: useTextStrike
+            ? _asDouble(style['strikeThickness'], 1.6)
+                .clamp(0.5, 12.0)
+                .toDouble()
+            : null,
       ),
     );
-  }
-}
 
-class _PillOrTextNode extends StatelessWidget {
-  const _PillOrTextNode({
-    required this.product,
-    required this.node,
-  });
-
-  final MBProduct product;
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = _resolveNodeText(product, node);
-    final isChip = node.variantId.contains('chip') ||
-        node.variantId.contains('badge') ||
-        node.readString('backgroundHex').isNotEmpty;
-
-    if (!isChip) {
-      return _TextNode(text: text, node: node);
-    }
-
-    return _PillNode(label: text, node: node);
-  }
-}
-
-class _PillNode extends StatelessWidget {
-  const _PillNode({
-    required this.label,
-    required this.node,
-    this.emphasize = false,
-  });
-
-  final String label;
-  final _V3DesignNode node;
-  final bool emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    final background = node.readColor(
-      'backgroundHex',
-      fallback: emphasize ? Colors.white : Colors.white.withValues(alpha: 0.92),
-    );
-
-    final border = node.readColorOrNull('borderHex');
-    final radius = node.readDouble('borderRadius', fallback: 999);
-
-    return DecoratedBox(
+    return Container(
+      alignment: alignment,
+      padding: padding,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(radius),
-        border: border == null
+        border: border == Colors.transparent
             ? null
             : Border.all(
                 color: border,
-                width: node.readDouble('borderWidth', fallback: 1.2),
+                width: _asDouble(node.style['borderWidth'], 1.0),
               ),
-        boxShadow: [
-          if (emphasize)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-        ],
       ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: node.readColor(
-                'textColorHex',
-                fallback: emphasize
-                    ? const Color(0xFFFF6500)
-                    : const Color(0xFF151922),
-              ),
-              fontSize: node.readDouble('fontSize', fallback: emphasize ? 13 : 10),
-              fontWeight: _fontWeightFromString(
-                node.readString('fontWeight', fallback: emphasize ? 'w900' : 'w700'),
-              ),
-              height: 1,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ButtonNode extends StatelessWidget {
-  const _ButtonNode({
-    required this.label,
-    required this.node,
-    this.onTap,
-  });
-
-  final String label;
-  final _V3DesignNode node;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: _PillNode(label: label, node: node, emphasize: false),
-    );
-  }
-}
-
-class _MediaNode extends StatelessWidget {
-  const _MediaNode({
-    required this.product,
-    required this.node,
-  });
-
-  final MBProduct product;
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = _resolveImageUrl(product);
-    final border = node.readColor('borderHex', fallback: Colors.white);
-    final ringWidth = node.readDouble('ringWidth', fallback: 0).clamp(0, 24).toDouble();
-    final rawRadius = node.readDouble('borderRadius', fallback: 24).clamp(0, 999).toDouble();
-    final isCircleLike = rawRadius >= 500 || node.variantId.contains('circle');
-
-    // Important:
-    // Studio V3 treats media_circle_ring as a rounded-rect/oval frame based on
-    // the saved node width/height. Do not use BoxShape.circle here, because for
-    // non-square nodes it creates a different crop than the Studio preview.
-    final effectiveRadius = isCircleLike
-        ? math.min(node.width, node.height) / 2
-        : rawRadius;
-
-    final innerRadius = math.max(0.0, effectiveRadius - ringWidth);
-    final imageInset = ringWidth > 0 ? math.max(1.0, ringWidth * 0.36) : 0.0;
-    final imageFit = _boxFitFromString(
-      node.readString(
-        'imageFit',
-        fallback: isCircleLike ? 'contain' : 'cover',
-      ),
-    );
-
-    final image = imageUrl.isEmpty
-        ? const ColoredBox(color: Color(0xFFFFEFE3))
-        : Image.network(
-            imageUrl,
-            fit: imageFit,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (_, __, ___) => const ColoredBox(
-              color: Color(0xFFFFEFE3),
-              child: Center(
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  color: Color(0xFFFF6500),
-                  size: 18,
+      child: usePainterStrike
+          ? Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Align(alignment: alignment, child: textWidget),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _MrpStrikePainter(
+                        style: style,
+                        fallbackColor: textColor,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: node.readColor('backgroundHex', fallback: Colors.white),
-        borderRadius: BorderRadius.circular(effectiveRadius),
-        border: ringWidth > 0
-            ? Border.all(
-                color: border,
-                width: ringWidth,
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(imageInset),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(innerRadius),
-          child: ColoredBox(
-            color: Colors.white,
-            child: Center(child: image),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MrpNode extends StatelessWidget {
-  const _MrpNode({
-    required this.product,
-    required this.node,
-  });
-
-  final MBProduct product;
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _formatCurrency(_readOriginalPrice(product));
-    final child = _PillOrTextNode(
-      product: product,
-      node: node.copyWithLabel(label),
-    );
-
-    return CustomPaint(
-      foregroundPainter: _MrpStrikePainter(
-        color: node.readColor('strikeHex', fallback: const Color(0xFFFF4A4A)),
-        width: node.readDouble('strikeWidth', fallback: 1.4),
-      ),
-      child: child,
+              ],
+            )
+          : textWidget,
     );
   }
 }
 
 class _MrpStrikePainter extends CustomPainter {
   const _MrpStrikePainter({
-    required this.color,
-    required this.width,
+    required this.style,
+    required this.fallbackColor,
   });
 
-  final Color color;
-  final double width;
+  final Map<String, dynamic> style;
+  final Color fallbackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
+    final mode = style['strikeMode']?.toString().trim().toLowerCase();
+    final effectiveMode = mode == null || mode.isEmpty ? 'cross' : mode;
+    final color = _hexColor(style['strikeColorHex'], fallbackColor).withValues(
+      alpha: _asDouble(style['strikeOpacity'], 1.0).clamp(0.0, 1.0),
+    );
+    final thickness = _asDouble(style['strikeThickness'], 1.6)
+        .clamp(0.5, 12.0)
+        .toDouble();
+    final widthFactor = _asDouble(style['strikeWidthFactor'], 0.92)
+        .clamp(0.1, 1.4)
+        .toDouble();
+    final inset = _asDouble(style['strikeInset'], 0.0).clamp(0.0, 40.0).toDouble();
+    final rawLength = math.max(0.0, size.width * widthFactor - inset * 2);
+    final lineLength = math.min(size.width + size.height, rawLength);
     final paint = Paint()
       ..color = color
-      ..strokeWidth = width
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = thickness
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
 
-    canvas.drawLine(
-      Offset(size.width * 0.16, size.height * 0.55),
-      Offset(size.width * 0.84, size.height * 0.45),
-      paint,
-    );
+    void drawCenteredLine(double angleDeg) {
+      canvas.save();
+      canvas.translate(size.width / 2, size.height / 2);
+      canvas.rotate(angleDeg * math.pi / 180.0);
+      canvas.drawLine(
+        Offset(-lineLength / 2, 0),
+        Offset(lineLength / 2, 0),
+        paint,
+      );
+      canvas.restore();
+    }
+
+    switch (effectiveMode) {
+      case 'horizontal':
+      case 'linethrough':
+      case 'lineThrough':
+        drawCenteredLine(0);
+        break;
+      case 'diagonal':
+        drawCenteredLine(_asDouble(style['strikeAngleDeg'], -14));
+        break;
+      case 'cross':
+      default:
+        final angle = _asDouble(style['strikeAngleDeg'], -14).abs();
+        drawCenteredLine(angle);
+        drawCenteredLine(-angle);
+        break;
+    }
   }
 
   @override
   bool shouldRepaint(covariant _MrpStrikePainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.width != width;
+    return oldDelegate.style != style || oldDelegate.fallbackColor != fallbackColor;
   }
 }
 
-class _ProgressNode extends StatelessWidget {
-  const _ProgressNode({required this.node});
-
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final background = node.readColor(
-      'backgroundHex',
-      fallback: Colors.white.withValues(alpha: 0.40),
-    );
-    final foreground = node.readColor(
-      'fillHex',
-      fallback: const Color(0xFFFF6500),
-    );
-    final progress = node.readDouble('progress', fallback: 0.72).clamp(0, 1).toDouble();
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: Stack(
-          children: [
-            Positioned.fill(child: ColoredBox(color: background)),
-            FractionallySizedBox(
-              widthFactor: progress,
-              child: ColoredBox(color: foreground),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IconCircleNode extends StatelessWidget {
-  const _IconCircleNode({required this.node});
-
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (node.elementType) {
-      'wishlist' => Icons.favorite_border_rounded,
-      'compare' => Icons.compare_arrows_rounded,
-      'share' => Icons.share_rounded,
-      _ => Icons.circle_outlined,
-    };
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: node.readColor('backgroundHex', fallback: Colors.white),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Icon(
-        icon,
-        size: math.min(node.width, node.height) * 0.56,
-        color: node.readColor('textColorHex', fallback: const Color(0xFFFF6500)),
-      ),
-    );
-  }
-}
-
-class _DotsNode extends StatelessWidget {
-  const _DotsNode({required this.node});
-
-  final _V3DesignNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var index = 0; index < 3; index++) ...[
-          Container(
-            width: index == 0 ? 14 : 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: index == 0
-                  ? node.readColor('fillHex', fallback: const Color(0xFFFF6500))
-                  : Colors.white.withValues(alpha: 0.70),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-          if (index != 2) const SizedBox(width: 4),
-        ],
-      ],
-    );
-  }
-}
-
-class _V3CardDesign {
-  const _V3CardDesign({
-    required this.cardWidth,
-    required this.cardHeight,
-    required this.borderRadius,
-    required this.palette,
-    required this.nodes,
+class _MediaNode extends StatelessWidget {
+  const _MediaNode({
+    required this.imageUrl,
+    required this.node,
+    required this.scale,
   });
 
-  final double cardWidth;
-  final double cardHeight;
-  final double borderRadius;
-  final Map<String, dynamic> palette;
-  final List<_V3DesignNode> nodes;
+  final String imageUrl;
+  final MBAdvancedDesignNode node;
+  final double scale;
 
-  static _V3CardDesign? tryParse(String rawJson) {
-    try {
-      final decoded = jsonDecode(rawJson);
-      if (decoded is! Map) return null;
+  @override
+  Widget build(BuildContext context) {
+    final radius = _asDouble(node.style['borderRadius'], 24) * scale;
+    final ringWidth = _asDouble(node.style['ringWidth'], 0) * scale;
+    final borderColor = _hexColor(node.style['borderHex'], Colors.white);
+    final hasImage = imageUrl.trim().isNotEmpty;
 
-      final root = _stringKeyedMap(decoded);
-      final layout = _stringKeyedMap(root['layout']);
-      final palette = _stringKeyedMap(root['palette']);
-      final nodesRaw = root['nodes'];
+    return Container(
+      padding: EdgeInsets.all(ringWidth),
+      decoration: BoxDecoration(
+        color: borderColor,
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x24000000),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(math.max(0, radius - ringWidth)),
+        child: hasImage
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const _ImageFallback(),
+              )
+            : const _ImageFallback(),
+      ),
+    );
+  }
+}
 
-      if (nodesRaw is! List) return null;
+class _ImageFallback extends StatelessWidget {
+  const _ImageFallback();
 
-      final cardWidth = _readDouble(layout['cardWidth'], fallback: 185).clamp(80, 900).toDouble();
-      final cardHeight = _readDouble(layout['cardHeight'], fallback: 255).clamp(80, 1200).toDouble();
-      final radius = _readDouble(layout['borderRadius'], fallback: 0).clamp(0, 120).toDouble();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFFFF2E7),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.shopping_bag_rounded,
+        color: Color(0xFFFF6500),
+        size: 34,
+      ),
+    );
+  }
+}
 
-      final nodes = nodesRaw
-          .whereType<Object?>()
-          .map(_V3DesignNode.tryParse)
-          .whereType<_V3DesignNode>()
-          .toList(growable: false);
+class _ShapeNode extends StatelessWidget {
+  const _ShapeNode({
+    required this.node,
+    required this.scale,
+  });
 
-      if (nodes.isEmpty) return null;
+  final MBAdvancedDesignNode node;
+  final double scale;
 
-      return _V3CardDesign(
-        cardWidth: cardWidth,
-        cardHeight: cardHeight,
-        borderRadius: radius,
-        palette: palette,
-        nodes: nodes,
-      );
-    } catch (_) {
-      return null;
+  @override
+  Widget build(BuildContext context) {
+    final color = _hexColor(node.style['backgroundHex'], Colors.white)
+        .withValues(alpha: _asDouble(node.style['opacity'], 1.0).clamp(0.0, 1.0));
+    final radius = _asDouble(node.style['borderRadius'], 0) * scale;
+    final border = _hexColor(node.style['borderHex'], Colors.transparent);
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+        border: border == Colors.transparent
+            ? null
+            : Border.all(
+                color: border,
+                width: _asDouble(node.style['borderWidth'], 1.0),
+              ),
+      ),
+    );
+  }
+}
+
+class _SubtleGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x14FFFFFF)
+      ..strokeWidth = 1;
+
+    const step = 24.0;
+    for (var x = step; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (var y = step; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _V3DesignNode {
-  const _V3DesignNode({
-    required this.id,
-    required this.elementType,
-    required this.variantId,
-    required this.binding,
-    required this.visible,
-    required this.x,
-    required this.y,
-    required this.z,
-    required this.width,
-    required this.height,
-    required this.style,
-  });
-
-  final String id;
-  final String elementType;
-  final String variantId;
-  final String binding;
-  final bool visible;
-  final double x;
-  final double y;
-  final int z;
-  final double width;
-  final double height;
-  final Map<String, dynamic> style;
-
-  static _V3DesignNode? tryParse(Object? raw) {
-    final map = _stringKeyedMap(raw);
-    if (map.isEmpty) return null;
-
-    final position = _stringKeyedMap(map['position']);
-    final size = _stringKeyedMap(map['size']);
-    final style = _stringKeyedMap(map['style']);
-
-    return _V3DesignNode(
-      id: map['id']?.toString() ?? '',
-      elementType: (map['elementType']?.toString() ?? '').trim().toLowerCase(),
-      variantId: (map['variantId']?.toString() ?? '').trim().toLowerCase(),
-      binding: (map['binding']?.toString() ?? '').trim(),
-      visible: map['visible'] != false,
-      x: _readDouble(position['x'], fallback: 0.5),
-      y: _readDouble(position['y'], fallback: 0.5),
-      z: _readDouble(position['z'], fallback: 0).round(),
-      width: _readDouble(size['width'], fallback: 80),
-      height: _readDouble(size['height'], fallback: 28),
-      style: style,
-    );
-  }
-
-  _V3DesignNode copyWithLabel(String label) {
-    return _V3DesignNode(
-      id: id,
-      elementType: elementType,
-      variantId: variantId,
-      binding: binding,
-      visible: visible,
-      x: x,
-      y: y,
-      z: z,
-      width: width,
-      height: height,
-      style: {
-        ...style,
-        'label': label,
-      },
-    );
-  }
-
-  String readString(String key, {String fallback = ''}) {
-    return style[key]?.toString().trim() ?? fallback;
-  }
-
-  double readDouble(String key, {required double fallback}) {
-    return _readDouble(style[key], fallback: fallback);
-  }
-
-  Color readColor(String key, {required Color fallback}) {
-    return _parseColor(style[key], fallback: fallback);
-  }
-
-  Color? readColorOrNull(String key) {
-    final value = style[key];
-    if (value == null) return null;
-    return _parseColor(value, fallback: Colors.transparent);
-  }
-
-  String get textAlign => readString('textAlign', fallback: 'left');
-}
-
-
-BoxFit _imageFitFromString(String source, {required BoxFit fallback}) {
-  switch (source.trim().toLowerCase()) {
-    case 'contain':
-      return BoxFit.contain;
-    case 'fill':
-      return BoxFit.fill;
-    case 'fitwidth':
-    case 'fit_width':
-      return BoxFit.fitWidth;
-    case 'fitheight':
-    case 'fit_height':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaledown':
-    case 'scale_down':
-      return BoxFit.scaleDown;
-    case 'cover':
-    case '':
-      return BoxFit.cover;
-    default:
-      return fallback;
-  }
-}
-
-Alignment _imageAlignmentFromString(
-  String source, {
-  required Alignment fallback,
-}) {
-  switch (source.trim().toLowerCase()) {
-    case 'top':
-    case 'topcenter':
-    case 'top_center':
-      return Alignment.topCenter;
-    case 'bottom':
-    case 'bottomcenter':
-    case 'bottom_center':
-      return Alignment.bottomCenter;
-    case 'left':
-    case 'centerleft':
-    case 'center_left':
-      return Alignment.centerLeft;
-    case 'right':
-    case 'centerright':
-    case 'center_right':
-      return Alignment.centerRight;
-    case 'topleft':
-    case 'top_left':
-      return Alignment.topLeft;
-    case 'topright':
-    case 'top_right':
-      return Alignment.topRight;
-    case 'bottomleft':
-    case 'bottom_left':
-      return Alignment.bottomLeft;
-    case 'bottomright':
-    case 'bottom_right':
-      return Alignment.bottomRight;
-    case 'center':
-    case '':
-      return Alignment.center;
-    default:
-      return fallback;
-  }
-}
-String _resolveNodeText(MBProduct product, _V3DesignNode node) {
-  final styleLabel = node.readString('label');
-  if (styleLabel.isNotEmpty) return styleLabel;
-
-  final binding = node.binding.trim();
-
+String _resolveBinding(dynamic product, String binding, String fallback) {
   switch (binding) {
     case 'product.titleEn':
-      return _tryReadString(() => (product as dynamic).titleEn, fallback: 'Product');
+      return _readDynamicString(product, 'titleEn', fallback);
     case 'product.titleBn':
-      return _tryReadString(() => (product as dynamic).titleBn, fallback: 'à¦ªà¦£à§à¦¯');
+      return _readDynamicString(product, 'titleBn', fallback);
+    case 'product.nameEn':
+      return _readDynamicString(product, 'nameEn', fallback);
     case 'product.shortDescriptionEn':
-      return _tryReadString(() => (product as dynamic).shortDescriptionEn, fallback: '');
+      return _readDynamicString(product, 'shortDescriptionEn', fallback);
     case 'product.shortDescriptionBn':
-      return _tryReadString(() => (product as dynamic).shortDescriptionBn, fallback: '');
-    case 'product.brandNameEn':
-    case 'product.brand':
-      return _tryReadString(() => (product as dynamic).brandNameEn, fallback: 'Brand');
-    case 'product.categoryNameEn':
-    case 'product.category':
-      return _tryReadString(() => (product as dynamic).categoryNameEn, fallback: 'Category');
+      return _readDynamicString(product, 'shortDescriptionBn', fallback);
+    case 'product.descriptionEn':
+      return _readDynamicString(product, 'descriptionEn', fallback);
+    case 'product.thumbnailUrl':
+      return _readDynamicString(product, 'thumbnailUrl', fallback);
+    case 'product.imageUrl':
+      return _readDynamicString(product, 'imageUrl', fallback);
     case 'product.finalPrice':
     case 'product.salePrice':
+      return _readPrice(product, fallback);
     case 'product.price':
-      return _formatCurrency(_readFinalPrice(product));
-    case 'product.originalPrice':
-    case 'product.mrp':
-      return _formatCurrency(_readOriginalPrice(product));
-    case 'product.unitLabelEn':
-      return _tryReadString(() => (product as dynamic).unitLabelEn, fallback: '/pcs');
-    case 'product.stockText':
-      return 'In stock';
-    case 'product.deliveryHint':
-      return 'Fast delivery';
-    case 'product.rating':
-      return 'â˜… â˜… â˜… â˜… â˜†(128)';
+      return _readDynamicString(product, 'price', fallback);
+    case 'product.brandName':
+    case 'product.brandNameEn':
+    case 'product.brand':
+      return _readDynamicString(product, 'brandNameEn', fallback);
+    case 'product.categoryName':
+    case 'product.categoryNameEn':
+    case 'product.category':
+      return _readDynamicString(product, 'categoryNameEn', fallback);
     case 'static.discount':
       return _discountLabel(product);
     case 'action.buy':
       return 'Buy';
     case 'action.add':
       return 'Add';
-    case 'static.flash':
-      return 'Flash';
-    case 'static.new':
-      return 'New';
-    case 'static.premium':
-      return 'Premium';
-    case 'timer.countdown':
-      return '02:15:08';
     default:
       if (binding.startsWith('static.')) {
         return binding.substring('static.'.length).replaceAll('_', ' ');
       }
-      return node.elementType == 'cta' ? 'Buy' : '';
+      return fallback;
   }
 }
 
-String _resolveImageUrl(MBProduct product) {
-  final thumb = _tryReadString(() => (product as dynamic).thumbnailUrl);
-  if (thumb.isNotEmpty) return thumb;
+String _resolveNodeText(dynamic product, MBAdvancedDesignNode node) {
+  final styleLabel = node.style['label']?.toString().trim();
+  final styleText = node.style['text']?.toString().trim();
+  final prefix = node.style['prefixText']?.toString() ?? '';
+
+  String fallback;
+  switch (node.elementType) {
+    case 'title':
+      fallback = 'Product title';
+      break;
+    case 'subtitle':
+      fallback = 'Fresh product detail';
+      break;
+    case 'brand':
+      fallback = 'Fresh Farms';
+      break;
+    case 'category':
+      fallback = 'Vegetables';
+      break;
+    case 'price':
+      fallback = '\u09F3120';
+      break;
+    case 'mrp':
+      fallback = '\u09F3150';
+      break;
+    case 'discount':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : _discountLabel(product);
+      break;
+    case 'cta':
+      fallback = styleLabel?.isNotEmpty == true
+          ? styleLabel!
+          : (node.binding == 'action.details' ? 'View' : 'Buy');
+      break;
+    case 'badge':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'HOT';
+      break;
+    case 'timer':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '02:15:08';
+      break;
+    case 'rating':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '★ 4.8';
+      break;
+    case 'stock':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'In stock';
+      break;
+    case 'delivery':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Fast delivery';
+      break;
+    case 'unit':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '500 g';
+      break;
+    case 'feature':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Farm fresh';
+      break;
+    case 'savingText':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Save 25%';
+      break;
+    case 'ribbon':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'NEW';
+      break;
+    case 'wishlist':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '♡';
+      break;
+    case 'compare':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '⇄';
+      break;
+    case 'share':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '↗';
+      break;
+    case 'icon':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '✪';
+      break;
+    case 'quantity':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Qty 1';
+      break;
+    case 'priceBadge':
+      fallback = '\u09F3120';
+      break;
+    case 'promoBadge':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Promo';
+      break;
+    case 'flashBadge':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Flash';
+      break;
+    case 'secondaryCta':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Details';
+      break;
+    case 'animation':
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '●';
+      break;
+    default:
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Label';
+      break;
+  }
+
+  final bindingText = _resolveBinding(product, node.binding, fallback).trim();
+  final baseText = styleText?.isNotEmpty == true
+      ? styleText!
+      : (bindingText.isNotEmpty ? bindingText : fallback);
+  final text = prefix.isEmpty ? baseText : '$prefix$baseText';
+  if (node.elementType == 'price' ||
+      node.elementType == 'mrp' ||
+      node.elementType == 'priceBadge') {
+    return _formatPrice(text);
+  }
+  return text;
+}
+
+Color _fallbackTextColor(String elementType) {
+  switch (elementType) {
+    case 'title':
+    case 'category':
+    case 'delivery':
+    case 'unit':
+    case 'feature':
+      return Colors.white;
+    case 'subtitle':
+    case 'mrp':
+      return const Color(0xFFFFF4E8);
+    case 'cta':
+    case 'flashBadge':
+      return Colors.white;
+    default:
+      return const Color(0xFFFF6500);
+  }
+}
+
+bool _shouldStrikeOriginalPrice(dynamic product, MBAdvancedDesignNode node) {
+  if (node.elementType != 'mrp') return false;
+
+  final manualVisible = node.style['strikeVisible'];
+  if (manualVisible is bool) return manualVisible;
+
+  final auto = _asBool(node.style['autoStrikeWhenDiscounted'], true);
+  if (!auto) return false;
+
+  final originalPrice = _readDynamicNumber(product, 'price');
+  final salePrice = _readDynamicNumber(product, 'salePrice');
+  if (originalPrice == null || salePrice == null) return false;
+  if (originalPrice <= 0 || salePrice <= 0) return false;
+  return salePrice < originalPrice;
+}
+
+bool _isChipLikeMrpNode(MBAdvancedDesignNode node, Color background) {
+  if (node.elementType != 'mrp') return false;
+  final variant = node.variantId.toLowerCase();
+  if (variant.contains('chip') ||
+      variant.contains('pill') ||
+      variant.contains('badge')) {
+    return true;
+  }
+  final rawBg = node.style['backgroundHex']?.toString().trim();
+  return rawBg != null &&
+      rawBg.isNotEmpty &&
+      rawBg != '#00000000' &&
+      background != Colors.transparent;
+}
+
+double? _readDynamicNumber(dynamic product, String fieldName) {
+  final text = _readDynamicString(product, fieldName, '').trim();
+  if (text.isEmpty) return null;
+  final normalized = text
+      .replaceAll('\u09F3', '')
+      .replaceAll(',', '')
+      .replaceAll(RegExp(r'[^0-9\.-]'), '')
+      .trim();
+  if (normalized.isEmpty) return null;
+  return double.tryParse(normalized);
+}
+
+bool _asBool(Object? value, bool fallback) {
+  if (value is bool) return value;
+  final text = value?.toString().trim().toLowerCase();
+  if (text == 'true') return true;
+  if (text == 'false') return false;
+  return fallback;
+}
+
+String _readDynamicString(dynamic product, String fieldName, String fallback) {
+  try {
+    final map = product is Map ? product : null;
+    if (map != null && map.containsKey(fieldName)) {
+      final value = map[fieldName];
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+  } catch (_) {}
 
   try {
-    final dynamic imageUrls = (product as dynamic).imageUrls;
-    if (imageUrls is List && imageUrls.isNotEmpty) {
-      final first = imageUrls.first?.toString().trim() ?? '';
-      if (first.isNotEmpty) return first;
+    late final Object? value;
+    switch (fieldName) {
+      case 'titleEn':
+        value = product.titleEn;
+        break;
+      case 'titleBn':
+        value = product.titleBn;
+        break;
+      case 'nameEn':
+        value = product.nameEn;
+        break;
+      case 'shortDescriptionEn':
+        value = product.shortDescriptionEn;
+        break;
+      case 'shortDescriptionBn':
+        value = product.shortDescriptionBn;
+        break;
+      case 'descriptionEn':
+        value = product.descriptionEn;
+        break;
+      case 'thumbnailUrl':
+        value = product.thumbnailUrl;
+        break;
+      case 'imageUrl':
+        value = product.imageUrl;
+        break;
+      case 'price':
+        value = product.price;
+        break;
+      case 'salePrice':
+        value = product.salePrice;
+        break;
+      case 'brandNameEn':
+        value = product.brandNameEn;
+        break;
+      case 'categoryNameEn':
+        value = product.categoryNameEn;
+        break;
+      default:
+        value = null;
     }
-  } catch (_) {
-    // Ignore; fall through.
-  }
+    final text = value?.toString().trim();
+    if (text != null && text.isNotEmpty) return text;
+  } catch (_) {}
 
-  return '';
+  return fallback;
 }
 
-BoxFit _boxFitFromString(String source) {
-  switch (source.trim().toLowerCase()) {
-    case 'fill':
-      return BoxFit.fill;
-    case 'cover':
-      return BoxFit.cover;
-    case 'fitwidth':
-    case 'fit_width':
-      return BoxFit.fitWidth;
-    case 'fitheight':
-    case 'fit_height':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaledown':
-    case 'scale_down':
-      return BoxFit.scaleDown;
-    case 'contain':
-    default:
-      return BoxFit.contain;
-  }
+String _readPrice(dynamic product, String fallback) {
+  final salePrice = _readDynamicString(product, 'salePrice', '');
+  if (salePrice.isNotEmpty && salePrice != '0') return salePrice;
+  final price = _readDynamicString(product, 'price', '');
+  if (price.isNotEmpty) return price;
+  return fallback;
 }
 
-num _readFinalPrice(MBProduct product) {
-  final sale = _tryReadNum(() => (product as dynamic).salePrice);
-  if (sale != null && sale > 0) return sale;
-  return _tryReadNum(() => (product as dynamic).price) ?? 0;
-}
-
-num _readOriginalPrice(MBProduct product) {
-  final price = _tryReadNum(() => (product as dynamic).price);
-  if (price != null && price > 0) return price;
-  return _readFinalPrice(product);
-}
-
-String _discountLabel(MBProduct product) {
-  final original = _readOriginalPrice(product).toDouble();
-  final finalPrice = _readFinalPrice(product).toDouble();
-
-  if (original <= 0 || finalPrice <= 0 || finalPrice >= original) {
+String _discountLabel(dynamic product) {
+  final originalPrice = _readDynamicNumber(product, 'price');
+  final salePrice = _readDynamicNumber(product, 'salePrice');
+  if (originalPrice == null || salePrice == null) return '25% OFF';
+  if (originalPrice <= 0 || salePrice <= 0 || salePrice >= originalPrice) {
     return 'Save';
   }
-
-  final percent = (((original - finalPrice) / original) * 100).round();
+  final percent = (((originalPrice - salePrice) / originalPrice) * 100).round();
   return '$percent% OFF';
 }
 
-String _formatCurrency(num value) {
-  final number = value % 1 == 0 ? value.toInt().toString() : value.toStringAsFixed(1);
-  return 'à§³$number';
+String _formatPrice(String value) {
+  final text = value.trim();
+  if (text.isEmpty) return '\u09F3120';
+  if (text.startsWith('\u09F3')) return text;
+  final number = num.tryParse(text);
+  if (number == null) return text;
+  final formatted = number == number.roundToDouble()
+      ? number.toInt().toString()
+      : number.toStringAsFixed(2);
+  return '\u09F3$formatted';
 }
 
-Map<String, dynamic> _stringKeyedMap(Object? source) {
-  if (source is Map<String, dynamic>) return Map<String, dynamic>.from(source);
-  if (source is Map) {
-    return source.map((key, value) => MapEntry(key.toString(), value));
-  }
-  return <String, dynamic>{};
-}
-
-double _readDouble(Object? value, {required double fallback}) {
-  if (value is num) return value.toDouble();
-  return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
-}
-
-Color _parseColor(Object? value, {required Color fallback}) {
-  final source = value?.toString().trim();
-  if (source == null || source.isEmpty) return fallback;
-
-  var hex = source.toUpperCase().replaceAll('#', '');
-  if (hex.length == 6) hex = 'FF$hex';
-  if (hex.length != 8) return fallback;
-
-  final parsed = int.tryParse(hex, radix: 16);
-  if (parsed == null) return fallback;
-
-  return Color(parsed);
-}
-
-String _tryReadString(Object? Function() reader, {String fallback = ''}) {
-  try {
-    final value = reader();
-    return value?.toString().trim() ?? fallback;
-  } catch (_) {
-    return fallback;
+Alignment _textAlignment(Object? value) {
+  switch (value?.toString()) {
+    case 'center':
+      return Alignment.center;
+    case 'right':
+      return Alignment.centerRight;
+    case 'left':
+    default:
+      return Alignment.centerLeft;
   }
 }
 
-num? _tryReadNum(Object? Function() reader) {
-  try {
-    final value = reader();
-    if (value is num) return value;
-    return num.tryParse(value?.toString().trim() ?? '');
-  } catch (_) {
-    return null;
+TextAlign _textAlign(Object? value) {
+  switch (value?.toString()) {
+    case 'center':
+      return TextAlign.center;
+    case 'right':
+      return TextAlign.right;
+    case 'left':
+    default:
+      return TextAlign.left;
   }
 }
 
-FontWeight _fontWeightFromString(String source) {
-  switch (source.trim().toLowerCase()) {
-    case 'w100':
-      return FontWeight.w100;
-    case 'w200':
-      return FontWeight.w200;
-    case 'w300':
-      return FontWeight.w300;
+FontWeight _fontWeight(Object? value) {
+  switch (value?.toString()) {
     case 'w400':
-    case 'normal':
       return FontWeight.w400;
     case 'w500':
       return FontWeight.w500;
     case 'w600':
       return FontWeight.w600;
     case 'w700':
-    case 'bold':
       return FontWeight.w700;
     case 'w800':
       return FontWeight.w800;
     case 'w900':
-    case 'black':
+    default:
       return FontWeight.w900;
-    default:
-      return FontWeight.w700;
   }
 }
 
-TextAlign _textAlignFromString(String source) {
-  switch (source.trim().toLowerCase()) {
-    case 'center':
-      return TextAlign.center;
-    case 'right':
-    case 'end':
-      return TextAlign.right;
-    case 'justify':
-      return TextAlign.justify;
-    case 'left':
-    case 'start':
-    default:
-      return TextAlign.left;
-  }
+Color _hexColor(Object? value, Color fallback) {
+  final raw = value?.toString().trim();
+  if (raw == null || raw.isEmpty) return fallback;
+  var hex = raw.replaceAll('#', '').toUpperCase();
+  if (hex.length == 6) hex = 'FF$hex';
+  if (hex.length != 8) return fallback;
+  final parsed = int.tryParse(hex, radix: 16);
+  if (parsed == null) return fallback;
+  return Color(parsed);
 }
 
-Alignment _alignmentFromTextAlign(String source) {
-  switch (source.trim().toLowerCase()) {
-    case 'center':
-      return Alignment.center;
-    case 'right':
-    case 'end':
-      return Alignment.centerRight;
-    case 'left':
-    case 'start':
-    default:
-      return Alignment.centerLeft;
-  }
+double _asDouble(Object? value, double fallback) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
 
-
+double _clampDouble(double value, double min, double max) {
+  if (max < min) return min;
+  return math.min(math.max(value, min), max);
+}

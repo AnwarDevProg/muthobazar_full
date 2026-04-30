@@ -1,0 +1,352 @@
+Yes, Anwar Vai — this is the correct next direction. We should treat this as a Studio V3 foundation upgrade, not just “add more buttons.”
+
+The best implementation should be split safely like this:
+
+Patch 12.1 = Element catalog + product-model binding system
+Patch 12.2 = Left drawer real preview items
+Patch 12.3 = Inspector controls by element type
+Patch 12.4 = Runtime renderer support for new element types
+Patch 12.5 = Clean V3 JSON save/export rules
+
+Trying to do all 7 points in one patch is risky because it touches drawer, model, inspector, renderer, product dialog preview, and JSON save format together.
+
+Final target architecture
+1. Left drawer should become data-driven
+
+Instead of hardcoded drawer items, we create a catalog like:
+
+MBAdvancedElementCatalog
+
+Each element item should define:
+
+class MBAdvancedElementItem {
+  final String groupId;        // title, subtitle, media, price, promo...
+  final String elementType;    // title, media, price, cta...
+  final String variantId;      // title_text_bold, media_circle_ring...
+  final String binding;        // product.titleEn, product.thumbnailUrl...
+  final String label;          // Product title EN
+  final Map<String, dynamic> defaultStyle;
+  final MBInspectorControlSet inspectorControls;
+}
+
+Then the drawer can render every group automatically.
+
+2. Add all element groups/items
+
+We should support these groups:
+
+Card / Surface
+Title
+Subtitle / Description
+Brand
+Category
+Media
+Unit / Quantity
+Price
+MRP / Original Price
+Discount / Saving
+Promo / Flash Sale
+Stock / Delivery
+Rating / Review
+Wishlist / Compare / Share
+CTA / Secondary CTA
+Quantity Selector
+Timer / Countdown
+Progress / Stock Bar
+Dots / Indicators
+Ribbon / Corner Tag
+Border / Divider
+Panel / Shape
+Effects / Glow / Shadow
+Animation / Hover
+
+Each group should have multiple draggable items.
+
+Example for Title:
+
+Product title text
+Product title bold
+Product title chip
+Product title gradient chip
+Bangla title text
+Multiline title
+
+Example for Media:
+
+Thumbnail rounded
+Thumbnail circle ring
+Full image rounded
+Full image poster
+Image with overlay
+No image placeholder
+3. Align bindings with real models
+
+We should define binding sources clearly.
+
+MBProduct bindings
+product.titleEn
+product.titleBn
+product.shortDescriptionEn
+product.shortDescriptionBn
+product.descriptionEn
+product.descriptionBn
+product.thumbnailUrl
+product.imageUrls.first
+product.finalPrice
+product.salePrice
+product.price
+product.costPrice
+product.quantityType
+product.quantityValue
+product.unitLabelEn
+product.unitLabelBn
+product.stockQty
+product.isFeatured
+product.isFlashSale
+product.isNewArrival
+product.isBestSeller
+product.categoryNameEn
+product.categoryNameBn
+product.brandNameEn
+product.brandNameBn
+MBBrand bindings
+
+Use if brand object is available in product dialog preview context:
+
+brand.nameEn
+brand.nameBn
+brand.logoUrl
+brand.slug
+
+If not available, use denormalized product fields:
+
+product.brandNameEn
+product.brandNameBn
+MBCategory bindings
+category.nameEn
+category.nameBn
+category.imageUrl
+category.iconUrl
+category.slug
+
+Fallback:
+
+product.categoryNameEn
+product.categoryNameBn
+MBProductVariation bindings
+
+For variable product preview later:
+
+variation.titleEn
+variation.sku
+variation.finalPrice
+variation.salePrice
+variation.price
+variation.thumbnailUrl
+variation.stockQty
+variation.attributes
+MBProductPurchaseOption bindings
+
+Useful for grocery/quantity cards:
+
+purchaseOption.labelEn
+purchaseOption.labelBn
+purchaseOption.price
+purchaseOption.salePrice
+purchaseOption.quantityValue
+purchaseOption.unitLabelEn
+purchaseOption.unitLabelBn
+Attribute bindings
+
+Later:
+
+attribute.nameEn
+attribute.nameBn
+attributeValue.valueEn
+attributeValue.valueBn
+attributeValue.colorHex
+attributeValue.imageUrl
+
+Important rule: for Home rendering, the saved card should mostly bind to fields already available inside MBProduct. Admin preview can use extended preview context.
+
+4. Product dialog preview data
+
+The Studio should receive a preview context, not just a raw product.
+
+Target:
+
+class MBAdvancedCardPreviewContext {
+  final MBProduct product;
+  final MBBrand? brand;
+  final MBCategory? category;
+  final MBProductVariation? selectedVariation;
+  final MBProductPurchaseOption? selectedPurchaseOption;
+}
+
+Then both drawer preview and canvas preview can resolve real values from the current form state.
+
+This means while editing a product, the left drawer item preview should show:
+
+Actual product title
+Actual product price
+Actual thumbnail
+Actual brand/category
+Actual sale/discount
+
+not generic demo text.
+
+5. More variants per element
+
+Each drawer item should visually preview itself using current product data.
+
+Example:
+
+Price group:
+- Plain price text
+- Circle price badge
+- Pill price badge
+- Price with unit
+- Sale price + MRP pair
+- Price on dark badge
+
+CTA group:
+- Buy pill
+- Add to cart pill
+- Icon + text button
+- Dark button
+- Outline button
+- Mini floating CTA
+
+This will make the drawer feel like a real design tool.
+
+6. Inspector controls by element type
+
+Right panel must show only applicable controls.
+
+Text/title/subtitle controls
+Binding
+Label override
+Font size
+Font weight
+Text color
+Alignment
+Max lines
+Line height
+Letter spacing
+Background color
+Border color
+Border radius
+Padding
+Opacity
+Media controls
+Image binding
+Image fit: cover / contain / fill
+Image alignment
+Image zoom / scale
+Border radius
+Ring width
+Border color
+Background color
+Shadow
+Opacity
+Price/MRP controls
+Currency symbol
+Prefix/suffix
+Badge style
+Auto discount behavior
+Original price strike
+Strike mode: line / diagonal / cross
+Strike color
+Strike width
+CTA controls
+Action binding
+Label
+Button style
+Background
+Text color
+Radius
+Border
+Icon option
+Tap behavior placeholder
+Promo/badge/timer controls
+Label override
+Auto discount text
+Timer source
+Background
+Text color
+Radius
+Icon
+Pulse/animation placeholder
+7. Clean V3 JSON save rule
+
+Saved JSON should contain design instructions only.
+
+Good JSON:
+
+{
+  "version": 20,
+  "type": "muthobazar_card_design_advanced_v2",
+  "templateId": "hero_poster_circle_diagonal_v1",
+  "designFamilyId": "hero_poster_circle",
+  "layout": {
+    "cardWidth": 185,
+    "cardHeight": 255,
+    "borderRadius": 0,
+    "resizeMode": "responsive",
+    "lockElementsToCard": true,
+    "cardLayoutType": "hero_poster_circle_diagonal_v1"
+  },
+  "palette": {},
+  "nodes": [
+    {
+      "id": "title_01",
+      "elementType": "title",
+      "variantId": "title_text_bold",
+      "binding": "product.titleEn",
+      "visible": true,
+      "locked": false,
+      "position": {},
+      "size": {},
+      "style": {}
+    }
+  ],
+  "metadata": {
+    "cardLayoutType": "hero_poster_circle_diagonal_v1"
+  }
+}
+
+Avoid saving runtime-only values like:
+
+resolved product title
+resolved price text
+temporary preview state
+selected product object
+brand/category full object
+debug fields
+
+Only save label when the user intentionally overrides text.
+
+Best next patch
+
+Start with:
+
+Patch 12.1 = Advanced Studio element catalog + binding resolver
+
+Scope:
+
+1. Create data-driven element catalog.
+2. Add all missing element groups/items.
+3. Add binding resolver for product/brand/category/variation/purchase option preview data.
+4. Update left drawer to show real product-data previews.
+5. Keep current inspector mostly unchanged for now.
+6. Do not change Home renderer yet except if new element types require safe fallback.
+
+Then:
+
+Patch 12.2 = Inspector controls by element type
+
+Then:
+
+Patch 12.3 = Runtime renderer support for all catalog variants
+
+My recommendation: Patch 12.1 first. This gives us a strong catalog/binding foundation, and then every future template will be much easier to build.

@@ -1,0 +1,736 @@
+MuthoBazar Home Product Grid Rules
+Card Picking, Row Packing, Full-Width Handling, and Adaptive Gap Filler System
+Author/Project Reference: MuthoBazar
+Purpose: Future reference for Home page product-card layout behavior
+
+======================================================================
+1. OVERVIEW
+======================================================================
+
+The MuthoBazar Home page product grid should use a controlled eCommerce-style
+row layout, not a masonry/Pinterest layout.
+
+Main goal:
+
+- Keep product comparison clean.
+- Pair half-width product cards together.
+- Render full-width cards only between completed half-width rows.
+- Use filler widgets under shorter half-width cards instead of leaving ugly gaps.
+- Keep V3 cardDesignJson designs responsive by scaling into the available grid slot.
+- Support future card families, full-width designs, large cards, and campaign cards.
+
+The selected strategy is:
+
+Hybrid Row Pack Algorithm
++ Responsive 2/3/4-column grid
++ Footprint-aware card placement
++ Adaptive gap filler widgets
++ Future elastic card height adjustment
+
+======================================================================
+2. CARD PICKING / ROW PACKING RULE
+======================================================================
+
+2.1 Load products
+
+Home receives one product list from the section.
+
+2.2 Shuffle once per fresh load
+
+Products are shuffled only when the product list changes or fresh data is loaded.
+
+Do not reshuffle on every rebuild.
+
+Example:
+
+_orderedProducts = List<MBProduct>.of(widget.products);
+
+if (forceShuffle && _orderedProducts.length > 1) {
+  _orderedProducts.shuffle(Random(DateTime.now().microsecondsSinceEpoch));
+}
+
+2.3 Resolve each card footprint
+
+Each product becomes one layout tile.
+
+Current footprint types:
+
+- half-width card  -> span 1 column
+- full-width card  -> span all columns
+
+Future footprint types:
+
+- large card       -> span 2 columns
+- hero card        -> span all columns and taller row
+- two-by-two card  -> span 2 columns and 2 row units
+
+2.4 V3 card footprint detection
+
+For V3 cards using cardDesignJson:
+
+- cardDesignJson.layout.cardWidth around 185/192 -> half-width card
+- cardDesignJson.layout.cardWidth around 392     -> full-width card
+- cardLayoutType contains full/wide/banner/hero  -> full-width card
+- metadata.footprint == full                     -> full-width card
+- metadata.columnSpan can later define custom spans
+
+2.5 Legacy card footprint detection
+
+For old cardConfig / old variant cards:
+
+- product.effectiveCardConfig.variant.isFullWidth == true -> full-width
+- otherwise -> half-width
+
+======================================================================
+3. RESPONSIVE COLUMN COUNT RULE
+======================================================================
+
+Home grid should adapt by available content width.
+
+Recommended rule:
+
+- Phone / narrow width      -> 2 columns
+- Small tablet / wide phone -> 3 columns
+- Tablet / wide screen      -> 4 columns
+
+Example:
+
+int resolveColumnCount(double width) {
+  if (width >= 900) return 4;
+  if (width >= 600) return 3;
+  return 2;
+}
+
+Important:
+
+The V3 design cardWidth, such as 185, is a design base width.
+It is not a fixed physical screen width.
+
+Runtime behavior:
+
+Designed card size: 185 x 255
+↓
+Home grid calculates column slot width
+↓
+Renderer scales the V3 design into that slot
+↓
+All nodes scale together: title, image, price, CTA, spacing
+
+For tablets, we should add more columns instead of enlarging the same 2-column cards too much.
+
+======================================================================
+4. HYBRID ROW PACK ALGORITHM
+======================================================================
+
+Main rule:
+
+Half-width cards must complete a row before held full-width cards render.
+
+Wrong:
+
+[ Beans ] [ empty ]
+[ Broccoli full-width ]
+[ Eggplant ] [ empty ]
+
+Correct:
+
+[ Beans ] [ Eggplant ]
+[ Broccoli full-width ]
+
+4.1 Product row building behavior
+
+Use pending half-width cards and held full-width cards.
+
+Pseudo logic:
+
+final rows = <HomeGridRow>[];
+final pendingHalfCards = <MBProduct>[];
+final heldFullWidthCards = <MBProduct>[];
+
+void flushHeldFullWidthCards() {
+  for (final product in heldFullWidthCards) {
+    rows.add(HomeGridRow.full(product));
+  }
+  heldFullWidthCards.clear();
+}
+
+for (final product in products) {
+  final footprint = resolveFootprint(product);
+
+  if (footprint.isFullWidth) {
+    if (pendingHalfCards.isEmpty) {
+      rows.add(HomeGridRow.full(product));
+    } else {
+      heldFullWidthCards.add(product);
+    }
+    continue;
+  }
+
+  pendingHalfCards.add(product);
+
+  if (pendingHalfCards.length == columnCount) {
+    rows.add(HomeGridRow.half(List.of(pendingHalfCards)));
+    pendingHalfCards.clear();
+
+    // Full-width cards render only after a completed half row.
+    flushHeldFullWidthCards();
+  }
+}
+
+// If list ends with incomplete half row and full-width cards are waiting,
+// render full-width cards first, then the final incomplete half row.
+if (pendingHalfCards.isNotEmpty && heldFullWidthCards.isNotEmpty) {
+  flushHeldFullWidthCards();
+}
+
+if (pendingHalfCards.isNotEmpty) {
+  rows.add(HomeGridRow.half(List.of(pendingHalfCards)));
+}
+
+4.2 Why this matters
+
+This prevents this broken layout:
+
+[ Half card ] [ empty ]
+[ Full card spanning row ]
+[ Half card ] [ empty ]
+
+and produces:
+
+[ Half card ] [ Half card ]
+[ Full card spanning row ]
+
+4.3 Full-width card rule
+
+Full-width cards must render only between completed half-card rows.
+
+They should span all active columns:
+
+- Phone 2-column layout: full card spans 2 columns
+- Tablet 3-column layout: full card spans 3 columns
+- Tablet 4-column layout: full card spans 4 columns
+
+======================================================================
+5. CARD HEIGHT RULE
+======================================================================
+
+Each card height comes from its own design/profile.
+
+5.1 V3 card height
+
+For V3 cards:
+
+height = runtimeWidth * (cardDesignJson.layout.cardHeight / cardDesignJson.layout.cardWidth)
+
+Example:
+
+Design size: 185 x 255
+Runtime width: 170
+
+height = 170 * (255 / 185)
+
+5.2 Legacy card height
+
+For old cards:
+
+height = MBProductCardLayoutResolver.resolve(...).preferredHeight
+
+5.3 Future card height profile
+
+Eventually use:
+
+class MBCardLayoutProfile {
+  final double preferredHeight;
+  final double minHeight;
+  final double maxHeight;
+
+  final bool canShrink;
+  final bool canExpand;
+
+  final double maxShrinkPercent;
+  final double maxExpandPercent;
+
+  final MBCardHeightClass heightClass;
+  final MBCardGapBehavior gapBehavior;
+}
+
+Recommended height classes:
+
+enum MBCardHeightClass {
+  short,
+  standard,
+  tall,
+  hero,
+}
+
+Initial examples:
+
+compact01       half + standard -> 255
+compact02       half + standard -> 255
+price01         half + standard -> 265
+premium01       half + tall     -> 290
+flash01         half + standard -> 265
+
+horizontal03    full + short    -> 150
+wide04          full + medium   -> 255
+promo01         full + tall     -> 280
+featured01      full + hero     -> 320
+
+======================================================================
+6. HALF-ROW SHARED HEIGHT RULE
+======================================================================
+
+For each half-width row:
+
+leftHeight  = resolved height of left card
+rightHeight = resolved height of right card
+rowHeight   = max(leftHeight, rightHeight)
+
+For responsive 3/4-column rows:
+
+rowHeight = max(height of every card in that row)
+
+Each card keeps its own calculated height.
+The row itself uses the tallest card height.
+
+Example:
+
+left card height  = 255
+right card height = 310
+row height        = 310
+gap under left    = 55
+
+The gap under the shorter card can be filled by an adaptive filler widget.
+
+======================================================================
+7. ADAPTIVE GAP FILLER RULE
+======================================================================
+
+Filler applies only under shorter half-width cards.
+
+It does not apply under full-width cards.
+
+7.1 Step order
+
+1. Pair/pack half-width cards into a completed row.
+2. Calculate each product card height.
+3. rowHeight = max(card heights).
+4. For every shorter card, calculate gap:
+   gap = rowHeight - cardHeight
+5. Try to find the best filler widget for the gap.
+6. If a filler fits, render it under that shorter card.
+7. If no filler fits:
+   - if gap is tiny, render small decorative spacer or nothing.
+8. Full-width card starts only after a completed half row.
+
+Important rule:
+
+Do not shrink/expand product cards first if a good filler can fit the gap.
+
+So the first implementation focuses on:
+
+adaptive filler selection
+
+not:
+
+product height distortion
+
+======================================================================
+8. FILLER DEFINITIONS
+======================================================================
+
+Each filler should be defined with safe height range and priority.
+
+class MBGapFillerDefinition {
+  const MBGapFillerDefinition({
+    required this.id,
+    required this.preferredHeight,
+    required this.minHeight,
+    required this.maxHeight,
+    required this.priority,
+    required this.isDecorativeOnly,
+    required this.isTappable,
+  });
+
+  final String id;
+  final double preferredHeight;
+  final double minHeight;
+  final double maxHeight;
+  final int priority;
+  final bool isDecorativeOnly;
+  final bool isTappable;
+}
+
+Initial filler list:
+
+const fillers = <MBGapFillerDefinition>[
+  MBGapFillerDefinition(
+    id: 'offer_chip',
+    preferredHeight: 76,
+    minHeight: 62,
+    maxHeight: 92,
+    priority: 1,
+    isDecorativeOnly: false,
+    isTappable: true,
+  ),
+  MBGapFillerDefinition(
+    id: 'delivery_chip',
+    preferredHeight: 54,
+    minHeight: 44,
+    maxHeight: 66,
+    priority: 2,
+    isDecorativeOnly: false,
+    isTappable: true,
+  ),
+  MBGapFillerDefinition(
+    id: 'category_chip',
+    preferredHeight: 104,
+    minHeight: 86,
+    maxHeight: 128,
+    priority: 3,
+    isDecorativeOnly: false,
+    isTappable: true,
+  ),
+  MBGapFillerDefinition(
+    id: 'micro_decorative',
+    preferredHeight: 34,
+    minHeight: 26,
+    maxHeight: 43,
+    priority: 4,
+    isDecorativeOnly: true,
+    isTappable: false,
+  ),
+  MBGapFillerDefinition(
+    id: 'decorative_strip',
+    preferredHeight: 18,
+    minHeight: 8,
+    maxHeight: 28,
+    priority: 5,
+    isDecorativeOnly: true,
+    isTappable: false,
+  ),
+];
+
+Suggested filler types:
+
+1. Delivery chip
+   Height: 44–66
+   Text: Fast delivery / Same day delivery
+
+2. Offer chip
+   Height: 62–92
+   Text: Save more today / Flash sale active
+
+3. Category chip
+   Height: 86–128
+   Text: More fresh vegetables / Browse category
+
+4. Micro decorative filler
+   Height: 26–43
+   Decorative / text-only
+
+5. Decorative strip
+   Height: 8–28
+   Small gradient or separator
+
+Future filler types:
+
+- mini countdown
+- brand promo
+- user location delivery hint
+- loyalty points
+- wallet/cashback
+- mini product suggestion
+- category suggestion
+- “Free delivery over ৳500”
+
+======================================================================
+9. FILLER CANDIDATE SELECTION
+======================================================================
+
+A filler can be used only if:
+
+filler.minHeight <= gap && gap <= filler.maxHeight
+
+Then choose the best one by:
+
+1. priority
+2. fit quality
+3. resize amount
+4. tap safety
+
+Score idea:
+
+double scoreFiller(MBGapFillerDefinition filler, double gap) {
+  final heightDifference = (filler.preferredHeight - gap).abs();
+
+  final resizePenalty = heightDifference / filler.preferredHeight;
+
+  final tappablePenalty =
+      filler.isTappable && gap < 44 ? 10000.0 : 0.0;
+
+  return (filler.priority * 1000) +
+      (heightDifference * 5) +
+      (resizePenalty * 100) +
+      tappablePenalty;
+}
+
+Lower score wins.
+
+Example:
+
+Priority 1 chip fits with 10% shrink.
+Priority 2 chip fits with 10% expand.
+Priority 3 chip fits exactly.
+
+The priority 1 chip can still win because business priority matters, as long as the resize is safe.
+
+Practical sorting rule:
+
+1. priority
+2. exact or near-exact fit
+3. less resize needed
+4. tappable safety
+
+Priority examples:
+
+Priority 1:
+Campaign / active offer / flash sale chip
+
+Priority 2:
+Delivery promise / free delivery / same-day delivery chip
+
+Priority 3:
+Category browse chip / brand chip
+
+Priority 4:
+Decorative gradient / line / pattern
+
+======================================================================
+10. RENDERING EACH HALF-CARD SLOT
+======================================================================
+
+Each half-card slot is a Column:
+
+Column(
+  children: [
+    SizedBox(
+      height: cardHeight,
+      child: MBProductCardRenderer(product: product),
+    ),
+    if (gap > 0)
+      AdaptiveGapFiller(height: gap),
+  ],
+)
+
+Concept:
+
+class HalfCardSlot extends StatelessWidget {
+  const HalfCardSlot({
+    required this.product,
+    required this.cardHeight,
+    required this.rowHeight,
+  });
+
+  final MBProduct product;
+  final double cardHeight;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final gap = rowHeight - cardHeight;
+    final filler = MBGapFillerResolver.resolve(gap);
+
+    return Column(
+      children: [
+        SizedBox(
+          height: cardHeight,
+          child: MBProductCardRenderer(product: product),
+        ),
+        if (filler != null)
+          SizedBox(
+            height: gap,
+            child: MBGapFillerChip(
+              definition: filler,
+              height: gap,
+            ),
+          )
+        else if (gap > 0)
+          SizedBox(height: gap),
+      ],
+    );
+  }
+}
+
+======================================================================
+11. EXPECTED FINAL BEHAVIOR
+======================================================================
+
+Case 1: two half cards
+
+[ Beans    ] [ Eggplant ]
+
+If one is shorter:
+
+[ Beans    ] [ Eggplant ]
+[ filler   ] [          ]
+
+Case 2: half + full + half
+
+Input order:
+
+Beans, Broccoli full, Eggplant
+
+Rendered as:
+
+[ Beans    ] [ Eggplant ]
+[ Broccoli full-width     ]
+
+Case 3: one half card left at the end
+
+[ Beans ] [ filler/empty ]
+
+Case 4: full-width card
+
+[ Broccoli full-width card ]
+
+Full-width card must never appear as half-width.
+
+======================================================================
+12. PATCH HISTORY / WHAT WE WROTE
+======================================================================
+
+Patch 11.8
+-----------
+Restored Hybrid Row Pack Algorithm.
+
+Meaning:
+
+- hold full-width cards while a half row is incomplete
+- complete half row first
+- then render held full-width cards
+- keep responsive 2/3/4-column grid
+- keep V3 full-width detection
+- keep V3 direct renderer
+
+Patch 11.9
+-----------
+Added Adaptive Gap Filler Widgets.
+
+Meaning:
+
+- when paired half cards have different heights,
+  use the remaining gap under the shorter card
+  for delivery/offer/category/decorative filler widgets
+
+- choose filler by:
+  - safe height range
+  - priority
+  - fit quality
+  - tappable safety
+
+======================================================================
+13. FUTURE IMPROVEMENT: ELASTIC PRODUCT HEIGHT ADJUSTMENT
+======================================================================
+
+Future step, not required in the first filler implementation:
+
+If no good filler can fit the gap, try safe product card adjustment.
+
+Final future flow:
+
+Pair half cards
+↓
+Calculate gap
+↓
+Try best filler at current gap
+↓
+If good filler found:
+   keep product heights unchanged
+   render filler under shorter card
+↓
+If no good filler:
+   try card elastic adjustment
+↓
+Recalculate gap
+↓
+Try filler again
+↓
+If small remaining gap:
+   decorative spacer / absorb as padding
+↓
+Render full-width cards only after complete row
+
+Product card adjustment rule:
+
+Each card variant should later define:
+
+preferredHeight
+minHeight
+maxHeight
+expandablePercent
+shrinkablePercent
+canCompress
+canExpand
+compressionPriority
+
+Example:
+
+compact01:
+preferredHeight: 255
+minHeight: 235
+maxHeight: 275
+shrinkable: 8%
+expandable: 8%
+
+premium01:
+preferredHeight: 290
+minHeight: 265
+maxHeight: 310
+shrinkable: 8%
+expandable: 6%
+
+flash01:
+preferredHeight: 270
+minHeight: 250
+maxHeight: 285
+shrinkable: 7%
+expandable: 5%
+
+Important safety rule:
+
+The layout engine must not damage product card design.
+
+Do not shrink these below readability/usefulness:
+
+- minimum image visibility
+- title readability
+- button/tap size
+- price visibility
+- CTA height
+- important badges
+
+Use elastic adjustment only when:
+
+- no useful filler fits the gap
+- or the remaining gap is visually awkward
+- or the gap is too small for a meaningful filler
+
+======================================================================
+14. WHY THIS IS BETTER THAN MASONRY
+======================================================================
+
+For MuthoBazar, row-based grid + adaptive filler is better than masonry.
+
+Reason:
+
+- eCommerce needs clear product comparison.
+- Product rows stay understandable.
+- Full-width campaign cards render cleanly.
+- Product order does not become too confusing.
+- Gaps become useful marketing areas.
+- Design remains controlled.
+- The system supports future variants without breaking the shopping grid.
+
+Masonry can be kept only as a possible future mode for inspiration/discovery feeds,
+not for the main Home product grid.
