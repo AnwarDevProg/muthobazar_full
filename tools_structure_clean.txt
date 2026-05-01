@@ -66,36 +66,19 @@ C.
 |   |   +---customer_feature.md
 |   |   \---staff_feature.md
 |   \---README.md
-+---scripts
-|   +---analyze_all.sh
-|   +---bootstrap_all.sh
-|   +---deploy_all_functions.ps1
-|   +---deploy_verify_category_backend.ps1
-|   +---find_old_card_layout_refs.ps1
-|   +---format_all.sh
-|   +---generate_clean_tree.md
-|   +---generate_clean_tree.ps1
-|   +---git_push.ps1
-|   +---run_admin_web_chrome.ps1
-|   +---run_customer.sh
-|   +---run_staff.sh
-|   +---setup_workspace.sh
-|   +---test_all.sh
-|   \---verify_card_layout_upgrade.ps1
-+---add_design_studio_color_picker.ps1
-+---add_design_studio_color_picker_v2.ps1
-+---apply_design_studio_v2_drag_keyboard.ps1
-+---apply_design_studio_v2_interaction_fix.ps1
-+---apply_design_studio_v2_preview_interaction_cleanup.ps1
-+---apply_design_studio_v2_select_move_fix.ps1
-+---apply_design_studio_v2_shell.ps1
-+---apply_design_studio_v2_visual_normalize.ps1
-+---apply_element_style_tuning.ps1
-+---connect_design_studio_v2_admin.ps1
-+---connect_design_studio_v2_admin_v2.ps1
-+---fix_element_style_live_preview_bridge.ps1
-+---fix_missing_read_element_styles.ps1
-+---fix_palette_live_preview_bridge.ps1
-+---install_advanced_card_studio_patch_1_from_downloads.ps1
-+---install_advanced_card_studio_patch_2b_from_downloads.ps1
-\---restore_design_studio_before_color_picker.ps1
+\---scripts
+    +---analyze_all.sh
+    +---bootstrap_all.sh
+    +---deploy_all_functions.ps1
+    +---deploy_verify_category_backend.ps1
+    +---find_old_card_layout_refs.ps1
+    +---format_all.sh
+    +---generate_clean_tree.md
+    +---generate_clean_tree.ps1
+    +---git_push.ps1
+    +---run_admin_web_chrome.ps1
+    +---run_customer.sh
+    +---run_staff.sh
+    +---setup_workspace.sh
+    +---test_all.sh
+    \---verify_card_layout_upgrade.ps1

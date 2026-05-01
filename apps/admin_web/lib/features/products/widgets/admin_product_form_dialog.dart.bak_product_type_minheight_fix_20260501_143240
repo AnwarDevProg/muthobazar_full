@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
@@ -105,7 +105,7 @@ class _ProductTypeCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOut,
-          constraints: const BoxConstraints(minHeight: 116),
+          minHeight: 116,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: backgroundColor,
@@ -211,37 +211,6 @@ class AdminProductFormDialog extends StatefulWidget {
   final List<AdminProductRelationOption> availableBrands;
   final String? dialogTitle;
   final ValueChanged<MBProduct>? onSaved;
-  static double _dialogHorizontalInset(double screenWidth) {
-    if (screenWidth >= 1200) {
-      return 16;
-    }
-    if (screenWidth >= 900) {
-      return 12;
-    }
-    return 0;
-  }
-
-  static double _dialogVerticalInset(double screenHeight) {
-    if (screenHeight >= 760) {
-      return 20;
-    }
-    if (screenHeight >= 620) {
-      return 12;
-    }
-    return 0;
-  }
-
-  static double _dialogWidthFor(double screenWidth) {
-    final availableWidth =
-        screenWidth - (_dialogHorizontalInset(screenWidth) * 2);
-    return availableWidth <= 0 ? screenWidth : availableWidth;
-  }
-
-  static double _dialogHeightFor(double screenHeight) {
-    final availableHeight =
-        screenHeight - (_dialogVerticalInset(screenHeight) * 2);
-    return availableHeight <= 0 ? screenHeight : availableHeight;
-  }
 
 
   static Future<MBProduct?> show(
@@ -262,37 +231,29 @@ class AdminProductFormDialog extends StatefulWidget {
     return showDialog<MBProduct>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
-        final screenSize = MediaQuery.sizeOf(dialogContext);
-        final horizontalInset = _dialogHorizontalInset(screenSize.width);
-        final verticalInset = _dialogVerticalInset(screenSize.height);
-
-        return Dialog(
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: horizontalInset,
-            vertical: verticalInset,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          width: 1180,
+          height: 820,
+          child: AdminProductFormDialog(
+            actorUid: actorUid,
+            actorName: actorName,
+            actorPhone: actorPhone,
+            actorRole: actorRole,
+            controller: controller,
+            initialProduct: initialProduct,
+            availableCategories: availableCategories,
+            availableBrands: availableBrands,
+            dialogTitle: dialogTitle,
+            onSaved: onSaved,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: _dialogWidthFor(screenSize.width),
-            height: _dialogHeightFor(screenSize.height),
-            child: AdminProductFormDialog(
-              actorUid: actorUid,
-              actorName: actorName,
-              actorPhone: actorPhone,
-              actorRole: actorRole,
-              controller: controller,
-              initialProduct: initialProduct,
-              availableCategories: availableCategories,
-              availableBrands: availableBrands,
-              dialogTitle: dialogTitle,
-              onSaved: onSaved,
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
+
   @override
   State<AdminProductFormDialog> createState() =>
       _AdminProductFormDialogState();
@@ -941,7 +902,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
             child: Row(
               children: [
                 Expanded(
-                  flex: 7,
+                  flex: 3,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -1000,7 +961,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                 ),
                 Container(width: 1, color: Theme.of(context).dividerColor),
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -1163,7 +1124,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                     item.titleEn.trim().isEmpty ? item.sku : item.titleEn,
                   ),
                   subtitle: Text(
-                    'enabled: ${item.isEnabled} Ã¢â‚¬Â¢ default: ${item.isDefault} Ã¢â‚¬Â¢ sort: ${item.sortOrder}',
+                    'enabled: ${item.isEnabled} â€¢ default: ${item.isDefault} â€¢ sort: ${item.sortOrder}',
                   ),
                 ),
               )
@@ -1611,7 +1572,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
             subtitle:
-            'role: ${item.role} Ã¢â‚¬Â¢ type: ${item.type} Ã¢â‚¬Â¢ primary: ${item.isPrimary} Ã¢â‚¬Â¢ order: ${item.sortOrder}',
+            'role: ${item.role} â€¢ type: ${item.type} â€¢ primary: ${item.isPrimary} â€¢ order: ${item.sortOrder}',
             leading: item.effectiveThumbUrl.trim().isEmpty
                 ? const Icon(Icons.image_not_supported_outlined)
                 : PreviewImage(url: item.effectiveThumbUrl),
@@ -2033,7 +1994,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.nameEn,
             subtitle:
-            'values: ${item.values.length} Ã¢â‚¬Â¢ variation: ${item.useForVariation} Ã¢â‚¬Â¢ order: ${item.sortOrder}',
+            'values: ${item.values.length} â€¢ variation: ${item.useForVariation} â€¢ order: ${item.sortOrder}',
             onEdit: () => _editAttribute(item),
             onDelete: () {
               setState(() {
@@ -2302,7 +2263,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn,
             subtitle:
-            'mode: ${item.mode} Ã¢â‚¬Â¢ price: ${item.price} Ã¢â‚¬Â¢ default: ${item.isDefault}',
+            'mode: ${item.mode} â€¢ price: ${item.price} â€¢ default: ${item.isDefault}',
             onEdit: () => _editPurchaseOption(item),
             onDelete: () {
               setState(() {
@@ -3734,8 +3695,6 @@ Wrap(
     });
   }
 }
-
-
 
 
 

@@ -75,7 +75,8 @@ C.
 |   |   +---controllers
 |   |   +---models
 |   |   +---pages
-|   |   |   \---chat_page.dart
+|   |   |   +---chat_page.dart
+|   |   |   \---chat_page.dart.bak_placeholder_20260430_005532
 |   |   \---widgets
 |   +---checkout
 |   |   +---controllers
@@ -153,7 +154,8 @@ C.
 |   |   +---models
 |   |   |   \---mb_store_card_preview_entry.dart
 |   |   +---pages
-|   |   |   \---store_page.dart
+|   |   |   +---store_page.dart
+|   |   |   \---store_page.dart.bak_placeholder_20260430_005531
 |   |   \---widgets
 |   |       +---store_card_add_dialog.dart
 |   |       +---store_section_card.dart

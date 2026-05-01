@@ -1,0 +1,10 @@
+﻿Product dialog full width patch
+Generated: 05/01/2026 15:40:51
+Target: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_dialog.dart
+Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\product_dialog_full_width_patch\backup\admin_product_form_dialog_20260501_154051.dart.bak
+Modified copy: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\product_dialog_full_width_patch\modified_copy\admin_product_form_dialog.dart
+
+Changes:
+1. Replaced fixed 1180x820 dialog size with MediaQuery-based near full-screen width/height.
+2. Reduced desktop dialog side inset to 16 px.
+3. Changed main dialog body flex from 3:2 to 7:3 so the form gets more width.

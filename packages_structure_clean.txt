@@ -304,12 +304,18 @@ C.
 |   |   |   |   |   |   \---mb_card_design_studio.dart
 |   |   |   |   |   +---design_studio_advanced
 |   |   |   |   |   |   +---models
+|   |   |   |   |   |   |   +---mb_advanced_binding_registry.dart
+|   |   |   |   |   |   |   +---mb_advanced_binding_resolver.dart
 |   |   |   |   |   |   |   +---mb_advanced_card_design_document.dart
+|   |   |   |   |   |   |   +---mb_advanced_element_catalog_v12.dart
 |   |   |   |   |   |   |   \---mb_advanced_element_variant.dart
 |   |   |   |   |   |   +---panels
 |   |   |   |   |   |   |   +---mb_advanced_canvas_panel.dart
 |   |   |   |   |   |   |   +---mb_advanced_element_drawer_panel.dart
+|   |   |   |   |   |   |   +---mb_advanced_element_drawer_panel.dart.bak_1273_compile_fix_20260501_001855
 |   |   |   |   |   |   |   \---mb_advanced_inspector_panel.dart
+|   |   |   |   |   |   +---rendering
+|   |   |   |   |   |   |   \---mb_advanced_product_card_renderer.dart
 |   |   |   |   |   |   +---mb_card_design_studio_advanced.dart
 |   |   |   |   |   |   \---mb_card_design_studio_advanced_exports.dart
 |   |   |   |   |   +---design_studio_v2
@@ -327,7 +333,8 @@ C.
 |   |   |   |   |   |   +---mb_card_variant_registry.dart
 |   |   |   |   |   |   +---mb_product_card_layout_profile.dart
 |   |   |   |   |   |   +---mb_product_card_layout_resolver.dart
-|   |   |   |   |   |   \---mb_product_card_variant_router.dart
+|   |   |   |   |   |   +---mb_product_card_variant_router.dart
+|   |   |   |   |   |   \---mb_responsive_card_grid_resolver.dart
 |   |   |   |   |   +---variants
 |   |   |   |   |   |   +---mb_product_card_compact01.dart
 |   |   |   |   |   |   +---mb_product_card_compact02.dart
