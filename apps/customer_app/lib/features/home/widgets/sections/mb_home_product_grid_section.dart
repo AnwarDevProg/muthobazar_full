@@ -284,15 +284,11 @@ class _ProductCardFlow extends StatelessWidget {
   }
 
   static int _resolveColumnCount(double width) {
-    if (width >= 900) return 4;
-    if (width >= 600) return 3;
-    return 2;
+    return MBResponsiveCardGridResolver.resolveColumnCount(width);
   }
 
   static double _resolveColumnGap(double width) {
-    if (width >= 900) return 16;
-    if (width >= 600) return 14;
-    return 12;
+    return MBResponsiveCardGridResolver.resolveGridSpacing(width);
   }
 
   static double _resolveRowGap(double width) {
@@ -1054,5 +1050,6 @@ String _tryReadString(Object? Function() reader, {String fallback = ''}) {
     return fallback;
   }
 }
+
 
 

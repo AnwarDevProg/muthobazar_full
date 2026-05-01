@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
 // Patch 12.4 adds preview-only contrast-safe text colors.
 //
@@ -10,7 +10,6 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_binding_registry.dart';
 import '../models/mb_advanced_binding_resolver.dart';
 import '../models/mb_advanced_card_design_document.dart';
 import '../models/mb_advanced_element_catalog_v12.dart';
@@ -26,9 +25,6 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
     this.previewCategory,
     this.previewVariation,
     this.previewPurchaseOption,
-    this.previewProductAttribute,
-    this.previewAttributeValue,
-    this.previewAttributePreset,
     required this.onAddVariant,
     required this.onApplyCardVariant,
   });
@@ -40,9 +36,6 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
   final dynamic previewCategory;
   final dynamic previewVariation;
   final dynamic previewPurchaseOption;
-  final dynamic previewProductAttribute;
-  final dynamic previewAttributeValue;
-  final dynamic previewAttributePreset;
   final ValueChanged<MBAdvancedElementVariant> onAddVariant;
   final ValueChanged<MBAdvancedElementVariant> onApplyCardVariant;
 
@@ -61,9 +54,6 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
       category: previewCategory,
       selectedVariation: previewVariation,
       selectedPurchaseOption: previewPurchaseOption,
-      selectedProductAttribute: previewProductAttribute,
-      selectedAttributeValue: previewAttributeValue,
-      selectedAttributePreset: previewAttributePreset,
       fallbackTitle: productTitle.trim().isEmpty ? 'Product title' : productTitle,
       fallbackSubtitle: productSubtitle.trim().isEmpty
           ? 'Fresh product detail'
@@ -1097,5 +1087,4 @@ double _asDouble(Object? value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
-
 

@@ -1,6 +1,7 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
 // Patch 12.4 adds preview-only contrast-safe text colors.
+// Patch 12.7 adds full preview context fields from product dialog.
 //
 // Purpose:
 // - Uses the data-driven V12 element catalog.
@@ -10,9 +11,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_binding_registry.dart';
 import '../models/mb_advanced_binding_resolver.dart';
-import '../models/mb_advanced_card_design_document.dart';
 import '../models/mb_advanced_element_catalog_v12.dart';
 import '../models/mb_advanced_element_variant.dart';
 
@@ -48,6 +47,7 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final groups = MBAdvancedElementCatalogV12.groups();
     final previewContext = MBAdvancedPreviewContext(
       product: previewProduct ??
           <String, dynamic>{
@@ -69,8 +69,6 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
           ? 'Fresh product detail'
           : productSubtitle,
     );
-
-    final groups = _buildVisibleGroups(previewContext);
 
     return Container(
       width: 322,
@@ -111,328 +109,6 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
   }
 }
 
-
-List<MBAdvancedElementGroup> _buildVisibleGroups(
-  MBAdvancedPreviewContext previewContext,
-) {
-  final baseGroups = MBAdvancedElementCatalogV12.groups();
-  final visibleGroups = <MBAdvancedElementGroup>[];
-
-  for (final group in baseGroups) {
-    if (_hiddenDrawerGroupIds.contains(group.id)) {
-      continue;
-    }
-
-    final filteredVariants = group.id == 'variation'
-        ? group.variants
-            .where((variant) =>
-                variant.binding != MBAdvancedBindingKey.variationAttributeSummary)
-            .toList(growable: false)
-        : group.variants;
-
-    visibleGroups.add(
-      MBAdvancedElementGroup(
-        id: group.id,
-        title: group.title,
-        subtitle: group.subtitle,
-        variants: filteredVariants,
-      ),
-    );
-
-    if (group.id == 'variation') {
-      visibleGroups.add(_buildVariationAttributeGroup(previewContext));
-    }
-  }
-
-  return visibleGroups;
-}
-
-const Set<String> _hiddenDrawerGroupIds = <String>{
-  'product_attribute',
-  'attribute_value',
-  'attribute_preset',
-};
-
-MBAdvancedElementGroup _buildVariationAttributeGroup(
-  MBAdvancedPreviewContext previewContext,
-) {
-  final attributes = _extractVariationAttributes(previewContext.selectedVariation);
-  final variants = <MBAdvancedElementVariant>[];
-  final entries = attributes.entries.toList(growable: false);
-
-  if (entries.isEmpty) {
-    variants.addAll(
-      <MBAdvancedElementVariant>[
-        _variationAttributeVariant(
-          id: 'variation_attribute_text_fallback',
-          title: 'Variation attribute text',
-          description: 'variation.attribute.value',
-          binding: 'variation.attribute.attribute',
-          x: 0.50,
-          y: 0.76,
-          width: 148,
-          height: 24,
-          style: _textStyle(
-            textHex: '#FFF4E8',
-            fontSize: 10.5,
-            fontWeight: 'w800',
-            textAlign: 'center',
-          ),
-        ),
-        _variationAttributeVariant(
-          id: 'variation_attribute_chip_fallback',
-          title: 'Variation attribute chip',
-          description: 'variation.attribute.value',
-          binding: 'variation.attribute.attribute',
-          x: 0.50,
-          y: 0.76,
-          width: 138,
-          height: 26,
-          style: _chipStyle(
-            backgroundHex: '#FFFFFF',
-            textHex: '#FF6500',
-            fontSize: 10.0,
-            fontWeight: 'w900',
-          ),
-        ),
-      ],
-    );
-  } else {
-    for (final entry in entries) {
-      final safeId = _safeId(entry.key);
-      final binding = 'variation.attribute.${entry.key}';
-      variants.add(
-        _variationAttributeVariant(
-          id: 'variation_attribute_${safeId}_text',
-          title: '${entry.key} text',
-          description: entry.value,
-          binding: binding,
-          x: 0.50,
-          y: 0.76,
-          width: 148,
-          height: 24,
-          style: _textStyle(
-            textHex: '#FFF4E8',
-            fontSize: 10.5,
-            fontWeight: 'w800',
-            textAlign: 'center',
-          ),
-        ),
-      );
-      variants.add(
-        _variationAttributeVariant(
-          id: 'variation_attribute_${safeId}_chip',
-          title: '${entry.key} chip',
-          description: entry.value,
-          binding: binding,
-          x: 0.50,
-          y: 0.76,
-          width: 132,
-          height: 26,
-          style: _chipStyle(
-            backgroundHex: '#FFFFFF',
-            textHex: '#FF6500',
-            fontSize: 10.0,
-            fontWeight: 'w900',
-          ),
-        ),
-      );
-    }
-  }
-
-  return MBAdvancedElementGroup(
-    id: 'variation_attribute',
-    title: 'Variation Attribute',
-    subtitle: 'Available variation attribute values',
-    variants: variants,
-  );
-}
-
-Map<String, String> _extractVariationAttributes(dynamic variation) {
-  final result = <String, String>{};
-  if (variation == null) return result;
-
-  try {
-    final raw = variation is Map ? variation['attributes'] : variation.attributes;
-    if (raw is Map && raw.isNotEmpty) {
-      for (final entry in raw.entries) {
-        final key = entry.key?.toString().trim() ?? '';
-        final value = entry.value?.toString().trim() ?? '';
-        if (key.isEmpty || value.isEmpty) continue;
-        result[key] = value;
-      }
-      if (result.isNotEmpty) return result;
-    }
-
-    if (raw is Iterable && raw.isNotEmpty) {
-      for (final item in raw) {
-        final name = _readPreviewField(item, const <String>[
-          'nameEn',
-          'nameBn',
-          'attributeName',
-          'attributeKey',
-          'key',
-          'label',
-          'title',
-        ]);
-        final value = _readPreviewField(item, const <String>[
-          'valueEn',
-          'valueBn',
-          'value',
-          'labelEn',
-          'labelBn',
-          'label',
-          'text',
-          'displayName',
-          'name',
-        ]);
-        if (name.isEmpty || value.isEmpty) continue;
-        result[name] = value;
-      }
-      if (result.isNotEmpty) return result;
-    }
-  } catch (_) {}
-
-  final summary = MBAdvancedBindingResolver.resolveText(
-    MBAdvancedPreviewContext(product: const <String, dynamic>{}, selectedVariation: variation),
-    MBAdvancedBindingKey.variationAttributeSummary,
-    fallback: '',
-  );
-  if (summary.isEmpty) return result;
-
-  for (final part in summary.split(',')) {
-    final piece = part.trim();
-    if (piece.isEmpty) continue;
-    final separatorIndex = piece.indexOf(':');
-    if (separatorIndex > 0) {
-      final key = piece.substring(0, separatorIndex).trim();
-      final value = piece.substring(separatorIndex + 1).trim();
-      if (key.isNotEmpty && value.isNotEmpty) {
-        result[key] = value;
-      }
-    }
-  }
-
-  return result;
-}
-
-String _readPreviewField(dynamic source, List<String> fields) {
-  for (final field in fields) {
-    final value = _readPreviewSingleField(source, field);
-    if (value.isNotEmpty) return value;
-  }
-  return '';
-}
-
-String _readPreviewSingleField(dynamic source, String field) {
-  if (source == null) return '';
-
-  try {
-    if (source is Map && source.containsKey(field)) {
-      final value = source[field]?.toString().trim() ?? '';
-      if (value.isNotEmpty) return value;
-    }
-  } catch (_) {}
-
-  try {
-    switch (field) {
-      case 'nameEn':
-        return source.nameEn?.toString().trim() ?? '';
-      case 'nameBn':
-        return source.nameBn?.toString().trim() ?? '';
-      case 'attributeName':
-        return source.attributeName?.toString().trim() ?? '';
-      case 'attributeKey':
-        return source.attributeKey?.toString().trim() ?? '';
-      case 'key':
-        return source.key?.toString().trim() ?? '';
-      case 'label':
-        return source.label?.toString().trim() ?? '';
-      case 'title':
-        return source.title?.toString().trim() ?? '';
-      case 'valueEn':
-        return source.valueEn?.toString().trim() ?? '';
-      case 'valueBn':
-        return source.valueBn?.toString().trim() ?? '';
-      case 'value':
-        return source.value?.toString().trim() ?? '';
-      case 'labelEn':
-        return source.labelEn?.toString().trim() ?? '';
-      case 'labelBn':
-        return source.labelBn?.toString().trim() ?? '';
-      case 'text':
-        return source.text?.toString().trim() ?? '';
-      case 'displayName':
-        return source.displayName?.toString().trim() ?? '';
-      case 'name':
-        return source.name?.toString().trim() ?? '';
-    }
-  } catch (_) {}
-
-  return '';
-}
-
-MBAdvancedElementVariant _variationAttributeVariant({
-  required String id,
-  required String title,
-  required String description,
-  required String binding,
-  required double x,
-  required double y,
-  required double width,
-  required double height,
-  required Map<String, dynamic> style,
-}) {
-  return MBAdvancedElementVariant(
-    id: id,
-    groupId: 'variation_attribute',
-    elementType: 'variation',
-    title: title,
-    description: description,
-    binding: binding,
-    defaultPosition: MBAdvancedDesignNodePosition(x: x, y: y, z: 38),
-    defaultSize: MBAdvancedDesignNodeSize(width: width, height: height),
-    defaultStyle: style,
-  );
-}
-
-Map<String, dynamic> _textStyle({
-  required String textHex,
-  required double fontSize,
-  required String fontWeight,
-  required String textAlign,
-}) {
-  return <String, dynamic>{
-    'textHex': textHex,
-    'fontSize': fontSize,
-    'fontWeight': fontWeight,
-    'textAlign': textAlign,
-    'maxLines': 2,
-  };
-}
-
-Map<String, dynamic> _chipStyle({
-  required String backgroundHex,
-  required String textHex,
-  required double fontSize,
-  required String fontWeight,
-}) {
-  return <String, dynamic>{
-    'backgroundHex': backgroundHex,
-    'textHex': textHex,
-    'fontSize': fontSize,
-    'fontWeight': fontWeight,
-    'paddingHorizontal': 10.0,
-    'paddingVertical': 4.0,
-    'borderRadius': 999.0,
-  };
-}
-
-String _safeId(String value) {
-  final cleaned = value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-  return cleaned.isEmpty ? 'attribute' : cleaned;
-}
-
 class _DrawerHeader extends StatelessWidget {
   const _DrawerHeader();
 
@@ -471,7 +147,7 @@ class _DrawerHeader extends StatelessWidget {
           ),
           SizedBox(height: 4),
           Text(
-            'Patch 12.7.3: variation-aware drawer previews. Drag items to the canvas.',
+            'Patch 12.1: product-aware catalog previews. Drag items to the canvas.',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -1097,5 +773,4 @@ double _asDouble(Object? value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
-
 

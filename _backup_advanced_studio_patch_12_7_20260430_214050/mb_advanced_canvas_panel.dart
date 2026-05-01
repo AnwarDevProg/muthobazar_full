@@ -11,8 +11,6 @@
 //
 // Patch 8 adds card/root anchored preview sizing and real card radius clipping.
 // Patch 10.3 hides the visible preview-slot shell and shows the true card-only preview.
-// Patch 12.7 uses the shared advanced preview context for canvas rendering.
-// Patch 12.7.1 renders new model-bound element aliases and prevents invisible drops.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -20,7 +18,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../models/mb_advanced_binding_resolver.dart';
 import '../models/mb_advanced_card_design_document.dart';
 import '../models/mb_advanced_element_variant.dart';
 
@@ -37,13 +34,6 @@ class MBAdvancedCanvasPanel extends StatefulWidget {
   const MBAdvancedCanvasPanel({
     super.key,
     required this.product,
-    this.previewBrand,
-    this.previewCategory,
-    this.previewVariation,
-    this.previewPurchaseOption,
-    this.previewProductAttribute,
-    this.previewAttributeValue,
-    this.previewAttributePreset,
     required this.document,
     required this.onSelectCard,
     required this.onSelectNode,
@@ -54,13 +44,6 @@ class MBAdvancedCanvasPanel extends StatefulWidget {
   });
 
   final dynamic product;
-  final dynamic previewBrand;
-  final dynamic previewCategory;
-  final dynamic previewVariation;
-  final dynamic previewPurchaseOption;
-  final dynamic previewProductAttribute;
-  final dynamic previewAttributeValue;
-  final dynamic previewAttributePreset;
   final MBAdvancedCardDesignDocument document;
   final VoidCallback onSelectCard;
   final ValueChanged<String> onSelectNode;
@@ -77,19 +60,6 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
   late final FocusNode _focusNode;
   Timer? _keyboardRepeatTimer;
   LogicalKeyboardKey? _heldKey;
-
-  MBAdvancedPreviewContext get _previewContext {
-    return MBAdvancedPreviewContext.fromProduct(
-      product: widget.product,
-      brand: widget.previewBrand,
-      category: widget.previewCategory,
-      selectedVariation: widget.previewVariation,
-      selectedPurchaseOption: widget.previewPurchaseOption,
-      selectedProductAttribute: widget.previewProductAttribute,
-      selectedAttributeValue: widget.previewAttributeValue,
-      selectedAttributePreset: widget.previewAttributePreset,
-    );
-  }
 
   @override
   void initState() {
@@ -338,7 +308,7 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                                               width: cardWidth,
                                               height: cardHeight,
                                               child: _EditableCardCanvas(
-                                                previewContext: _previewContext,
+                                                product: widget.product,
                                                 document: widget.document,
                                                 scale: scale,
                                                 onSelectCard: () {
@@ -791,7 +761,7 @@ class _DropHint extends StatelessWidget {
 
 class _EditableCardCanvas extends StatelessWidget {
   const _EditableCardCanvas({
-    required this.previewContext,
+    required this.product,
     required this.document,
     required this.scale,
     required this.onSelectCard,
@@ -799,7 +769,7 @@ class _EditableCardCanvas extends StatelessWidget {
     required this.onMoveNode,
   });
 
-  final MBAdvancedPreviewContext previewContext;
+  final dynamic product;
   final MBAdvancedCardDesignDocument document;
   final double scale;
   final VoidCallback onSelectCard;
@@ -860,7 +830,7 @@ class _EditableCardCanvas extends StatelessWidget {
                 for (final node in sortedNodes)
                   if (node.visible)
                     _CanvasNodeWidget(
-                      previewContext: previewContext,
+                      product: product,
                       node: node,
                       selected: document.selectedNodeId == node.id,
                       scale: scale,
@@ -880,7 +850,7 @@ class _EditableCardCanvas extends StatelessWidget {
 
 class _CanvasNodeWidget extends StatelessWidget {
   const _CanvasNodeWidget({
-    required this.previewContext,
+    required this.product,
     required this.node,
     required this.selected,
     required this.scale,
@@ -890,7 +860,7 @@ class _CanvasNodeWidget extends StatelessWidget {
     required this.onMoveNode,
   });
 
-  final MBAdvancedPreviewContext previewContext;
+  final dynamic product;
   final MBAdvancedDesignNode node;
   final bool selected;
   final double scale;
@@ -967,7 +937,7 @@ class _CanvasNodeWidget extends StatelessWidget {
                   : const <BoxShadow>[],
             ),
             child: _NodeVisual(
-              previewContext: previewContext,
+              product: product,
               node: node,
               scale: scale,
             ),
@@ -980,12 +950,12 @@ class _CanvasNodeWidget extends StatelessWidget {
 
 class _NodeVisual extends StatelessWidget {
   const _NodeVisual({
-    required this.previewContext,
+    required this.product,
     required this.node,
     required this.scale,
   });
 
-  final MBAdvancedPreviewContext previewContext;
+  final dynamic product;
   final MBAdvancedDesignNode node;
   final double scale;
 
@@ -1000,33 +970,18 @@ class _NodeVisual extends StatelessWidget {
       case 'unit':
       case 'feature':
       case 'savingText':
-      case 'savingtext':
       case 'ribbon':
-      case 'variation':
-      case 'purchaseOption':
-      case 'purchaseoption':
-      case 'purchase_option':
-      case 'attribute':
-      case 'productAttribute':
-      case 'productattribute':
-      case 'product_attribute':
-      case 'attributeValue':
-      case 'attributevalue':
-      case 'attribute_value':
-      case 'attributePreset':
-      case 'attributepreset':
-      case 'attribute_preset':
         return _TextNode(
-          text: _resolveNodeText(previewContext, node),
+          text: _resolveNodeText(product, node),
           node: node,
           scale: scale,
           fallbackColor: _fallbackTextColor(node.elementType),
           maxLines: node.variantId.contains('chip') ? 1 : 3,
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(previewContext, node),
+          strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
         );
       case 'media':
         return _MediaNode(
-          imageUrl: _resolveImageUrl(previewContext, node.binding),
+          imageUrl: _resolveBinding(product, node.binding, ''),
           node: node,
           scale: scale,
         );
@@ -1043,34 +998,24 @@ class _NodeVisual extends StatelessWidget {
       case 'share':
       case 'icon':
       case 'priceBadge':
-      case 'pricebadge':
-      case 'price_badge':
       case 'promoBadge':
-      case 'promobadge':
-      case 'promo_badge':
       case 'flashBadge':
-      case 'flashbadge':
-      case 'flash_badge':
       case 'secondaryCta':
-      case 'secondarycta':
-      case 'secondary_cta':
       case 'animation':
       case 'cta':
         return _TextNode(
-          text: _resolveNodeText(previewContext, node),
+          text: _resolveNodeText(product, node),
           node: node,
           scale: scale,
           fallbackColor: _fallbackTextColor(node.elementType),
           maxLines: 1,
           center: true,
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(previewContext, node),
+          strikeOriginalPrice: _shouldStrikeOriginalPrice(product, node),
         );
       case 'divider':
       case 'shape':
       case 'panel':
       case 'imageOverlay':
-      case 'imageoverlay':
-      case 'image_overlay':
       case 'progress':
       case 'dots':
       case 'border':
@@ -1082,15 +1027,7 @@ class _NodeVisual extends StatelessWidget {
           scale: scale,
         );
       default:
-        return _TextNode(
-          text: _resolveNodeText(previewContext, node),
-          node: node,
-          scale: scale,
-          fallbackColor: const Color(0xFFFFFFFF),
-          maxLines: 2,
-          center: node.style['textAlign']?.toString() == 'center',
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(previewContext, node),
-        );
+        return const SizedBox.shrink();
     }
   }
 }
@@ -1360,142 +1297,138 @@ class _SubtleGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-String _resolveBinding(
-  MBAdvancedPreviewContext previewContext,
-  String binding,
-  String fallback,
-) {
-  return MBAdvancedBindingResolver.resolveText(
-    previewContext,
-    binding,
-    fallback: fallback,
-  );
-}
-
-String _resolveImageUrl(
-  MBAdvancedPreviewContext previewContext,
-  String binding,
-) {
-  final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
-    previewContext,
-    binding,
-  );
-
-  if (imageUrl.trim().isNotEmpty) {
-    return imageUrl;
+String _resolveBinding(dynamic product, String binding, String fallback) {
+  switch (binding) {
+    case 'product.titleEn':
+      return _readDynamicString(product, 'titleEn', fallback);
+    case 'product.nameEn':
+      return _readDynamicString(product, 'nameEn', fallback);
+    case 'product.shortDescriptionEn':
+      return _readDynamicString(product, 'shortDescriptionEn', fallback);
+    case 'product.descriptionEn':
+      return _readDynamicString(product, 'descriptionEn', fallback);
+    case 'product.thumbnailUrl':
+      return _readDynamicString(product, 'thumbnailUrl', fallback);
+    case 'product.imageUrl':
+      return _readDynamicString(product, 'imageUrl', fallback);
+    case 'product.finalPrice':
+      return _readPrice(product, fallback);
+    case 'product.price':
+      return _readDynamicString(product, 'price', fallback);
+    case 'product.brandName':
+      return _readDynamicString(product, 'brandName', fallback);
+    case 'product.categoryName':
+      return _readDynamicString(product, 'categoryName', fallback);
+    default:
+      return fallback;
   }
-
-  return MBAdvancedBindingResolver.resolveImageUrl(
-    previewContext,
-    'product.thumbnailUrl',
-  );
 }
 
-String _resolveNodeText(
-  MBAdvancedPreviewContext previewContext,
-  MBAdvancedDesignNode node,
-) {
+
+String _resolveNodeText(dynamic product, MBAdvancedDesignNode node) {
   final styleLabel = node.style['label']?.toString().trim();
   final styleText = node.style['text']?.toString().trim();
   final prefix = node.style['prefixText']?.toString() ?? '';
-  final suffix = node.style['suffixText']?.toString() ?? '';
 
-  final fallback = styleLabel?.isNotEmpty == true
-      ? styleLabel!
-      : _fallbackTextForNode(node);
-
-  final resolved = MBAdvancedBindingResolver.resolveText(
-    previewContext,
-    node.binding,
-    fallback: fallback,
-  ).trim();
-
-  final baseText = styleText?.isNotEmpty == true
-      ? styleText!
-      : (resolved.isNotEmpty ? resolved : fallback);
-
-  final text = '$prefix$baseText$suffix';
-
-  if (node.elementType == 'price' ||
-      node.elementType == 'mrp' ||
-      node.elementType == 'priceBadge') {
-    return _formatPrice(text);
-  }
-
-  return text;
-}
-
-String _fallbackTextForNode(MBAdvancedDesignNode node) {
+  String fallback;
   switch (node.elementType) {
     case 'title':
-      return 'Product title';
+      fallback = 'Product title';
+      break;
     case 'subtitle':
-      return 'Fresh product detail';
+      fallback = 'Fresh product detail';
+      break;
     case 'brand':
-      return 'Fresh Farms';
+      fallback = 'Fresh Farms';
+      break;
     case 'category':
-      return 'Vegetables';
+      fallback = 'Vegetables';
+      break;
     case 'price':
-    case 'priceBadge':
-      return '\u09F3120';
+      fallback = '\u09F3120';
+      break;
     case 'mrp':
-      return '\u09F3150';
+      fallback = '\u09F3150';
+      break;
     case 'discount':
-      return '25% OFF';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '25% OFF';
+      break;
     case 'cta':
-      return node.binding == 'action.details' ? 'View' : 'Buy';
+      fallback = styleLabel?.isNotEmpty == true
+          ? styleLabel!
+          : (node.binding == 'action.details' ? 'View' : 'Buy');
+      break;
     case 'badge':
-      return 'HOT';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'HOT';
+      break;
     case 'timer':
-      return '02:15:08';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '02:15:08';
+      break;
     case 'rating':
-      return '★ 4.8';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '★ 4.8';
+      break;
     case 'stock':
-      return 'In stock';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'In stock';
+      break;
     case 'delivery':
-      return 'Fast delivery';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Fast delivery';
+      break;
     case 'unit':
-      return '500 g';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '500 g';
+      break;
     case 'feature':
-      return 'Farm fresh';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Farm fresh';
+      break;
     case 'savingText':
-      return 'Save 25%';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Save 25%';
+      break;
     case 'ribbon':
-      return 'NEW';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'NEW';
+      break;
     case 'wishlist':
-      return '♡';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '♡';
+      break;
     case 'compare':
-      return '⇄';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '⇄';
+      break;
     case 'share':
-      return '↗';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '↗';
+      break;
     case 'icon':
-      return '✪';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '✪';
+      break;
     case 'quantity':
-      return 'Qty 1';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Qty 1';
+      break;
+    case 'priceBadge':
+      fallback = '\u09F3120';
+      break;
     case 'promoBadge':
-      return 'Promo';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Promo';
+      break;
     case 'flashBadge':
-      return 'Flash';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Flash';
+      break;
     case 'secondaryCta':
-      return 'Details';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Details';
+      break;
     case 'animation':
-      return '●';
-    case 'variation':
-      return 'Variation';
-    case 'purchaseOption':
-    case 'purchaseoption':
-      return '1 pcs';
-    case 'attribute':
-      return 'Attribute';
-    case 'attributeValue':
-    case 'attributevalue':
-      return 'Value';
-    case 'attributePreset':
-    case 'attributepreset':
-      return 'Preset';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : '●';
+      break;
     default:
-      return 'Label';
+      fallback = styleLabel?.isNotEmpty == true ? styleLabel! : 'Label';
+      break;
   }
+
+  final bindingText = _resolveBinding(product, node.binding, fallback).trim();
+  final baseText = styleText?.isNotEmpty == true
+      ? styleText!
+      : (bindingText.isNotEmpty ? bindingText : fallback);
+  final text = prefix.isEmpty ? baseText : '$prefix$baseText';
+  if (node.elementType == 'price' || node.elementType == 'mrp' || node.elementType == 'priceBadge') {
+    return _formatPrice(text);
+  }
+  return text;
 }
 
 Color _fallbackTextColor(String elementType) {
@@ -1518,7 +1451,7 @@ Color _fallbackTextColor(String elementType) {
 }
 
 
-bool _shouldStrikeOriginalPrice(MBAdvancedPreviewContext previewContext, MBAdvancedDesignNode node) {
+bool _shouldStrikeOriginalPrice(dynamic product, MBAdvancedDesignNode node) {
   if (node.elementType != 'mrp') return false;
 
   final manualVisible = node.style['strikeVisible'];
@@ -1527,14 +1460,8 @@ bool _shouldStrikeOriginalPrice(MBAdvancedPreviewContext previewContext, MBAdvan
   final auto = _asBool(node.style['autoStrikeWhenDiscounted'], true);
   if (!auto) return false;
 
-  final originalPrice = MBAdvancedBindingResolver.resolveNumber(
-    previewContext,
-    'product.price',
-  )?.toDouble();
-  final salePrice = MBAdvancedBindingResolver.resolveNumber(
-    previewContext,
-    'product.salePrice',
-  )?.toDouble();
+  final originalPrice = _readDynamicNumber(product, 'price');
+  final salePrice = _readDynamicNumber(product, 'salePrice');
   if (originalPrice == null || salePrice == null) return false;
   if (originalPrice <= 0 || salePrice <= 0) return false;
   return salePrice < originalPrice;

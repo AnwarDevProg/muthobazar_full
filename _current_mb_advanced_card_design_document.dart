@@ -1,4 +1,4 @@
-// MuthoBazar Advanced Product Card Design Studio
+﻿// MuthoBazar Advanced Product Card Design Studio
 // Patch 9 model layer.
 //
 // Purpose:
@@ -16,15 +16,13 @@
 // - Patch 9 adds responsive/fixed resize mode for card-level resizing.
 // Patch 12.4 lowers the allowed card height minimum from 220 to 180.
 // Patch 12.5 uses shared responsive grid resolver constants.
-// Patch 12.7.2 allows model-bound element types to be inserted/rendered.
 
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import '../../system/mb_responsive_card_grid_resolver.dart';
 
-@immutable
+import '../../system/mb_responsive_card_grid_resolver.dart';@immutable
 class MBAdvancedDesignNodePosition {
   const MBAdvancedDesignNodePosition({
     required this.x,
@@ -302,20 +300,6 @@ class MBAdvancedCardDesignDocument {
     'shadow',
     'spacing',
     'animation',
-    'variation',
-    'purchaseOption',
-    'purchaseoption',
-    'purchase_option',
-    'attribute',
-    'productAttribute',
-    'productattribute',
-    'product_attribute',
-    'attributeValue',
-    'attributevalue',
-    'attribute_value',
-    'attributePreset',
-    'attributepreset',
-    'attribute_preset',
   };
 
   final int version;
@@ -940,25 +924,6 @@ class MBAdvancedCardDesignDocument {
         return 'spacing_padding_guide';
       case 'animation':
         return 'animation_pulse';
-      case 'variation':
-        return 'variation_text';
-      case 'purchaseOption':
-      case 'purchaseoption':
-      case 'purchase_option':
-        return 'purchase_option_chip';
-      case 'attribute':
-      case 'productAttribute':
-      case 'productattribute':
-      case 'product_attribute':
-        return 'product_attribute_chip';
-      case 'attributeValue':
-      case 'attributevalue':
-      case 'attribute_value':
-        return 'attribute_value_chip';
-      case 'attributePreset':
-      case 'attributepreset':
-      case 'attribute_preset':
-        return 'attribute_preset_chip';
       default:
         return 'basic';
     }
@@ -1042,25 +1007,6 @@ class MBAdvancedCardDesignDocument {
         return 'static.spacing';
       case 'animation':
         return 'static.animation';
-      case 'variation':
-        return 'variation.titleEn';
-      case 'purchaseOption':
-      case 'purchaseoption':
-      case 'purchase_option':
-        return 'purchaseOption.labelEn';
-      case 'attribute':
-      case 'productAttribute':
-      case 'productattribute':
-      case 'product_attribute':
-        return 'productAttribute.nameEn';
-      case 'attributeValue':
-      case 'attributevalue':
-      case 'attribute_value':
-        return 'attributeValue.valueEn';
-      case 'attributePreset':
-      case 'attributepreset':
-      case 'attribute_preset':
-        return 'attributePreset.nameEn';
       default:
         return 'static';
     }
@@ -1116,20 +1062,6 @@ class MBAdvancedCardDesignDocument {
       case 'secondaryCta':
       case 'ribbon':
       case 'animation':
-      case 'variation':
-      case 'purchaseOption':
-      case 'purchaseoption':
-      case 'purchase_option':
-      case 'attribute':
-      case 'productAttribute':
-      case 'productattribute':
-      case 'product_attribute':
-      case 'attributeValue':
-      case 'attributevalue':
-      case 'attribute_value':
-      case 'attributePreset':
-      case 'attributepreset':
-      case 'attribute_preset':
         return <String, dynamic>{'backgroundHex': '#FFFFFF', 'textColorHex': '#FF6500', 'fontSize': 11.0, 'fontWeight': 'w900', 'borderRadius': 999.0};
       default:
         return <String, dynamic>{};

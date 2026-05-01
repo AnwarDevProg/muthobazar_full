@@ -12,7 +12,6 @@
 // Patch 8 adds card/root anchored preview sizing and real card radius clipping.
 // Patch 10.3 hides the visible preview-slot shell and shows the true card-only preview.
 // Patch 12.7 uses the shared advanced preview context for canvas rendering.
-// Patch 12.7.1 renders new model-bound element aliases and prevents invisible drops.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -1000,22 +999,15 @@ class _NodeVisual extends StatelessWidget {
       case 'unit':
       case 'feature':
       case 'savingText':
-      case 'savingtext':
       case 'ribbon':
       case 'variation':
       case 'purchaseOption':
       case 'purchaseoption':
-      case 'purchase_option':
       case 'attribute':
-      case 'productAttribute':
-      case 'productattribute':
-      case 'product_attribute':
       case 'attributeValue':
       case 'attributevalue':
-      case 'attribute_value':
       case 'attributePreset':
       case 'attributepreset':
-      case 'attribute_preset':
         return _TextNode(
           text: _resolveNodeText(previewContext, node),
           node: node,
@@ -1043,17 +1035,9 @@ class _NodeVisual extends StatelessWidget {
       case 'share':
       case 'icon':
       case 'priceBadge':
-      case 'pricebadge':
-      case 'price_badge':
       case 'promoBadge':
-      case 'promobadge':
-      case 'promo_badge':
       case 'flashBadge':
-      case 'flashbadge':
-      case 'flash_badge':
       case 'secondaryCta':
-      case 'secondarycta':
-      case 'secondary_cta':
       case 'animation':
       case 'cta':
         return _TextNode(
@@ -1069,8 +1053,6 @@ class _NodeVisual extends StatelessWidget {
       case 'shape':
       case 'panel':
       case 'imageOverlay':
-      case 'imageoverlay':
-      case 'image_overlay':
       case 'progress':
       case 'dots':
       case 'border':
@@ -1082,15 +1064,7 @@ class _NodeVisual extends StatelessWidget {
           scale: scale,
         );
       default:
-        return _TextNode(
-          text: _resolveNodeText(previewContext, node),
-          node: node,
-          scale: scale,
-          fallbackColor: const Color(0xFFFFFFFF),
-          maxLines: 2,
-          center: node.style['textAlign']?.toString() == 'center',
-          strikeOriginalPrice: _shouldStrikeOriginalPrice(previewContext, node),
-        );
+        return const SizedBox.shrink();
     }
   }
 }

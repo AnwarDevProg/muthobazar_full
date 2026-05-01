@@ -259,7 +259,10 @@ class _CardInspector extends StatelessWidget {
                 document.resizeCardLayout(cardWidth: value),
               ),
             ),
-            min: MBResponsiveCardGridResolver.minCardHeightPx,
+            _NumberFieldRow(
+              label: 'Height',
+              value: document.cardHeight,
+              min: MBResponsiveCardGridResolver.minCardHeightPx,
               max: MBResponsiveCardGridResolver.maxCardHeightPx,
               decimals: 0,
               onChanged: (value) => onUpdateDocument(
@@ -1711,6 +1714,7 @@ Color _hexToColor(String hex) {
   if (buffer.length != 8) return const Color(0xFFFF6500);
   return Color(int.tryParse(buffer.toString(), radix: 16) ?? 0xFFFF6500);
 }
+
 
 
 

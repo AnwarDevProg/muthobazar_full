@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
@@ -235,116 +235,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     }
 
     return null;
-  }
-
-  dynamic get _advancedStudioPreviewBrand {
-    return <String, dynamic>{
-      'id': _brandIdController.text.trim(),
-      'nameEn': _brandNameEnController.text.trim(),
-      'nameBn': _brandNameBnController.text.trim(),
-      'slug': _brandSlugController.text.trim(),
-    };
-  }
-
-  dynamic get _advancedStudioPreviewCategory {
-    return <String, dynamic>{
-      'id': _categoryIdController.text.trim(),
-      'nameEn': _categoryNameEnController.text.trim(),
-      'nameBn': _categoryNameBnController.text.trim(),
-      'slug': _categorySlugController.text.trim(),
-    };
-  }
-
-  MBProductVariation? get _advancedStudioPreviewVariation {
-    return _primaryVariationForOwnership;
-  }
-
-  MBProductPurchaseOption? get _advancedStudioPreviewPurchaseOption {
-    if (_purchaseOptions.isEmpty) return null;
-    return _purchaseOptions.first;
-  }
-
-  MBProductAttribute? get _advancedStudioPreviewProductAttribute {
-    if (_variationAttributesSnapshot.isNotEmpty) {
-      return _variationAttributesSnapshot.first;
-    }
-
-    if (_attributes.isNotEmpty) {
-      return _attributes.first;
-    }
-
-    return null;
-  }
-
-  dynamic get _advancedStudioPreviewAttributeValue {
-    final attribute = _advancedStudioPreviewProductAttribute;
-    if (attribute == null || attribute.values.isEmpty) return null;
-
-    for (final value in attribute.values) {
-      if (value.isEnabled) return value;
-    }
-
-    return attribute.values.first;
-  }
-
-  dynamic get _advancedStudioPreviewAttributePreset {
-    final attribute = _advancedStudioPreviewProductAttribute;
-    final dynamic value = _advancedStudioPreviewAttributeValue;
-
-    if (attribute == null && value == null) {
-      return null;
-    }
-
-    return <String, dynamic>{
-      'nameEn': attribute?.nameEn ?? 'Attribute',
-      'nameBn': attribute?.nameBn ?? 'Attribute',
-      'valueEn': _advancedStudioDynamicText(value, 'value', fallback: 'Value'),
-      'valueBn': _advancedStudioDynamicText(value, 'valueBn', fallback: 'Value'),
-      'colorHex': _advancedStudioDynamicText(value, 'colorHex', fallback: '#FF6500'),
-      'imageUrl': _advancedStudioDynamicText(value, 'imageUrl'),
-    };
-  }
-
-  String _advancedStudioDynamicText(
-    dynamic source,
-    String fieldName, {
-    String fallback = '',
-  }) {
-    if (source == null) return fallback;
-
-    try {
-      if (source is Map && source.containsKey(fieldName)) {
-        return source[fieldName]?.toString().trim() ?? fallback;
-      }
-    } catch (_) {}
-
-    try {
-      late final Object? value;
-      switch (fieldName) {
-        case 'value':
-          value = source.value;
-          break;
-        case 'valueEn':
-          value = source.valueEn;
-          break;
-        case 'valueBn':
-          value = source.valueBn;
-          break;
-        case 'colorHex':
-          value = source.colorHex;
-          break;
-        case 'imageUrl':
-          value = source.imageUrl;
-          break;
-        default:
-          value = null;
-      }
-
-      final text = value?.toString().trim() ?? '';
-      return text.isEmpty ? fallback : text;
-    } catch (_) {
-      return fallback;
-    }
   }
 
   List<MBProductMedia> get _effectiveProductMediaItems {
@@ -2471,13 +2361,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
             child: MBCardDesignStudioAdvanced(
               products: [previewProduct],
               initialProductIndex: 0,
-              previewBrand: _advancedStudioPreviewBrand,
-              previewCategory: _advancedStudioPreviewCategory,
-              previewVariation: _advancedStudioPreviewVariation,
-              previewPurchaseOption: _advancedStudioPreviewPurchaseOption,
-              previewProductAttribute: _advancedStudioPreviewProductAttribute,
-              previewAttributeValue: _advancedStudioPreviewAttributeValue,
-              previewAttributePreset: _advancedStudioPreviewAttributePreset,
               initialDesignJson: _cardDesignJson,
               title: 'Product Card Design Studio V3',
               wrapWithScaffold: false,

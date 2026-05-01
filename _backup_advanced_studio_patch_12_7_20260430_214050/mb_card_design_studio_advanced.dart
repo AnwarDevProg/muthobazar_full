@@ -1,4 +1,4 @@
-// MuthoBazar Advanced Product Card Design Studio
+﻿// MuthoBazar Advanced Product Card Design Studio
 // Patch 10.3 shell.
 //
 // Target layout:
@@ -35,13 +35,6 @@ class MBCardDesignStudioAdvanced extends StatefulWidget {
     this.initialDesignJson,
     this.title = 'Product Card Design Studio Advanced',
     this.wrapWithScaffold = true,
-    this.previewBrand,
-    this.previewCategory,
-    this.previewVariation,
-    this.previewPurchaseOption,
-    this.previewProductAttribute,
-    this.previewAttributeValue,
-    this.previewAttributePreset,
     this.onSave,
   });
 
@@ -50,13 +43,6 @@ class MBCardDesignStudioAdvanced extends StatefulWidget {
   final String? initialDesignJson;
   final String title;
   final bool wrapWithScaffold;
-  final dynamic previewBrand;
-  final dynamic previewCategory;
-  final dynamic previewVariation;
-  final dynamic previewPurchaseOption;
-  final dynamic previewProductAttribute;
-  final dynamic previewAttributeValue;
-  final dynamic previewAttributePreset;
   final ValueChanged<String>? onSave;
 
   @override
@@ -117,25 +103,11 @@ class _MBCardDesignStudioAdvancedState
                 productSubtitle: _productSubtitle(_product),
                 
           previewProduct: _product,
-                previewBrand: widget.previewBrand,
-                previewCategory: widget.previewCategory,
-                previewVariation: widget.previewVariation,
-                previewPurchaseOption: widget.previewPurchaseOption,
-                previewProductAttribute: widget.previewProductAttribute,
-                previewAttributeValue: widget.previewAttributeValue,
-                previewAttributePreset: widget.previewAttributePreset,
-                onAddVariant: _addVariant,
+onAddVariant: _addVariant,
                 onApplyCardVariant: _applyCardVariant,
               ),
               MBAdvancedCanvasPanel(
                 product: _product,
-                previewBrand: widget.previewBrand,
-                previewCategory: widget.previewCategory,
-                previewVariation: widget.previewVariation,
-                previewPurchaseOption: widget.previewPurchaseOption,
-                previewProductAttribute: widget.previewProductAttribute,
-                previewAttributeValue: widget.previewAttributeValue,
-                previewAttributePreset: widget.previewAttributePreset,
                 document: _document,
                 onSelectCard: () {
                   setState(() => _document = _document.selectCard());

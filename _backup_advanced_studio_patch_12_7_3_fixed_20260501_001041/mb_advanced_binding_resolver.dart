@@ -1,7 +1,7 @@
 // File: mb_advanced_binding_resolver.dart
 //
 // MuthoBazar Advanced Product Card Design Studio
-// Patch 12.7.3 binding resolver.
+// Patch 12.6 binding resolver.
 //
 // Purpose:
 // - Resolve saved V3 binding keys from a shared preview/runtime context.
@@ -10,7 +10,6 @@
 //   MBProductPurchaseOption, MBProductAttribute, MBProductAttributeValue,
 //   and MBAttributePreset style objects.
 // - Work with real model objects and temporary Map-based product-dialog state.
-// - Patch 12.7.3 adds variation image fallback and dynamic variation-attribute bindings.
 
 import 'dart:math' as math;
 
@@ -88,15 +87,6 @@ class MBAdvancedBindingResolver {
       final number = resolveNumber(context, normalized);
       if (number != null) return formatCurrency(number);
       return registryFallback;
-    }
-
-    if (normalized.startsWith('variation.attribute.')) {
-      final attributeKey = normalized.substring('variation.attribute.'.length).trim();
-      return _variationAttributeValue(
-        context.selectedVariation,
-        attributeKey,
-        fallback: registryFallback,
-      );
     }
 
     switch (normalized) {
@@ -323,10 +313,11 @@ class MBAdvancedBindingResolver {
       case MBAdvancedBindingKey.categoryIconUrl:
         return _readAny(context.category, const <String>['iconUrl'], fallback);
       case MBAdvancedBindingKey.variationThumbnailUrl:
-        return _resolveVariationImageUrl(context.selectedVariation, fallback: fallback);
+        return _readAny(context.selectedVariation, const <String>['thumbnailUrl'], fallback);
       case MBAdvancedBindingKey.variationFirstImageUrl:
-        final resolved = _resolveVariationImageUrl(context.selectedVariation, fallback: '');
-        return resolved.isNotEmpty ? resolved : fallback;
+        return _readFirstImageUrl(context.selectedVariation).isNotEmpty
+            ? _readFirstImageUrl(context.selectedVariation)
+            : fallback;
       case MBAdvancedBindingKey.attributeValueImageUrl:
         return _readAny(context.selectedAttributeValue, const <String>['imageUrl', 'thumbnailUrl'], fallback);
       case MBAdvancedBindingKey.attributePresetImageUrl:
@@ -451,89 +442,6 @@ class MBAdvancedBindingResolver {
     } catch (_) {}
 
     return fallback;
-  }
-
-
-  static String _variationAttributeValue(
-    dynamic variation,
-    String attributeKey, {
-    required String fallback,
-  }) {
-    final normalizedKey = attributeKey.trim().toLowerCase();
-    if (normalizedKey.isEmpty) return fallback;
-
-    try {
-      final raw = variation is Map ? variation['attributes'] : variation.attributes;
-      if (raw is Map && raw.isNotEmpty) {
-        for (final entry in raw.entries) {
-          final key = entry.key?.toString().trim() ?? '';
-          if (key.toLowerCase() == normalizedKey) {
-            final value = entry.value?.toString().trim() ?? '';
-            return value.isEmpty ? fallback : value;
-          }
-        }
-      }
-      if (raw is Iterable && raw.isNotEmpty) {
-        for (final item in raw) {
-          final name = _readAny(item, const <String>[
-            'nameEn',
-            'nameBn',
-            'attributeName',
-            'attributeKey',
-            'key',
-            'label',
-            'title',
-          ], '');
-          if (name.trim().toLowerCase() != normalizedKey) continue;
-          final value = _readAny(item, const <String>[
-            'valueEn',
-            'valueBn',
-            'value',
-            'labelEn',
-            'labelBn',
-            'label',
-            'text',
-            'displayName',
-            'name',
-          ], '');
-          return value.isEmpty ? fallback : value;
-        }
-      }
-    } catch (_) {}
-
-    return fallback;
-  }
-
-  static String _resolveVariationImageUrl(
-    dynamic variation, {
-    required String fallback,
-  }) {
-    final direct = _readAny(
-      variation,
-      const <String>['thumbnailUrl', 'thumbUrl', 'imageUrl'],
-      '',
-    );
-    if (direct.isNotEmpty) return direct;
-
-    final firstImage = _readFirstImageUrl(variation);
-    if (firstImage.isNotEmpty) return firstImage;
-
-    try {
-      final dynamic mediaItems = variation is Map
-          ? variation['mediaItems']
-          : variation.mediaItems;
-      if (mediaItems is Iterable && mediaItems.isNotEmpty) {
-        for (final item in mediaItems) {
-          final thumb = _readAny(item, const <String>['thumbUrl', 'thumbnailUrl'], '');
-          if (thumb.isNotEmpty) return thumb;
-          final full = _readAny(item, const <String>['fullUrl', 'imageUrl', 'url'], '');
-          if (full.isNotEmpty) return full;
-        }
-      }
-    } catch (_) {}
-
-    final productThumb = _readAny(variation, const <String>['productThumbnailUrl'], '');
-    return productThumb.isNotEmpty ? productThumb : fallback;
   }
 
   static String _purchaseOptionPackText(dynamic option, {required String fallback}) {
