@@ -168,7 +168,189 @@ function normalizeCardConfig(value, fallbackLayoutType) {
 function normalizeCardLayoutType(value) {
     return normalizeCardVariantId(value);
 }
-function normalizeProductPayload(input, actorUid, productId) {
+function asNullableString(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value);
+    return normalized.length > 0 ? normalized : null;
+}
+function asNullableNumber(value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+function asInteger(value, fallback = 0) {
+    return Math.trunc(asNumber(value, fallback));
+}
+function sanitizeJsonMap(value) {
+    const sanitized = sanitizeFirestoreValue(value);
+    if (!isJsonMap(sanitized))
+        return {};
+    return sanitized;
+}
+function normalizeObjectList(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value
+        .map((item) => sanitizeFirestoreValue(item))
+        .filter((item) => isJsonMap(item));
+}
+function normalizePurchaseOptions(value) {
+    return normalizeObjectList(value);
+}
+function normalizeOptionalCardConfig(value, fallbackLayoutType) {
+    const rawLayoutType = (0, callable_parsers_1.asTrimmedString)(fallbackLayoutType).toLowerCase();
+    const hasConfig = isJsonMap(value);
+    const hasLayout = rawLayoutType.length > 0;
+    if (!hasConfig && !hasLayout) {
+        return null;
+    }
+    return normalizeCardConfig(value, hasLayout ? rawLayoutType : "compact01");
+}
+function normalizeStatus(value, isEnabled) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
+    if (normalized.length > 0) {
+        return normalized;
+    }
+    return isEnabled ? "active" : "inactive";
+}
+function nullableRawTimestamp(value) {
+    return value === undefined ? null : value;
+}
+function normalizeVariations(value, existingValue, actorUid, now, rootData, reason) {
+    const inputVariations = normalizeObjectList(value);
+    const existingVariations = normalizeObjectList(existingValue);
+    const existingById = new Map();
+    for (const item of existingVariations) {
+        const id = (0, callable_parsers_1.asTrimmedString)(item.id);
+        if (id.length > 0) {
+            existingById.set(id, item);
+        }
+    }
+    return inputVariations.map((input, index) => {
+        const requestedId = (0, callable_parsers_1.asTrimmedString)(input.id);
+        const existing = requestedId.length > 0 ? existingById.get(requestedId) ?? {} : {};
+        const merged = {
+            ...existing,
+            ...input,
+        };
+        const id = requestedId.length > 0
+            ? requestedId
+            : (0, callable_parsers_1.asTrimmedString)(existing.id).length > 0
+                ? (0, callable_parsers_1.asTrimmedString)(existing.id)
+                : `variation_${index + 1}`;
+        const isEnabled = asBool(merged.isEnabled, true);
+        const wasDeleted = asBool(existing.isDeleted, false);
+        const wantsDeleted = asBool(merged.isDeleted, false);
+        let deletedAt = merged.deletedAt ?? null;
+        let deletedBy = asNullableString(merged.deletedBy);
+        let deleteReason = asNullableString(merged.deleteReason);
+        if (!wasDeleted && wantsDeleted) {
+            deletedAt = now;
+            deletedBy = actorUid;
+            deleteReason = deleteReason ?? reason ?? null;
+        }
+        if (wasDeleted && !wantsDeleted) {
+            deletedAt = null;
+            deletedBy = null;
+            deleteReason = null;
+        }
+        const normalizedCardConfig = normalizeOptionalCardConfig(merged.cardConfig, merged.cardLayoutType);
+        return {
+            ...merged,
+            id,
+            titleEn: (0, callable_parsers_1.asTrimmedString)(merged.titleEn),
+            titleBn: (0, callable_parsers_1.asTrimmedString)(merged.titleBn),
+            shortDescriptionEn: (0, callable_parsers_1.asTrimmedString)(merged.shortDescriptionEn),
+            shortDescriptionBn: (0, callable_parsers_1.asTrimmedString)(merged.shortDescriptionBn),
+            descriptionEn: (0, callable_parsers_1.asTrimmedString)(merged.descriptionEn),
+            descriptionBn: (0, callable_parsers_1.asTrimmedString)(merged.descriptionBn),
+            sku: asNullableString(merged.sku),
+            barcode: asNullableString(merged.barcode),
+            price: asNumber(merged.price, asNumber(rootData.price, 0)),
+            salePrice: asNullableNumber(merged.salePrice),
+            costPrice: asNullableNumber(merged.costPrice),
+            saleStartsAt: nullableRawTimestamp(merged.saleStartsAt),
+            saleEndsAt: nullableRawTimestamp(merged.saleEndsAt),
+            stockQty: asInteger(merged.stockQty, 0),
+            reservedQty: asInteger(merged.reservedQty, 0),
+            reorderLevel: asInteger(merged.reorderLevel, 0),
+            quantityType: (0, callable_parsers_1.asTrimmedString)(merged.quantityType).length > 0
+                ? (0, callable_parsers_1.asTrimmedString)(merged.quantityType)
+                : (0, callable_parsers_1.asTrimmedString)(rootData.quantityType).length > 0
+                    ? (0, callable_parsers_1.asTrimmedString)(rootData.quantityType)
+                    : "pcs",
+            quantityValue: asNumber(merged.quantityValue, 0),
+            unitLabelEn: asNullableString(merged.unitLabelEn),
+            unitLabelBn: asNullableString(merged.unitLabelBn),
+            toleranceType: (0, callable_parsers_1.asTrimmedString)(merged.toleranceType).length > 0
+                ? (0, callable_parsers_1.asTrimmedString)(merged.toleranceType)
+                : (0, callable_parsers_1.asTrimmedString)(rootData.toleranceType).length > 0
+                    ? (0, callable_parsers_1.asTrimmedString)(rootData.toleranceType)
+                    : "g",
+            tolerance: asNumber(merged.tolerance, 0),
+            isToleranceActive: asBool(merged.isToleranceActive, false),
+            trackInventory: asBool(merged.trackInventory, asBool(rootData.trackInventory, true)),
+            supportsInstantOrder: asBool(merged.supportsInstantOrder, asBool(rootData.supportsInstantOrder, true)),
+            supportsScheduledOrder: asBool(merged.supportsScheduledOrder, asBool(rootData.supportsScheduledOrder, false)),
+            allowBackorder: asBool(merged.allowBackorder, asBool(rootData.allowBackorder, false)),
+            instantCutoffTime: asNullableString(merged.instantCutoffTime),
+            todayInstantCap: asInteger(merged.todayInstantCap, 999999),
+            todayInstantSold: asInteger(merged.todayInstantSold, 0),
+            maxScheduleQtyPerDay: asInteger(merged.maxScheduleQtyPerDay, 999999),
+            minScheduleNoticeHours: asInteger(merged.minScheduleNoticeHours, 0),
+            schedulePriceType: (0, callable_parsers_1.asTrimmedString)(merged.schedulePriceType).length > 0
+                ? (0, callable_parsers_1.asTrimmedString)(merged.schedulePriceType)
+                : (0, callable_parsers_1.asTrimmedString)(rootData.schedulePriceType).length > 0
+                    ? (0, callable_parsers_1.asTrimmedString)(rootData.schedulePriceType)
+                    : "fixed",
+            estimatedSchedulePrice: asNullableNumber(merged.estimatedSchedulePrice),
+            purchaseOptions: normalizePurchaseOptions(merged.purchaseOptions),
+            deliveryShift: (0, callable_parsers_1.asTrimmedString)(merged.deliveryShift).length > 0
+                ? (0, callable_parsers_1.asTrimmedString)(merged.deliveryShift)
+                : (0, callable_parsers_1.asTrimmedString)(rootData.deliveryShift).length > 0
+                    ? (0, callable_parsers_1.asTrimmedString)(rootData.deliveryShift)
+                    : "any",
+            publishAt: nullableRawTimestamp(merged.publishAt),
+            unpublishAt: nullableRawTimestamp(merged.unpublishAt),
+            isEnabled,
+            status: normalizeStatus(merged.status, isEnabled),
+            isFeatured: asBool(merged.isFeatured, false),
+            isFlashSale: asBool(merged.isFlashSale, false),
+            isNewArrival: asBool(merged.isNewArrival, false),
+            isBestSeller: asBool(merged.isBestSeller, false),
+            isDeleted: wantsDeleted,
+            deletedAt,
+            deletedBy,
+            deleteReason,
+            createdBy: asNullableString(existing.createdBy) ??
+                asNullableString(merged.createdBy) ??
+                actorUid,
+            updatedBy: actorUid,
+            createdAt: existing.createdAt ?? merged.createdAt ?? now,
+            updatedAt: now,
+            totalSold: asInteger(existing.totalSold, 0),
+            addToCartCount: asInteger(existing.addToCartCount, 0),
+            views: asInteger(existing.views, 0),
+            cardLayoutType: normalizedCardConfig?.variantId ?? null,
+            cardConfig: normalizedCardConfig,
+            cardDesignJson: asNullableString(merged.cardDesignJson),
+            taxClassId: asNullableString(merged.taxClassId),
+            vatRate: asNullableNumber(merged.vatRate),
+            isTaxIncluded: asBool(merged.isTaxIncluded, false),
+            weightValue: asNullableNumber(merged.weightValue),
+            weightUnit: asNullableString(merged.weightUnit),
+            length: asNullableNumber(merged.length),
+            width: asNullableNumber(merged.width),
+            height: asNullableNumber(merged.height),
+            dimensionUnit: asNullableString(merged.dimensionUnit),
+            shippingClassId: asNullableString(merged.shippingClassId),
+            mediaItems: normalizeObjectList(merged.mediaItems),
+            imageUrls: asStringArray(merged.imageUrls),
+            thumbnailUrl: asNullableString(merged.thumbnailUrl),
+            adminNote: asNullableString(merged.adminNote),
+            metadata: sanitizeJsonMap(merged.metadata),
+            sortOrder: asInteger(merged.sortOrder, index),
+        };
+    });
+}
+function normalizeProductPayload(input, actorUid, productId, reason) {
     const titleEn = (0, callable_parsers_1.asTrimmedString)(input.titleEn);
     const slug = (0, callable_parsers_1.asTrimmedString)(input.slug).toLowerCase();
     const normalizedCardConfig = normalizeCardConfig(input.cardConfig, input.cardLayoutType);
@@ -186,6 +368,7 @@ function normalizeProductPayload(input, actorUid, productId) {
             ? (0, callable_parsers_1.asTrimmedString)(input.productCode)
             : null,
         sku: (0, callable_parsers_1.asTrimmedString)(input.sku).length > 0 ? (0, callable_parsers_1.asTrimmedString)(input.sku) : null,
+        barcode: asNullableString(input.barcode),
         productType: (0, callable_parsers_1.asTrimmedString)(input.productType).length > 0
             ? (0, callable_parsers_1.asTrimmedString)(input.productType)
             : "simple",
@@ -211,6 +394,7 @@ function normalizeProductPayload(input, actorUid, productId) {
         price: asNumber(input.price, 0),
         stockQty: Math.trunc(asNumber(input.stockQty, 0)),
         regularStockQty: Math.trunc(asNumber(input.regularStockQty, 0)),
+        reservedQty: Math.trunc(asNumber(input.reservedQty, 0)),
         reservedInstantQty: Math.trunc(asNumber(input.reservedInstantQty, 0)),
         todayInstantCap: Math.trunc(asNumber(input.todayInstantCap, 999999)),
         todayInstantSold: Math.trunc(asNumber(input.todayInstantSold, 0)),
@@ -234,6 +418,20 @@ function normalizeProductPayload(input, actorUid, productId) {
         isNewArrival: asBool(input.isNewArrival, false),
         isBestSeller: asBool(input.isBestSeller, false),
         isToleranceActive: asBool(input.isToleranceActive, false),
+        status: normalizeStatus(input.status, asBool(input.isEnabled, true)),
+        taxClassId: asNullableString(input.taxClassId),
+        vatRate: asNullableNumber(input.vatRate),
+        isTaxIncluded: asBool(input.isTaxIncluded, false),
+        weightValue: asNullableNumber(input.weightValue),
+        weightUnit: asNullableString(input.weightUnit),
+        length: asNullableNumber(input.length),
+        width: asNullableNumber(input.width),
+        height: asNullableNumber(input.height),
+        dimensionUnit: asNullableString(input.dimensionUnit),
+        shippingClassId: asNullableString(input.shippingClassId),
+        adminNote: asNullableString(input.adminNote),
+        metadata: sanitizeJsonMap(input.metadata),
+        purchaseOptions: normalizePurchaseOptions(input.purchaseOptions),
         isDeleted: false,
         deletedAt: null,
         deletedBy: null,
@@ -267,12 +465,18 @@ function normalizeProductPayload(input, actorUid, productId) {
         "minOrderQty",
         "maxOrderQty",
         "stepQty",
+        "vatRate",
+        "weightValue",
+        "length",
+        "width",
+        "height",
     ];
     for (const key of nullableNumberKeys) {
         const raw = input[key];
         normalized[key] =
             typeof raw === "number" && Number.isFinite(raw) ? raw : null;
     }
+    normalized.variations = normalizeVariations(input.variations, [], actorUid, admin.firestore.Timestamp.now(), normalized, reason);
     return normalized;
 }
 exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
@@ -312,7 +516,7 @@ exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
                 throw new https_1.HttpsError("already-exists", "A product with this id already exists.");
             }
             const now = admin.firestore.FieldValue.serverTimestamp();
-            const normalizedData = normalizeProductPayload(sanitizedInput, actor.uid, productId);
+            const normalizedData = normalizeProductPayload(sanitizedInput, actor.uid, productId, reason);
             const docData = {
                 ...normalizedData,
                 createdAt: sanitizedInput.createdAt ?? now,
@@ -344,6 +548,12 @@ exports.adminCreateProduct = (0, https_1.onCall)(async (request) => {
                     sku: docData.sku ?? null,
                     productCode: docData.productCode ?? null,
                     productType: docData.productType ?? null,
+                    barcode: docData.barcode ?? null,
+                    status: docData.status ?? null,
+                    reservedQty: docData.reservedQty ?? 0,
+                    variationsCount: Array.isArray(docData.variations)
+                        ? docData.variations.length
+                        : 0,
                 },
                 eventSource: "server_action",
             }));

@@ -42,15 +42,7 @@ const callable_parsers_1 = require("../utils/callable-parsers");
 const db = admin.firestore();
 function normalizeCardLayoutType(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
-    switch (normalized) {
-        case "compact":
-        case "deal":
-        case "featured":
-        case "standard":
-            return normalized;
-        default:
-            return "standard";
-    }
+    return normalized.length > 0 ? normalized : "compact01";
 }
 function normalizeExistingProductData(input) {
     const output = { ...input };
@@ -101,6 +93,7 @@ exports.adminDeleteProduct = (0, https_1.onCall)(async (request) => {
                 ...currentData,
                 isDeleted: true,
                 isEnabled: false,
+                status: "archived",
                 deletedAt: now,
                 deletedBy: actor.uid,
                 deleteReason: reason,

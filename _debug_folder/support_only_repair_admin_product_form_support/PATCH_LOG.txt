@@ -1,0 +1,11 @@
+﻿Support-only repair for admin_product_form_support.dart
+Generated: 05/01/2026 22:14:52
+Target: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+RepairFile: C:\Users\1\Downloads\admin_product_form_support_SUPPORT_ONLY_REPAIR.dart
+Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\support_only_repair_admin_product_form_support\backup\admin_product_form_support_20260501_221452.dart.bak
+AppliedCopy: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\support_only_repair_admin_product_form_support\applied_copy\admin_product_form_support.dart
+
+Scope:
+Only admin_product_form_support.dart is replaced.
+No model file is touched.
+No function file is touched.

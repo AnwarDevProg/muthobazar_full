@@ -1,0 +1,31 @@
+﻿Product + Variation model upgrade patch
+Generated: 05/01/2026 22:04:43
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+
+Targets:
+Product target: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_models\lib\catalog\mb_product.dart
+Variation target: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_models\lib\catalog\mb_product_variation.dart
+
+Backups:
+Product backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\product_model_upgrade_patch\backup\packages__shared_models__lib__catalog__mb_product.dart.20260501_220443.bak
+Variation backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\product_model_upgrade_patch\backup\packages__shared_models__lib__catalog__mb_product_variation.dart.20260501_220443.bak
+
+Applied files:
+Product source: C:\Users\1\Downloads\mb_product_MODEL_UPGRADE.dart
+Variation source: C:\Users\1\Downloads\mb_product_variation_MODEL_UPGRADE.dart
+
+Added to MBProduct:
+- barcode
+- reservedQty
+- status, tax, shipping/dimension, adminNote, metadata
+
+Added to MBProductVariation:
+- publish/unpublish window
+- soft delete fields
+- audit fields
+- totalSold/addToCartCount/views
+- schedulePriceType/estimatedSchedulePrice
+- purchaseOptions
+- cardLayoutType/cardConfig/cardDesignJson
+- shortDescriptionEn/shortDescriptionBn
+- status, tax, shipping/dimension, adminNote, metadata

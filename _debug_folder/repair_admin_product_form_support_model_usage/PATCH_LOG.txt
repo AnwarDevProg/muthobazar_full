@@ -1,0 +1,10 @@
+﻿Repair admin_product_form_support.dart model usage patch
+Generated: 05/01/2026 22:09:04
+Target: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+RepairFile: C:\Users\1\Downloads\admin_product_form_support_REPAIR_MODEL_USAGE.dart
+Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_admin_product_form_support_model_usage\backup\admin_product_form_support_20260501_220904.dart.bak
+AppliedCopy: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_admin_product_form_support_model_usage\applied_copy\admin_product_form_support.dart
+
+Reason:
+Your analyze output showed that admin_product_form_support.dart contains new variation field usage but missed the matching state controllers/helpers.
+This replacement applies the complete support file with declarations, initState, dispose, purchase-options section, and save mapping included.

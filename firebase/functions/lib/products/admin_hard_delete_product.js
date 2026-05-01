@@ -44,6 +44,18 @@ const storage = admin.storage();
 function asBool(value, fallback = false) {
     return typeof value === "boolean" ? value : fallback;
 }
+function asNumber(value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+function asInteger(value, fallback = 0) {
+    return typeof value === "number" && Number.isFinite(value)
+        ? Math.trunc(value)
+        : fallback;
+}
+function nullableString(value) {
+    const normalized = (0, callable_parsers_1.asTrimmedString)(value);
+    return normalized.length > 0 ? normalized : null;
+}
 function asStringList(value) {
     if (!Array.isArray(value))
         return [];
@@ -58,15 +70,7 @@ function asObjectList(value) {
 }
 function normalizeCardLayoutType(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
-    switch (normalized) {
-        case "compact":
-        case "deal":
-        case "featured":
-        case "standard":
-            return normalized;
-        default:
-            return "standard";
-    }
+    return normalized.length > 0 ? normalized : "compact01";
 }
 function parseExistingProduct(doc) {
     const data = (doc.data() ?? {});
@@ -77,6 +81,7 @@ function parseExistingProduct(doc) {
         slug: (0, callable_parsers_1.asTrimmedString)(data.slug).toLowerCase(),
         sku: (0, callable_parsers_1.asTrimmedString)(data.sku),
         productCode: (0, callable_parsers_1.asTrimmedString)(data.productCode),
+        barcode: (0, callable_parsers_1.asTrimmedString)(data.barcode),
         categoryId: (0, callable_parsers_1.asTrimmedString)(data.categoryId),
         categoryNameEn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameEn),
         categoryNameBn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameBn),
@@ -102,9 +107,33 @@ function parseExistingProduct(doc) {
             ? (0, callable_parsers_1.asTrimmedString)(data.deliveryShift)
             : "any",
         cardLayoutType: normalizeCardLayoutType(data.cardLayoutType),
+        status: (0, callable_parsers_1.asTrimmedString)(data.status).length > 0
+            ? (0, callable_parsers_1.asTrimmedString)(data.status)
+            : asBool(data.isEnabled, true)
+                ? "active"
+                : "inactive",
         isEnabled: asBool(data.isEnabled, true),
         isDeleted: asBool(data.isDeleted, false),
+        reservedQty: asInteger(data.reservedQty, 0),
+        taxClassId: nullableString(data.taxClassId),
+        vatRate: asNumber(data.vatRate),
+        isTaxIncluded: asBool(data.isTaxIncluded, false),
+        weightValue: asNumber(data.weightValue),
+        weightUnit: nullableString(data.weightUnit),
+        length: asNumber(data.length),
+        width: asNumber(data.width),
+        height: asNumber(data.height),
+        dimensionUnit: nullableString(data.dimensionUnit),
+        shippingClassId: nullableString(data.shippingClassId),
+        adminNote: nullableString(data.adminNote),
         mediaItems: asObjectList(data.mediaItems),
+        variations: asObjectList(data.variations),
+        purchaseOptions: asObjectList(data.purchaseOptions),
+        metadata: typeof data.metadata === "object" &&
+            data.metadata !== null &&
+            !Array.isArray(data.metadata)
+            ? data.metadata
+            : {},
         thumbnailUrl: (0, callable_parsers_1.asTrimmedString)(data.thumbnailUrl),
         imageUrls: asStringList(data.imageUrls),
         createdAt: data.createdAt ?? null,
@@ -122,6 +151,7 @@ function buildAuditBeforeData(current) {
         slug: current.slug,
         sku: current.sku,
         productCode: current.productCode,
+        barcode: current.barcode,
         categoryId: current.categoryId,
         categoryNameEn: current.categoryNameEn,
         categoryNameBn: current.categoryNameBn,
@@ -135,9 +165,25 @@ function buildAuditBeforeData(current) {
         toleranceType: current.toleranceType,
         deliveryShift: current.deliveryShift,
         cardLayoutType: current.cardLayoutType,
+        status: current.status,
         isEnabled: current.isEnabled,
         isDeleted: current.isDeleted,
+        reservedQty: current.reservedQty,
+        taxClassId: current.taxClassId,
+        vatRate: current.vatRate,
+        isTaxIncluded: current.isTaxIncluded,
+        weightValue: current.weightValue,
+        weightUnit: current.weightUnit,
+        length: current.length,
+        width: current.width,
+        height: current.height,
+        dimensionUnit: current.dimensionUnit,
+        shippingClassId: current.shippingClassId,
+        adminNote: current.adminNote,
         mediaItems: current.mediaItems,
+        variations: current.variations,
+        purchaseOptions: current.purchaseOptions,
+        metadata: current.metadata,
         thumbnailUrl: current.thumbnailUrl,
         imageUrls: current.imageUrls,
         createdAt: current.createdAt ?? null,
@@ -153,6 +199,14 @@ function collectStoragePaths(current) {
         const storagePath = (0, callable_parsers_1.asTrimmedString)(item.storagePath);
         if (storagePath.length > 0) {
             paths.add(storagePath);
+        }
+    }
+    for (const variation of current.variations) {
+        for (const item of asObjectList(variation.mediaItems)) {
+            const storagePath = (0, callable_parsers_1.asTrimmedString)(item.storagePath);
+            if (storagePath.length > 0) {
+                paths.add(storagePath);
+            }
         }
     }
     return Array.from(paths);
@@ -215,10 +269,15 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
                     slug: current.slug,
                     sku: current.sku,
                     productCode: current.productCode,
+                    barcode: current.barcode,
+                    status: current.status,
                     categoryId: current.categoryId,
                     brandId: current.brandId,
                     productType: current.productType,
                     cardLayoutType: current.cardLayoutType,
+                    reservedQty: current.reservedQty,
+                    variationsCount: current.variations.length,
+                    purchaseOptionsCount: current.purchaseOptions.length,
                     deletedAt: current.deletedAt ?? null,
                     wasQuarantined: current.isDeleted,
                     storagePathsCount: storagePaths.length,

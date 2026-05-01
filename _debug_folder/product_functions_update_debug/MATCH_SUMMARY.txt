@@ -1,0 +1,166 @@
+﻿Product Functions Update Collector
+Generated: 05/01/2026 20:33:25
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+
+============================================================
+Score: 165
+Original: firebase\functions\src\products\admin_create_product.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_create_product.ts
+Matched: products, product, category, brand, cart, order, isDeleted, deletedAt, reservedInstantQty, totalSold, addToCartCount, schedulePriceType, estimatedSchedulePrice, stockQty, inventory, price, salePrice, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 153
+Original: firebase\functions\src\products\admin_update_product.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_update_product.ts
+Matched: products, product, category, brand, cart, order, reservedInstantQty, totalSold, addToCartCount, schedulePriceType, estimatedSchedulePrice, stockQty, inventory, price, salePrice, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 117
+Original: firebase\functions\src\products\admin_delete_product.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_delete_product.ts
+Matched: products, product, category, brand, isDeleted, deletedAt, schedulePriceType, inventory, price, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 117
+Original: firebase\functions\src\products\admin_restore_product.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_restore_product.ts
+Matched: products, product, category, brand, isDeleted, deletedAt, schedulePriceType, inventory, price, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 111
+Original: firebase\functions\src\products\admin_set_product_enabled.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_set_product_enabled.ts
+Matched: products, product, category, brand, isDeleted, schedulePriceType, inventory, price, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 109
+Original: firebase\functions\src\products\admin_hard_delete_product.ts
+CopiedAs: files_to_upload/firebase__functions__src__products__admin_hard_delete_product.ts
+Matched: products, product, category, brand, isDeleted, deletedAt, schedulePriceType, inventory, price, status, onCall, runTransaction, collection, doc(
+
+============================================================
+Score: 76
+Original: firebase\functions\src\categories\set-category-active-state.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__set-category-active-state.ts
+Matched: products, product, category, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 76
+Original: firebase\functions\src\categories\update-category.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__update-category.ts
+Matched: products, product, category, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 76
+Original: firebase\functions\src\categories\create-category.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__create-category.ts
+Matched: products, product, category, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 70
+Original: firebase\functions\src\categories\category-product-count.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__category-product-count.ts
+Matched: products, product, category, isDeleted, onDocumentCreated, onDocumentUpdated, onDocumentDeleted, getFirestore, collection, doc(
+
+============================================================
+Score: 68
+Original: firebase\functions\src\banners\update-banner.ts
+CopiedAs: files_to_upload/firebase__functions__src__banners__update-banner.ts
+Matched: product, category, brand, banner, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 68
+Original: firebase\functions\src\categories\delete-category.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__delete-category.ts
+Matched: products, product, category, order, status, onCall, runTransaction, collection, doc(
+
+============================================================
+Score: 68
+Original: firebase\functions\src\banners\create-banner.ts
+CopiedAs: files_to_upload/firebase__functions__src__banners__create-banner.ts
+Matched: product, category, brand, banner, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 64
+Original: firebase\functions\src\categories\reorder-categories.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__reorder-categories.ts
+Matched: category, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 64
+Original: firebase\functions\src\categories\fix-category-group-sort.ts
+CopiedAs: files_to_upload/firebase__functions__src__categories__fix-category-group-sort.ts
+Matched: category, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 62
+Original: firebase\functions\src\brands\create-brand.ts
+CopiedAs: files_to_upload/firebase__functions__src__brands__create-brand.ts
+Matched: products, product, brand, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 62
+Original: firebase\functions\src\brands\set-brand-active-state.ts
+CopiedAs: files_to_upload/firebase__functions__src__brands__set-brand-active-state.ts
+Matched: products, product, brand, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 62
+Original: firebase\functions\src\brands\update-brand.ts
+CopiedAs: files_to_upload/firebase__functions__src__brands__update-brand.ts
+Matched: products, product, brand, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 60
+Original: firebase\functions\src\index.ts
+CopiedAs: files_to_upload/firebase__functions__src__index.ts
+Matched: products, product, category, brand, banner, order, initializeApp, setGlobalOptions
+
+============================================================
+Score: 54
+Original: firebase\functions\src\admin\audit-log-core.ts
+CopiedAs: files_to_upload/firebase__functions__src__admin__audit-log-core.ts
+Matched: products, product, brand, banner, status, FieldValue, serverTimestamp, collection, doc(
+
+============================================================
+Score: 54
+Original: firebase\functions\src\brands\delete-brand.ts
+CopiedAs: files_to_upload/firebase__functions__src__brands__delete-brand.ts
+Matched: products, product, brand, order, status, onCall, runTransaction, collection, doc(
+
+============================================================
+Score: 50
+Original: firebase\functions\src\banners\set-banner-active-state.ts
+CopiedAs: files_to_upload/firebase__functions__src__banners__set-banner-active-state.ts
+Matched: banner, order, status, onCall, FieldValue, serverTimestamp, runTransaction, collection, doc(
+
+============================================================
+Score: 42
+Original: firebase\functions\src\admin\log-admin-action.ts
+CopiedAs: files_to_upload/firebase__functions__src__admin__log-admin-action.ts
+Matched: products, product, brand, banner, status, onCall
+
+============================================================
+Score: 42
+Original: firebase\functions\src\banners\delete-banner.ts
+CopiedAs: files_to_upload/firebase__functions__src__banners__delete-banner.ts
+Matched: banner, order, status, onCall, runTransaction, collection, doc(
+
+============================================================
+Score: 24
+Original: firebase\functions\src\auth\check-phone-auth-eligibility.ts
+CopiedAs: files_to_upload/firebase__functions__src__auth__check-phone-auth-eligibility.ts
+Matched: onCall, getFirestore, collection, doc(
+
+============================================================
+Score: 20
+Original: firebase\functions\package-lock.json
+CopiedAs: files_to_upload/firebase__functions__package-lock.json
+Matched: order, status
+
+============================================================
+Score: 20
+Original: firebase\functions\src\utils\callable-parsers.ts
+CopiedAs: files_to_upload/firebase__functions__src__utils__callable-parsers.ts
+Matched: category, brand
+

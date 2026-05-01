@@ -1,0 +1,84 @@
+﻿Copied File Path Map
+Generated: 05/01/2026 20:33:25
+
+firebase__functions__src__products__admin_create_product.ts
+  Original: firebase\functions\src\products\admin_create_product.ts
+
+firebase__functions__src__products__admin_update_product.ts
+  Original: firebase\functions\src\products\admin_update_product.ts
+
+firebase__functions__src__products__admin_delete_product.ts
+  Original: firebase\functions\src\products\admin_delete_product.ts
+
+firebase__functions__src__products__admin_restore_product.ts
+  Original: firebase\functions\src\products\admin_restore_product.ts
+
+firebase__functions__src__products__admin_set_product_enabled.ts
+  Original: firebase\functions\src\products\admin_set_product_enabled.ts
+
+firebase__functions__src__products__admin_hard_delete_product.ts
+  Original: firebase\functions\src\products\admin_hard_delete_product.ts
+
+firebase__functions__src__categories__set-category-active-state.ts
+  Original: firebase\functions\src\categories\set-category-active-state.ts
+
+firebase__functions__src__categories__update-category.ts
+  Original: firebase\functions\src\categories\update-category.ts
+
+firebase__functions__src__categories__create-category.ts
+  Original: firebase\functions\src\categories\create-category.ts
+
+firebase__functions__src__categories__category-product-count.ts
+  Original: firebase\functions\src\categories\category-product-count.ts
+
+firebase__functions__src__banners__update-banner.ts
+  Original: firebase\functions\src\banners\update-banner.ts
+
+firebase__functions__src__categories__delete-category.ts
+  Original: firebase\functions\src\categories\delete-category.ts
+
+firebase__functions__src__banners__create-banner.ts
+  Original: firebase\functions\src\banners\create-banner.ts
+
+firebase__functions__src__categories__reorder-categories.ts
+  Original: firebase\functions\src\categories\reorder-categories.ts
+
+firebase__functions__src__categories__fix-category-group-sort.ts
+  Original: firebase\functions\src\categories\fix-category-group-sort.ts
+
+firebase__functions__src__brands__create-brand.ts
+  Original: firebase\functions\src\brands\create-brand.ts
+
+firebase__functions__src__brands__set-brand-active-state.ts
+  Original: firebase\functions\src\brands\set-brand-active-state.ts
+
+firebase__functions__src__brands__update-brand.ts
+  Original: firebase\functions\src\brands\update-brand.ts
+
+firebase__functions__src__index.ts
+  Original: firebase\functions\src\index.ts
+
+firebase__functions__src__admin__audit-log-core.ts
+  Original: firebase\functions\src\admin\audit-log-core.ts
+
+firebase__functions__src__brands__delete-brand.ts
+  Original: firebase\functions\src\brands\delete-brand.ts
+
+firebase__functions__src__banners__set-banner-active-state.ts
+  Original: firebase\functions\src\banners\set-banner-active-state.ts
+
+firebase__functions__src__admin__log-admin-action.ts
+  Original: firebase\functions\src\admin\log-admin-action.ts
+
+firebase__functions__src__banners__delete-banner.ts
+  Original: firebase\functions\src\banners\delete-banner.ts
+
+firebase__functions__src__auth__check-phone-auth-eligibility.ts
+  Original: firebase\functions\src\auth\check-phone-auth-eligibility.ts
+
+firebase__functions__package-lock.json
+  Original: firebase\functions\package-lock.json
+
+firebase__functions__src__utils__callable-parsers.ts
+  Original: firebase\functions\src\utils\callable-parsers.ts
+
