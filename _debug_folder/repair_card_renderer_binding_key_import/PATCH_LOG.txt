@@ -1,8 +1,0 @@
-﻿Repair card renderer binding-key import
-Generated: 05/02/2026 16:34:00
-Target: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\rendering\mb_advanced_product_card_renderer.dart
-Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_card_renderer_binding_key_import\backup\mb_advanced_product_card_renderer_20260502_163400.dart.bak
-AppliedCopy: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_card_renderer_binding_key_import\applied_copy\mb_advanced_product_card_renderer.dart
-
-Fix:
-Added import for mb_advanced_binding_registry.dart because renderer references MBAdvancedBindingKey.

@@ -4,16 +4,11 @@ import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
-import 'package:shared_core/shared_core.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_ui/widgets/common/product_cards/design_studio_advanced/mb_card_design_studio_advanced_exports.dart';
 
 import '../controllers/admin_product_controller.dart';
-import 'admin_product_card_picker_dialog.dart';
 import 'admin_product_form_support.dart';
-import 'admin_product_card_settings_dialog.dart';
-import 'card_design/admin_card_design_studio_dialog.dart';
-import 'card_studio/admin_product_card_studio_dialog.dart';
 
 // File: admin_product_form_dialog.dart
 
@@ -446,7 +441,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   String? _selectedBrandId;
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
-  AdminProductCardSettingsResult? _cardSettingsDraft;
   /// New design-family card JSON returned from MBCardDesignStudio.
   ///
   /// This lives beside the old cardConfig while the new design engine is
@@ -598,14 +592,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ),
     );
   }
-
-  Future<void> _openSelectedCardSettingsDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.edit,
-    );
-  }
-
 
   String? _findDuplicateAttributeMessage(
       MBProductAttribute candidate, {
@@ -959,7 +945,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         : _source.deliveryShift;
     final initialCardConfig = _source.effectiveCardConfig.normalized();
     _cardLayoutType = _normalizeAdminCardVariantId(initialCardConfig.variantId);
-    _cardSettingsDraft = _cardSettingsDraftFromConfig(initialCardConfig);
     _cardDesignJson = _source.cardDesignJson;
     _cardConfigDraft = initialCardConfig;
 
@@ -2048,20 +2033,10 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
             subtitle:
-            'role: ${item.role} â€¢ type: ${item.type} â€¢ primary: ${item.isPrimary} â€¢ order: ${item.sortOrder}${item.hasPendingUpload ? ' â€¢ pending upload' : ''}',
-            leading: item.pendingThumbBytes != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.memory(
-                      item.pendingThumbBytes!,
-                      width: 46,
-                      height: 46,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : item.effectiveThumbUrl.trim().isEmpty
-                    ? const Icon(Icons.image_not_supported_outlined)
-                    : PreviewImage(url: item.effectiveThumbUrl),
+            'role: ${item.role} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ type: ${item.type} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ primary: ${item.isPrimary} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ order: ${item.sortOrder}',
+            leading: item.effectiveThumbUrl.trim().isEmpty
+                ? const Icon(Icons.image_not_supported_outlined)
+                : PreviewImage(url: item.effectiveThumbUrl),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -3050,25 +3025,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   }
 
 
-  Future<void> _openCardDesignStudioDialog(BuildContext context) async {
-    final result = await AdminCardDesignStudioDialog.show(
-      context,
-      previewProduct: _source,
-      initialDesignJson: _cardDesignJson,
-      title: 'Product Card Design Studio',
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    setState(() {
-      _cardDesignJson = result.designJson.trim().isEmpty
-          ? null
-          : result.designJson.trim();
-    });
-  }
-
   Widget _buildCardDesignInfoChip(
     BuildContext context,
     String label,
@@ -3094,52 +3050,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
   }
 
-  Future<void> _openCardDesignStudioV2Dialog(BuildContext context) async {
-    final previewProduct = _buildProductFromForm();
-
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final size = MediaQuery.sizeOf(dialogContext);
-
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 18,
-          ),
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-          ),
-          child: SizedBox(
-            width: size.width * 0.96,
-            height: size.height * 0.92,
-            child: MBCardDesignStudioV2(
-              products: [previewProduct],
-              initialProductIndex: 0,
-              initialDesignJson: _cardDesignJson,
-              title: 'Product Card Design Studio V2',
-              wrapWithScaffold: false,
-              onSave: (json) {
-                Navigator.of(dialogContext).pop(json);
-              },
-            ),
-          ),
-        );
-      },
-    );
-
-    if (!mounted || result == null) {
-      return;
-    }
-
-    final normalized = result.trim();
-
-    setState(() {
-      _cardDesignJson = normalized.isEmpty ? null : normalized;
-    });
-  }
   Future<void> _openCardDesignStudioV3Dialog(BuildContext context) async {
     final previewProduct = _buildProductFromForm();
     final result = await showDialog<String>(
@@ -3206,7 +3116,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           Row(
             children: [
               Icon(
-                Icons.design_services_rounded,
+                Icons.auto_awesome_motion_rounded,
                 color: _hasCardDesignJson
                     ? theme.colorScheme.primary
                     : theme.colorScheme.onSurfaceVariant,
@@ -3214,97 +3124,34 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'New Design Studio',
+                  'Product Card Design Studio V3',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               if (_hasCardDesignJson)
-                _buildCardDesignInfoChip(context, 'saved design JSON'),
+                _buildCardDesignInfoChip(context, 'saved V3 design'),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             _hasCardDesignJson
-                ? 'A free-design card layout is attached to this product. Open the studio to edit, drag, resize, copy, or paste the design JSON.'
-                : 'Open the new design-family studio to create a free-position card design. This is saved beside the legacy cardConfig.',
+                ? 'Open Studio V3 to edit the saved product-card design.'
+                : 'Use only Studio V3 for card design, layout, preview, copy, paste, and save.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton.icon(
-                onPressed: () => _openCardDesignStudioDialog(context),
-                icon: const Icon(Icons.brush_rounded),
-                label: Text(
-                  _hasCardDesignJson
-                      ? 'Edit Design Studio'
-                      : 'Open Design Studio',
-                ),
-              ),
-              OutlinedButton.icon(                 onPressed: () => _openCardDesignStudioV2Dialog(context),                 icon: const Icon(Icons.dashboard_customize_rounded),                 label: const Text('Open Studio V2'),               ),
-              OutlinedButton.icon(
-                onPressed: () => _openCardDesignStudioV3Dialog(context),
-                icon: const Icon(Icons.auto_awesome_motion_rounded),
-                label: const Text('Open Studio V3'),
-              ),
-              if (_hasCardDesignJson)
-                OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() => _cardDesignJson = null);
-                  },
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('Clear design JSON'),
-                ),
-            ],
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _openCardDesignStudioV3Dialog(context),
+              icon: const Icon(Icons.auto_awesome_motion_rounded),
+              label: const Text('Open Studio V3'),
+            ),
           ),
         ],
       ),
-    );
-  }
-  Future<void> _openCardPickerDialog(BuildContext context) async {
-    await _openCardStudioDialog(
-      context,
-      initialMode: AdminProductCardStudioMode.pick,
-    );
-  }
-
-
-  Future<void> _openCardStudioDialog(
-    BuildContext context, {
-    required AdminProductCardStudioMode initialMode,
-  }) async {
-    final result = await AdminProductCardStudioDialog.show(
-      context,
-      initialMode: initialMode,
-      initialConfig: _selectedCardInstanceConfig,
-      previewProductBuilder: _buildProductForCardStudioPreview,
-    );
-
-    if (!mounted || result == null) {
-      return;
-    }
-
-    final normalized = result.cardConfig.normalized();
-
-    setState(() {
-      _cardLayoutType = normalized.variantId;
-      _cardConfigDraft = normalized;
-      _cardSettingsDraft = _cardSettingsDraftFromConfig(normalized);
-    });
-  }
-
-  MBProduct _buildProductForCardStudioPreview(
-    MBCardInstanceConfig cardConfig,
-  ) {
-    final normalized = cardConfig.normalized();
-
-    return _buildProductFromForm().copyWith(
-      cardLayoutType: normalized.variantId,
-      cardConfig: normalized,
     );
   }
   MBCardSettingsOverride _buildCardSettingsOverride() {
@@ -3315,124 +3162,19 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       return configDraft.settings;
     }
 
-    final draft = _cardSettingsDraft;
-
-    if (draft == null || draft.variantId != selectedVariant.id) {
-      return const MBCardSettingsOverride();
-    }
-
-    return MBCardSettingsOverride(
-      price: MBCardPriceSettings(
-        showDiscountBadge: draft.showDiscountBadge,
-        showSavingsText: draft.showSavingsText,
-        emphasizeFinalPrice: draft.emphasizeFinalPrice,
-      ),
-      actions: MBCardActionSettings(
-        showAddToCart: draft.showAddToCart,
-        showViewDetails: draft.showViewDetails,
-      ),
-      meta: MBCardMetaSettings(
-        showSubtitle: draft.showSubtitle,
-        showBrand: draft.showBrand,
-        showUnitLabel: draft.showUnitLabel,
-        showStockHint: draft.showStockHint,
-        showDeliveryHint: draft.showDeliveryHint,
-      ),
-      borderEffect: MBCardBorderEffectSettings(
-        showBorder: draft.showBorder,
-      ),
-      accent: MBCardAccentSettings(
-        showPromoStrip: draft.showPromoStrip,
-      ),
-    );
+    return const MBCardSettingsOverride();
   }
-
-
-  AdminProductCardSettingsResult? _cardSettingsDraftFromConfig(
-      MBCardInstanceConfig config,
-      ) {
-    final normalizedConfig = config.normalized();
-    final settings = normalizedConfig.settings;
-
-    if (settings.isEmpty) {
-      return null;
-    }
-
-    const defaultPrice = MBCardPriceSettings();
-    const defaultActions = MBCardActionSettings();
-    const defaultMeta = MBCardMetaSettings();
-    const defaultBorderEffect = MBCardBorderEffectSettings();
-    const defaultAccent = MBCardAccentSettings();
-
-    final price = settings.price ?? defaultPrice;
-    final actions = settings.actions ?? defaultActions;
-    final meta = settings.meta ?? defaultMeta;
-    final borderEffect = settings.borderEffect ?? defaultBorderEffect;
-    final accent = settings.accent ?? defaultAccent;
-
-    return AdminProductCardSettingsResult(
-      variantId: normalizedConfig.variantId,
-      showDiscountBadge: price.showDiscountBadge,
-      showSavingsText: price.showSavingsText,
-      emphasizeFinalPrice: price.emphasizeFinalPrice,
-      showAddToCart: actions.showAddToCart,
-      showViewDetails: actions.showViewDetails,
-      showSubtitle: meta.showSubtitle,
-      showBrand: meta.showBrand,
-      showUnitLabel: meta.showUnitLabel,
-      showStockHint: meta.showStockHint,
-      showDeliveryHint: meta.showDeliveryHint,
-      showBorder: borderEffect.showBorder,
-      showPromoStrip: accent.showPromoStrip,
-    );
-  }
-
-
-  Widget _buildSelectedCardPreview(BuildContext context) {
-    final previewProduct = _buildProductFromForm();
-    final variant = _selectedAdminCardVariant;
-    final resolved = MBCardConfigResolver.resolveByVariant(
-      variant,
-      settings: _buildCardSettingsOverride(),
-    );
-
-    Widget preview = MBProductCardVariantRouter.build(
-      context: context,
-      resolved: resolved,
-      product: previewProduct,
-      onTap: () {},
-      onAddToCartTap: () {},
-    );
-
-    if (resolved.footprint.isFullWidth) {
-      preview = SizedBox(
-        height: 320,
-        child: preview,
-      );
-    }
-
-    return AbsorbPointer(
-      absorbing: true,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: preview,
-      ),
-    );
-  }
-
 
 
   Widget _buildCardStyleSection(BuildContext context) {
     final selectedVariant = _selectedAdminCardVariant;
     final hasCustomConfig =
-        _cardConfigDraft?.normalized().settings.isNotEmpty == true ||
-        (_cardSettingsDraft != null &&
-            _cardSettingsDraft!.variantId == selectedVariant.id);
+        _cardConfigDraft?.normalized().settings.isNotEmpty == true;
 
     return SectionCard(
       title: 'Customer App Card Style',
       subtitle:
-          'Select the product-card variant and tune its settings in the Card Studio. The studio shows a persistent live mobile preview.',
+          'Open Studio V3 to select, design, preview, and save the product-card layout.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3465,29 +3207,9 @@ Wrap(
               border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Text(
-              'The product dialog now keeps this section clean. Use Card Studio for side-by-side family/variant selection and live phone preview.',
+              'Studio V3 is the single card-design workspace for this product.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _openCardPickerDialog(context),
-                  icon: const Icon(Icons.grid_view_rounded),
-                  label: const Text('Select card'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _openSelectedCardSettingsDialog(context),
-                  icon: const Icon(Icons.tune_rounded),
-                  label: const Text('Edit card'),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -3660,8 +3382,8 @@ Wrap(
         'selectedFamilyName': selectedVariant.family.name,
         'selectedFamilyLabel': selectedVariant.family.label,
         'selectedIsFullWidth': selectedVariant.isFullWidth,
-        'hasCardSettingsDraft': _cardSettingsDraft != null,
-        'cardSettingsDraft': _cardSettingsDraft?.toMap(),
+        'hasCardSettingsDraft': false,
+        'cardSettingsDraft': null,
         'selectedCardInstanceConfig': selectedCardConfig.toMap(),
         'buildCardSettingsOverride': _buildCardSettingsOverride().toMap(),
       },
@@ -3743,154 +3465,8 @@ Wrap(
     return normalized.substring(0, 80);
   }
 
-  String _mediaFileStemFor(MBProductMedia item) {
-    final label = item.labelEn.trim();
-    if (label.isNotEmpty) return label;
-    final base = item.pendingBaseName.trim();
-    if (base.isNotEmpty) return base;
-    final id = item.id.trim();
-    if (id.isNotEmpty) return id;
-    return 'product_media';
-  }
-
-  MBPreparedImageSet _preparedImageSetFromPendingMedia(MBProductMedia item) {
-    if (!item.hasPendingUpload) {
-      throw StateError('Media item ${item.id} has no pending upload bytes.');
-    }
-
-    final fullWidth = item.fullWidth ?? item.width ?? item.originalWidth ?? 1;
-    final fullHeight = item.fullHeight ?? item.height ?? item.originalHeight ?? 1;
-    final cardWidth = item.cardWidth ?? fullWidth;
-    final cardHeight = item.cardHeight ?? fullHeight;
-    final thumbWidth = item.thumbWidth ?? cardWidth;
-    final thumbHeight = item.thumbHeight ?? cardHeight;
-    final tinyWidth = item.tinyWidth ?? thumbWidth;
-    final tinyHeight = item.tinyHeight ?? thumbHeight;
-    final originalWidth = item.originalWidth ?? fullWidth;
-    final originalHeight = item.originalHeight ?? fullHeight;
-
-    return MBPreparedImageSet(
-      originalBytes: item.pendingOriginalBytes!,
-      fullBytes: item.pendingFullBytes!,
-      cardBytes: item.pendingCardBytes!,
-      thumbBytes: item.pendingThumbBytes!,
-      tinyBytes: item.pendingTinyBytes!,
-      originalWidth: originalWidth,
-      originalHeight: originalHeight,
-      fullWidth: fullWidth,
-      fullHeight: fullHeight,
-      cardWidth: cardWidth,
-      cardHeight: cardHeight,
-      thumbWidth: thumbWidth,
-      thumbHeight: thumbHeight,
-      tinyWidth: tinyWidth,
-      tinyHeight: tinyHeight,
-      originalFileName: item.pendingOriginalFileName.trim().isEmpty
-          ? '${item.id}.jpg'
-          : item.pendingOriginalFileName.trim(),
-      baseName: item.pendingBaseName.trim().isEmpty
-          ? item.id.trim()
-          : item.pendingBaseName.trim(),
-      mimeType: item.pendingMimeType.trim().isEmpty
-          ? 'image/jpeg'
-          : item.pendingMimeType.trim(),
-      originalByteLength: item.pendingOriginalBytes!.lengthInBytes,
-      fullByteLength: item.pendingFullBytes!.lengthInBytes,
-      cardByteLength: item.pendingCardBytes!.lengthInBytes,
-      thumbByteLength: item.pendingThumbBytes!.lengthInBytes,
-      tinyByteLength: item.pendingTinyBytes!.lengthInBytes,
-      sourceWidth: originalWidth,
-      sourceHeight: originalHeight,
-      requestSquareCrop: false,
-      requestAspectCrop: item.fitMode == 'manualCrop',
-      cropAspectRatioX: item.cropAspectRatioX ?? 4,
-      cropAspectRatioY: item.cropAspectRatioY ?? 5,
-      croppedWidth: item.cropWidth ?? cardWidth,
-      croppedHeight: item.cropHeight ?? cardHeight,
-      croppedByteLength: item.cropSizeBytes ?? item.pendingCardBytes!.lengthInBytes,
-      zoomScale: item.cropZoomScale ?? 1.0,
-      fitMode: item.fitMode,
-    );
-  }
-
-  Future<void> _uploadPendingProductMediaItems() async {
-    if (_mediaItems.every((item) => !item.hasPendingUpload)) return;
-
-    for (var i = 0; i < _mediaItems.length; i++) {
-      final item = _mediaItems[i];
-      if (!item.hasPendingUpload) continue;
-
-      final prepared = _preparedImageSetFromPendingMedia(item);
-      final mediaId = item.id.trim().isEmpty ? makeEditorId('media') : item.id.trim();
-
-      final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
-        prepared: prepared,
-        storageFolder: 'products/media',
-        uploadOriginalCardTiny: true,
-        entityId: mediaId,
-        fileStem: _mediaFileStemFor(item),
-        customMetadata: <String, String>{
-          'mediaId': mediaId,
-          'role': item.role,
-          'type': item.type,
-          'fitMode': item.fitMode,
-          'pipeline': 'muthobazar_deferred_media_v1',
-        },
-      );
-
-      _mediaItems[i] = item.copyWith(
-        id: mediaId,
-        url: uploaded.fullUrl,
-        storagePath: uploaded.fullPath,
-        originalUrl: uploaded.originalUrl,
-        originalStoragePath: uploaded.originalPath,
-        fullUrl: uploaded.fullUrl,
-        fullStoragePath: uploaded.fullPath,
-        cardUrl: uploaded.cardUrl,
-        cardStoragePath: uploaded.cardPath,
-        thumbUrl: uploaded.thumbUrl,
-        thumbStoragePath: uploaded.thumbPath,
-        tinyUrl: uploaded.tinyUrl,
-        tinyStoragePath: uploaded.tinyPath,
-        width: uploaded.fullWidth,
-        height: uploaded.fullHeight,
-        sizeBytes: prepared.fullByteLength,
-        originalWidth: uploaded.originalWidth,
-        originalHeight: uploaded.originalHeight,
-        originalSizeBytes: prepared.originalByteLength,
-        fullWidth: uploaded.fullWidth,
-        fullHeight: uploaded.fullHeight,
-        fullSizeBytes: prepared.fullByteLength,
-        cardWidth: uploaded.cardWidth,
-        cardHeight: uploaded.cardHeight,
-        cardSizeBytes: prepared.cardByteLength,
-        thumbWidth: uploaded.thumbWidth,
-        thumbHeight: uploaded.thumbHeight,
-        thumbSizeBytes: prepared.thumbByteLength,
-        tinyWidth: uploaded.tinyWidth,
-        tinyHeight: uploaded.tinyHeight,
-        tinySizeBytes: prepared.tinyByteLength,
-        clearPendingUpload: true,
-        updatedAt: DateTime.now(),
-      );
-    }
-
-    _normalizeProductMediaPrimary();
-  }
-
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
-
-    try {
-      await _uploadPendingProductMediaItems();
-    } catch (error) {
-      if (!mounted) return;
-      await _showProductMediaPrompt(
-        'Image Upload Failed',
-        'The product was not saved because one or more pending images failed to upload. Details: $error',
-      );
-      return;
-    }
 
     final product = _buildProductFromForm();
 
