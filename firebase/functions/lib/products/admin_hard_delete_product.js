@@ -44,18 +44,6 @@ const storage = admin.storage();
 function asBool(value, fallback = false) {
     return typeof value === "boolean" ? value : fallback;
 }
-function asNumber(value) {
-    return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-function asInteger(value, fallback = 0) {
-    return typeof value === "number" && Number.isFinite(value)
-        ? Math.trunc(value)
-        : fallback;
-}
-function nullableString(value) {
-    const normalized = (0, callable_parsers_1.asTrimmedString)(value);
-    return normalized.length > 0 ? normalized : null;
-}
 function asStringList(value) {
     if (!Array.isArray(value))
         return [];
@@ -70,7 +58,7 @@ function asObjectList(value) {
 }
 function normalizeCardLayoutType(value) {
     const normalized = (0, callable_parsers_1.asTrimmedString)(value).toLowerCase();
-    return normalized.length > 0 ? normalized : "compact01";
+    return normalized.length > 0 ? normalized : "standard";
 }
 function parseExistingProduct(doc) {
     const data = (doc.data() ?? {});
@@ -81,7 +69,6 @@ function parseExistingProduct(doc) {
         slug: (0, callable_parsers_1.asTrimmedString)(data.slug).toLowerCase(),
         sku: (0, callable_parsers_1.asTrimmedString)(data.sku),
         productCode: (0, callable_parsers_1.asTrimmedString)(data.productCode),
-        barcode: (0, callable_parsers_1.asTrimmedString)(data.barcode),
         categoryId: (0, callable_parsers_1.asTrimmedString)(data.categoryId),
         categoryNameEn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameEn),
         categoryNameBn: (0, callable_parsers_1.asTrimmedString)(data.categoryNameBn),
@@ -107,35 +94,13 @@ function parseExistingProduct(doc) {
             ? (0, callable_parsers_1.asTrimmedString)(data.deliveryShift)
             : "any",
         cardLayoutType: normalizeCardLayoutType(data.cardLayoutType),
-        status: (0, callable_parsers_1.asTrimmedString)(data.status).length > 0
-            ? (0, callable_parsers_1.asTrimmedString)(data.status)
-            : asBool(data.isEnabled, true)
-                ? "active"
-                : "inactive",
         isEnabled: asBool(data.isEnabled, true),
         isDeleted: asBool(data.isDeleted, false),
-        reservedQty: asInteger(data.reservedQty, 0),
-        taxClassId: nullableString(data.taxClassId),
-        vatRate: asNumber(data.vatRate),
-        isTaxIncluded: asBool(data.isTaxIncluded, false),
-        weightValue: asNumber(data.weightValue),
-        weightUnit: nullableString(data.weightUnit),
-        length: asNumber(data.length),
-        width: asNumber(data.width),
-        height: asNumber(data.height),
-        dimensionUnit: nullableString(data.dimensionUnit),
-        shippingClassId: nullableString(data.shippingClassId),
-        adminNote: nullableString(data.adminNote),
         mediaItems: asObjectList(data.mediaItems),
         variations: asObjectList(data.variations),
-        purchaseOptions: asObjectList(data.purchaseOptions),
-        metadata: typeof data.metadata === "object" &&
-            data.metadata !== null &&
-            !Array.isArray(data.metadata)
-            ? data.metadata
-            : {},
         thumbnailUrl: (0, callable_parsers_1.asTrimmedString)(data.thumbnailUrl),
         imageUrls: asStringList(data.imageUrls),
+        rawData: data,
         createdAt: data.createdAt ?? null,
         updatedAt: data.updatedAt ?? null,
         deletedAt: data.deletedAt ?? null,
@@ -151,7 +116,6 @@ function buildAuditBeforeData(current) {
         slug: current.slug,
         sku: current.sku,
         productCode: current.productCode,
-        barcode: current.barcode,
         categoryId: current.categoryId,
         categoryNameEn: current.categoryNameEn,
         categoryNameBn: current.categoryNameBn,
@@ -165,25 +129,10 @@ function buildAuditBeforeData(current) {
         toleranceType: current.toleranceType,
         deliveryShift: current.deliveryShift,
         cardLayoutType: current.cardLayoutType,
-        status: current.status,
         isEnabled: current.isEnabled,
         isDeleted: current.isDeleted,
-        reservedQty: current.reservedQty,
-        taxClassId: current.taxClassId,
-        vatRate: current.vatRate,
-        isTaxIncluded: current.isTaxIncluded,
-        weightValue: current.weightValue,
-        weightUnit: current.weightUnit,
-        length: current.length,
-        width: current.width,
-        height: current.height,
-        dimensionUnit: current.dimensionUnit,
-        shippingClassId: current.shippingClassId,
-        adminNote: current.adminNote,
         mediaItems: current.mediaItems,
         variations: current.variations,
-        purchaseOptions: current.purchaseOptions,
-        metadata: current.metadata,
         thumbnailUrl: current.thumbnailUrl,
         imageUrls: current.imageUrls,
         createdAt: current.createdAt ?? null,
@@ -193,23 +142,164 @@ function buildAuditBeforeData(current) {
         deleteReason: current.deleteReason ?? null,
     };
 }
+function addStoragePath(paths, value) {
+    const path = (0, callable_parsers_1.asTrimmedString)(value);
+    if (!path)
+        return;
+    if (path.startsWith("http://") || path.startsWith("https://"))
+        return;
+    if (path.startsWith("gs://")) {
+        const parsed = parseStoragePathFromUrl(path);
+        if (parsed)
+            paths.add(parsed);
+        return;
+    }
+    paths.add(path);
+}
+function addStoragePathFromUrl(paths, value) {
+    const parsed = parseStoragePathFromUrl((0, callable_parsers_1.asTrimmedString)(value));
+    if (parsed)
+        paths.add(parsed);
+}
+function parseStoragePathFromUrl(value) {
+    const url = value.trim();
+    if (!url)
+        return "";
+    if (url.startsWith("gs://")) {
+        const withoutScheme = url.replace(/^gs:\/\//, "");
+        const firstSlash = withoutScheme.indexOf("/");
+        if (firstSlash < 0)
+            return "";
+        return withoutScheme.substring(firstSlash + 1).trim();
+    }
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return url;
+    }
+    try {
+        const parsed = new URL(url);
+        const objectMarker = "/o/";
+        const markerIndex = parsed.pathname.indexOf(objectMarker);
+        if (markerIndex < 0)
+            return "";
+        const encodedPath = parsed.pathname.substring(markerIndex + objectMarker.length);
+        if (!encodedPath)
+            return "";
+        return decodeURIComponent(encodedPath).trim();
+    }
+    catch (error) {
+        logger.warn("Failed to parse Firebase Storage URL", {
+            url,
+            error,
+        });
+        return "";
+    }
+}
+function collectMediaStoragePaths(paths, item) {
+    // Legacy/generic path fields.
+    addStoragePath(paths, item.storagePath);
+    addStoragePath(paths, item.imageStoragePath);
+    addStoragePath(paths, item.imagePath);
+    addStoragePath(paths, item.thumbnailStoragePath);
+    addStoragePath(paths, item.thumbnailPath);
+    addStoragePath(paths, item.thumbPath);
+    // New generated image path fields.
+    addStoragePath(paths, item.originalStoragePath);
+    addStoragePath(paths, item.originalPath);
+    addStoragePath(paths, item.fullStoragePath);
+    addStoragePath(paths, item.fullPath);
+    addStoragePath(paths, item.cardStoragePath);
+    addStoragePath(paths, item.cardPath);
+    addStoragePath(paths, item.thumbStoragePath);
+    addStoragePath(paths, item.tinyStoragePath);
+    addStoragePath(paths, item.tinyPath);
+    // URL fallbacks for old records or partially migrated records.
+    addStoragePathFromUrl(paths, item.url);
+    addStoragePathFromUrl(paths, item.imageUrl);
+    addStoragePathFromUrl(paths, item.thumbnailUrl);
+    addStoragePathFromUrl(paths, item.originalUrl);
+    addStoragePathFromUrl(paths, item.fullUrl);
+    addStoragePathFromUrl(paths, item.cardUrl);
+    addStoragePathFromUrl(paths, item.thumbUrl);
+    addStoragePathFromUrl(paths, item.tinyUrl);
+}
+function collectRootStoragePaths(paths, data) {
+    // Root legacy/generic paths.
+    addStoragePath(paths, data.storagePath);
+    addStoragePath(paths, data.imageStoragePath);
+    addStoragePath(paths, data.imagePath);
+    addStoragePath(paths, data.thumbnailStoragePath);
+    addStoragePath(paths, data.thumbnailPath);
+    addStoragePath(paths, data.thumbPath);
+    // Root generated-image paths, if ever stored directly on product.
+    addStoragePath(paths, data.originalStoragePath);
+    addStoragePath(paths, data.originalPath);
+    addStoragePath(paths, data.fullStoragePath);
+    addStoragePath(paths, data.fullPath);
+    addStoragePath(paths, data.cardStoragePath);
+    addStoragePath(paths, data.cardPath);
+    addStoragePath(paths, data.thumbStoragePath);
+    addStoragePath(paths, data.tinyStoragePath);
+    addStoragePath(paths, data.tinyPath);
+    // Root URL fallbacks.
+    addStoragePathFromUrl(paths, data.url);
+    addStoragePathFromUrl(paths, data.imageUrl);
+    addStoragePathFromUrl(paths, data.thumbnailUrl);
+    addStoragePathFromUrl(paths, data.originalUrl);
+    addStoragePathFromUrl(paths, data.fullUrl);
+    addStoragePathFromUrl(paths, data.cardUrl);
+    addStoragePathFromUrl(paths, data.thumbUrl);
+    addStoragePathFromUrl(paths, data.tinyUrl);
+    for (const imageUrl of asStringList(data.imageUrls)) {
+        addStoragePathFromUrl(paths, imageUrl);
+    }
+}
+function collectVariationStoragePaths(paths, variation) {
+    // Variation legacy/generic fields.
+    addStoragePath(paths, variation.imageStoragePath);
+    addStoragePath(paths, variation.thumbImageStoragePath);
+    addStoragePath(paths, variation.fullImageStoragePath);
+    addStoragePath(paths, variation.cardImageStoragePath);
+    addStoragePath(paths, variation.tinyImageStoragePath);
+    addStoragePath(paths, variation.storagePath);
+    addStoragePath(paths, variation.imagePath);
+    addStoragePath(paths, variation.thumbPath);
+    // Variation generated-image fields.
+    addStoragePath(paths, variation.originalStoragePath);
+    addStoragePath(paths, variation.originalPath);
+    addStoragePath(paths, variation.fullStoragePath);
+    addStoragePath(paths, variation.fullPath);
+    addStoragePath(paths, variation.cardStoragePath);
+    addStoragePath(paths, variation.cardPath);
+    addStoragePath(paths, variation.thumbStoragePath);
+    addStoragePath(paths, variation.tinyStoragePath);
+    addStoragePath(paths, variation.tinyPath);
+    // Variation URL fallbacks.
+    addStoragePathFromUrl(paths, variation.imageUrl);
+    addStoragePathFromUrl(paths, variation.thumbImageUrl);
+    addStoragePathFromUrl(paths, variation.fullImageUrl);
+    addStoragePathFromUrl(paths, variation.cardImageUrl);
+    addStoragePathFromUrl(paths, variation.tinyImageUrl);
+    addStoragePathFromUrl(paths, variation.url);
+    addStoragePathFromUrl(paths, variation.thumbnailUrl);
+    addStoragePathFromUrl(paths, variation.originalUrl);
+    addStoragePathFromUrl(paths, variation.fullUrl);
+    addStoragePathFromUrl(paths, variation.cardUrl);
+    addStoragePathFromUrl(paths, variation.thumbUrl);
+    addStoragePathFromUrl(paths, variation.tinyUrl);
+    for (const media of asObjectList(variation.mediaItems)) {
+        collectMediaStoragePaths(paths, media);
+    }
+}
 function collectStoragePaths(current) {
     const paths = new Set();
+    collectRootStoragePaths(paths, current.rawData);
     for (const item of current.mediaItems) {
-        const storagePath = (0, callable_parsers_1.asTrimmedString)(item.storagePath);
-        if (storagePath.length > 0) {
-            paths.add(storagePath);
-        }
+        collectMediaStoragePaths(paths, item);
     }
     for (const variation of current.variations) {
-        for (const item of asObjectList(variation.mediaItems)) {
-            const storagePath = (0, callable_parsers_1.asTrimmedString)(item.storagePath);
-            if (storagePath.length > 0) {
-                paths.add(storagePath);
-            }
-        }
+        collectVariationStoragePaths(paths, variation);
     }
-    return Array.from(paths);
+    return Array.from(paths).sort();
 }
 async function deleteStorageObjectIfExists(path) {
     const safePath = path.trim();
@@ -269,17 +359,13 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
                     slug: current.slug,
                     sku: current.sku,
                     productCode: current.productCode,
-                    barcode: current.barcode,
-                    status: current.status,
                     categoryId: current.categoryId,
                     brandId: current.brandId,
                     productType: current.productType,
                     cardLayoutType: current.cardLayoutType,
-                    reservedQty: current.reservedQty,
-                    variationsCount: current.variations.length,
-                    purchaseOptionsCount: current.purchaseOptions.length,
                     deletedAt: current.deletedAt ?? null,
                     wasQuarantined: current.isDeleted,
+                    storageCleanup: "product_media_and_variation_media",
                     storagePathsCount: storagePaths.length,
                 },
                 eventSource: "server_action",
@@ -289,6 +375,10 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
         for (const path of storagePathsToDelete) {
             await deleteStorageObjectIfExists(path);
         }
+        logger.info("adminHardDeleteProduct storage cleanup complete", {
+            productId,
+            storagePathsCount: storagePathsToDelete.length,
+        });
         return {
             success: true,
             productId,

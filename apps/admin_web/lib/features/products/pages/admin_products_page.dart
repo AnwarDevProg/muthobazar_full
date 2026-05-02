@@ -572,7 +572,7 @@ class _ProductListTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ProductThumb(url: product.resolvedThumbnailUrl),
+            _ProductThumb(url: product.resolvedThumbImageUrl),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -682,7 +682,7 @@ class _ProductThumb extends StatelessWidget {
         url,
         width: 84,
         height: 84,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) => Container(
           width: 84,
           height: 84,

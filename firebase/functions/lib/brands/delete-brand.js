@@ -84,6 +84,56 @@ function buildAuditBeforeData(current) {
         updatedAt: current.updatedAt ?? null,
     };
 }
+function storagePathFromDownloadUrl(url) {
+    const safeUrl = url.trim();
+    if (safeUrl.length === 0)
+        return "";
+    try {
+        const parsed = new URL(safeUrl);
+        const marker = "/o/";
+        const markerIndex = parsed.pathname.indexOf(marker);
+        if (markerIndex < 0)
+            return "";
+        const encodedPath = parsed.pathname.substring(markerIndex + marker.length);
+        return decodeURIComponent(encodedPath);
+    }
+    catch (_) {
+        return "";
+    }
+}
+function addStoragePath(paths, value) {
+    const path = (0, callable_parsers_1.asTrimmedString)(value);
+    if (path.length > 0)
+        paths.add(path);
+}
+function addStoragePathFromUrl(paths, value) {
+    const path = storagePathFromDownloadUrl((0, callable_parsers_1.asTrimmedString)(value));
+    if (path.length > 0)
+        paths.add(path);
+}
+function collectBrandStoragePaths(raw, current) {
+    const paths = new Set();
+    addStoragePath(paths, current.imagePath);
+    addStoragePath(paths, current.thumbPath);
+    addStoragePath(paths, raw.logoPath);
+    addStoragePath(paths, raw.imageStoragePath);
+    addStoragePath(paths, raw.thumbStoragePath);
+    addStoragePath(paths, raw.logoStoragePath);
+    addStoragePath(paths, raw.storagePath);
+    addStoragePath(paths, raw.fullPath);
+    addStoragePath(paths, raw.cardPath);
+    addStoragePath(paths, raw.tinyPath);
+    addStoragePath(paths, raw.fullStoragePath);
+    addStoragePath(paths, raw.cardStoragePath);
+    addStoragePath(paths, raw.tinyStoragePath);
+    addStoragePathFromUrl(paths, current.imageUrl);
+    addStoragePathFromUrl(paths, current.logoUrl);
+    addStoragePathFromUrl(paths, raw.thumbUrl);
+    addStoragePathFromUrl(paths, raw.fullUrl);
+    addStoragePathFromUrl(paths, raw.cardUrl);
+    addStoragePathFromUrl(paths, raw.tinyUrl);
+    return Array.from(paths);
+}
 async function deleteStorageObjectIfExists(path) {
     const safePath = path.trim();
     if (!safePath)
@@ -108,8 +158,7 @@ exports.deleteBrand = (0, https_1.onCall)({
         (0, callable_parsers_1.requireNonEmpty)(brandId, "brandId");
         const brandRef = db.collection("brands").doc(brandId);
         let auditLogId = "";
-        let imagePathToDelete = "";
-        let thumbPathToDelete = "";
+        let storagePathsToDelete = [];
         await db.runTransaction(async (tx) => {
             const currentSnap = await tx.get(brandRef);
             if (!currentSnap.exists) {
@@ -140,17 +189,15 @@ exports.deleteBrand = (0, https_1.onCall)({
                     slug: current.slug,
                     imagePath: current.imagePath,
                     thumbPath: current.thumbPath,
+                    storageCleanup: "logo_image_paths",
                 },
                 eventSource: "server_action",
             }));
-            imagePathToDelete = current.imagePath;
-            if (current.thumbPath.length > 0 &&
-                current.thumbPath !== current.imagePath) {
-                thumbPathToDelete = current.thumbPath;
-            }
+            storagePathsToDelete = collectBrandStoragePaths(currentSnap.data() ?? {}, current);
         });
-        await deleteStorageObjectIfExists(imagePathToDelete);
-        await deleteStorageObjectIfExists(thumbPathToDelete);
+        for (const path of storagePathsToDelete) {
+            await deleteStorageObjectIfExists(path);
+        }
         return {
             success: true,
             brandId,

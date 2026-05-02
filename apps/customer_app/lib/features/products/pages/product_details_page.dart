@@ -130,15 +130,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     final variation = _selectedVariation;
     if (variation != null) {
-      final variationThumb = variation.effectiveThumbImageUrl.trim();
-      if (variationThumb.isNotEmpty) return variationThumb;
-
       final variationImage = variation.effectiveFullImageUrl.trim();
       if (variationImage.isNotEmpty) return variationImage;
+
+      final variationThumb = variation.effectiveThumbImageUrl.trim();
+      if (variationThumb.isNotEmpty) return variationThumb;
     }
 
-    final productImage = product.thumbnailUrl.trim();
-    if (productImage.isNotEmpty) return productImage;
+    final productFullImage = product.resolvedFullImageUrl.trim();
+    if (productFullImage.isNotEmpty) return productFullImage;
+
+    final productThumbImage = product.resolvedThumbImageUrl.trim();
+    if (productThumbImage.isNotEmpty) return productThumbImage;
 
     return null;
   }
@@ -728,7 +731,7 @@ class _ProductImageHeader extends StatelessWidget {
         )
             : Image.network(
           trimmed,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) => const Center(
             child: Icon(
               Icons.broken_image_outlined,

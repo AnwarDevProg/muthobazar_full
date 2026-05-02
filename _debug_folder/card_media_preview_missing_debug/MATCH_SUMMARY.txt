@@ -1,0 +1,485 @@
+﻿Card / Admin Media Preview Missing Debug Collector
+Generated: 05/02/2026 16:12:12
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+MaxFiles: 80
+
+============================================================
+Score: 192
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_element_catalog_v12.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_element_catalog_v12.dart
+Matched: product.thumbnailUrl, product.imageUrls.first, imageUrls.first, thumbnailUrl, Full image, Thumbnail circle, Thumbnail rounded, Brand logo, Category icon, MBProduct
+
+============================================================
+Score: 158
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_binding_registry.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_binding_registry.dart
+Matched: product.thumbnailUrl, product.imageUrls.first, imageUrls.first, thumbnailUrl, Brand logo, Category icon
+
+============================================================
+Score: 137
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\mb_card_design_studio_v2.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__mb_card_design_studio_v2.dart
+Matched: mb_card_design_studio, product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 137
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\rendering\mb_advanced_product_card_renderer.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__rendering__mb_advanced_product_card_renderer.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 133
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__mb_card_design_studio_advanced.dart
+Matched: mb_card_design_studio, Element Drawer, thumbnailUrl
+
+============================================================
+Score: 133
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_card_design_document.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_card_design_document.dart
+Matched: product.thumbnailUrl, thumbnailUrl
+
+============================================================
+Score: 133
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\panels\mb_advanced_element_drawer_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__panels__mb_advanced_element_drawer_panel.dart
+Matched: Element Drawer, thumbnailUrl
+
+============================================================
+Score: 128
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\panels\mb_advanced_canvas_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__panels__mb_advanced_canvas_panel.dart
+Matched: Responsive Preview Canvas, product.thumbnailUrl, thumbnailUrl
+
+============================================================
+Score: 127
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio\mb_card_design_studio.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio__mb_card_design_studio.dart
+Matched: mb_card_design_studio, thumbnailUrl, MBProduct
+
+============================================================
+Score: 124
+Original: packages\shared_models\lib\catalog\mb_product.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__catalog__mb_product.dart
+Matched: imageUrls.first, thumbnailUrl, fullImage, resolvedCardImageUrl, resolvedFullImageUrl, resolvedThumbImageUrl, resolvedTinyImageUrl, effectiveCardUrl, effectiveFullUrl, effectiveThumbUrl, effectiveTinyUrl, mediaItems, MBProductMedia, MBProduct
+
+============================================================
+Score: 123
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced_exports.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__mb_card_design_studio_advanced_exports.dart
+Matched: mb_card_design_studio
+
+============================================================
+Score: 123
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\mb_card_design_studio_v2_exports.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__mb_card_design_studio_v2_exports.dart
+Matched: mb_card_design_studio
+
+============================================================
+Score: 123
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\panels\mb_design_inspector_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__panels__mb_design_inspector_panel.dart
+Matched: Card Inspector
+
+============================================================
+Score: 123
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\panels\mb_design_element_drawer.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__panels__mb_design_element_drawer.dart
+Matched: Element Drawer
+
+============================================================
+Score: 123
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\panels\mb_advanced_inspector_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__panels__mb_advanced_inspector_panel.dart
+Matched: Card Inspector
+
+============================================================
+Score: 122
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\panels\mb_design_canvas_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__panels__mb_design_canvas_panel.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 118
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\models\mb_design_node.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__models__mb_design_node.dart
+Matched: product.thumbnailUrl, thumbnailUrl
+
+============================================================
+Score: 118
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_element_variant.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_element_variant.dart
+Matched: product.thumbnailUrl, thumbnailUrl
+
+============================================================
+Score: 116
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_binding_resolver.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_binding_resolver.dart
+Matched: thumbnailUrl, mediaItems, MBProduct
+
+============================================================
+Score: 98
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_studio_v2\models\mb_design_node_variant.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_studio_v2__models__mb_design_node_variant.dart
+Matched: 
+
+============================================================
+Score: 84
+Original: apps\admin_web\lib\features\products\widgets\card_design\admin_card_design_studio_dialog.dart
+CopiedAs: files_to_upload/apps__admin_web__lib__features__products__widgets__card_design__admin_card_design_studio_dialog.dart
+Matched: mb_card_design_studio, MBProduct
+
+============================================================
+Score: 80
+Original: apps\admin_web\lib\features\products\widgets\admin_product_form_dialog.dart
+CopiedAs: files_to_upload/apps__admin_web__lib__features__products__widgets__admin_product_form_dialog.dart
+Matched: Product Card Design Studio V3, Design Studio V3, mb_card_design_studio, thumbnailUrl, fullImage, effectiveFullUrl, effectiveThumbUrl, mediaItems, MBProductMedia, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_featured01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_featured01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_compact05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_compact05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_compact04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_compact04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_compact01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_compact01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_compact02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_compact02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_compact03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_compact03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_wide04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_wide04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_wide03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_wide03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_flash03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_flash03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_wide05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_wide05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_promo05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_promo05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_promo04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_promo04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_wide02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_wide02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_wide01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_wide01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_premium05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_premium05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_price01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_price01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_price02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_price02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_premium02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_premium02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_premium03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_premium03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_premium04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_premium04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_promo01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_promo01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_promo02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_promo02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_promo03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_promo03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_price03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_price03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_price04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_price04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_price05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_price05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_premium01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_premium01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_featured05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_featured05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_flash02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_flash02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_flash04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_flash04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_featured02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_featured02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_featured03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_featured03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_featured04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_featured04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_horizontal03.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_horizontal03.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_horizontal04.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_horizontal04.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_horizontal05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_horizontal05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_flash05.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_flash05.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_horizontal01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_horizontal01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_horizontal02.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_horizontal02.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\mb_design_card_context.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__mb_design_card_context.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 77
+Original: packages\shared_ui\lib\widgets\common\product_cards\variants\mb_product_card_flash01.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__variants__mb_product_card_flash01.dart
+Matched: product.thumbnailUrl, thumbnailUrl, MBProduct
+
+============================================================
+Score: 74
+Original: packages\shared_models\lib\catalog\mb_product_media.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__catalog__mb_product_media.dart
+Matched: effectiveCardUrl, effectiveFullUrl, effectiveThumbUrl, effectiveTinyUrl, MBProductMedia, MBProduct
+
+============================================================
+Score: 74
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_registry.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_registry.dart
+Matched: product.thumbnailUrl, thumbnailUrl
+
+============================================================
+Score: 72
+Original: packages\shared_ui\lib\widgets\common\product_cards\mb_product_card_renderer.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__mb_product_card_renderer.dart
+Matched: MBProduct
+
+============================================================
+Score: 72
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\mb_design_card_renderer.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__mb_design_card_renderer.dart
+Matched: MBProduct
+
+============================================================
+Score: 72
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\preview\mb_design_card_preview_panel.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__preview__mb_design_card_preview_panel.dart
+Matched: MBProduct
+
+============================================================
+Score: 68
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\preview\mb_design_card_mobile_preview_frame.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__preview__mb_design_card_mobile_preview_frame.dart
+Matched: 
+
+============================================================
+Score: 58
+Original: apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+CopiedAs: files_to_upload/apps__admin_web__lib__features__products__widgets__admin_product_form_support.dart
+Matched: thumbnailUrl, fullImage, effectiveCardUrl, effectiveFullUrl, effectiveThumbUrl, effectiveTinyUrl, mediaItems, MBProductMedia, MBProduct
+
+============================================================
+Score: 57
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\mb_saved_design_product_card.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__mb_saved_design_product_card.dart
+Matched: MBProduct
+
+============================================================
+Score: 57
+Original: packages\shared_ui\lib\widgets\common\product_cards\system\mb_product_card_variant_router.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__system__mb_product_card_variant_router.dart
+Matched: MBProduct
+
+============================================================
+Score: 57
+Original: packages\shared_ui\lib\widgets\common\product_cards\system\mb_product_card_layout_profile.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__system__mb_product_card_layout_profile.dart
+Matched: MBProduct
+
+============================================================
+Score: 57
+Original: packages\shared_ui\lib\widgets\common\product_cards\system\mb_product_card_layout_resolver.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__system__mb_product_card_layout_resolver.dart
+Matched: MBProduct
+
+============================================================
+Score: 54
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_family.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_family.dart
+Matched: 
+
+============================================================
+Score: 54
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_models.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_models.dart
+Matched: 
+
+============================================================
+Score: 54
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_config.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_config.dart
+Matched: 
+
+============================================================
+Score: 54
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_template.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_template.dart
+Matched: 
+
+============================================================
+Score: 54
+Original: packages\shared_models\lib\product_cards\design\mb_card_design_preset.dart
+CopiedAs: files_to_upload/packages__shared_models__lib__product_cards__design__mb_card_design_preset.dart
+Matched: 
+
+============================================================
+Score: 53
+Original: packages\shared_ui\lib\widgets\common\product_cards\design_engine\mb_design_card_defaults.dart
+CopiedAs: files_to_upload/packages__shared_ui__lib__widgets__common__product_cards__design_engine__mb_design_card_defaults.dart
+Matched: 
+

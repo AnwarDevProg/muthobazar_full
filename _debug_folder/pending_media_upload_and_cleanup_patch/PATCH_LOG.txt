@@ -1,0 +1,36 @@
+﻿Pending media upload and cleanup patch
+Generated: 05/02/2026 14:33:49
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__apps__admin_web__lib__features__products__widgets__admin_product_form_support.dart.20260502_143349.bak
+  Source: C:\Users\1\Downloads\admin_product_form_support_PENDING_UPLOAD_PATCHED.dart
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_dialog.dart
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__apps__admin_web__lib__features__products__widgets__admin_product_form_dialog.dart.20260502_143349.bak
+  Source: C:\Users\1\Downloads\admin_product_form_dialog_PENDING_UPLOAD_PATCHED.dart
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_models\lib\catalog\mb_product_media.dart
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__packages__shared_models__lib__catalog__mb_product_media.dart.20260502_143349.bak
+  Source: C:\Users\1\Downloads\mb_product_media_PENDING_UPLOAD_PATCHED.dart
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase\functions\src\categories\delete-category.ts
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__firebase__functions__src__categories__delete-category.ts.20260502_143349.bak
+  Source: C:\Users\1\Downloads\delete-category_CLEANUP_PATCHED.ts
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase\functions\src\brands\delete-brand.ts
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__firebase__functions__src__brands__delete-brand.ts.20260502_143349.bak
+  Source: C:\Users\1\Downloads\delete-brand_CLEANUP_PATCHED.ts
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase\functions\src\products\admin_hard_delete_product.ts
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\pending_media_upload_and_cleanup_patch\backup\Users__1__AndroidStudioProjects__MuthoBazar__firebase__functions__src__products__admin_hard_delete_product.ts.20260502_143349.bak
+  Source: C:\Users\1\Downloads\admin_hard_delete_product_CLEANUP_PATCHED.ts
+
+Changes:
+- Media dialog now keeps generated images in memory as pending bytes.
+- Media dialog no longer uploads image files before Save Product.
+- Save Product uploads pending media, receives URLs, then saves product.
+- Media previews include info cards for original/full/card/thumb/tiny images.
+- Category delete now cleans known image/icon storage paths.
+- Brand delete now cleans known logo/image storage paths.
+- Product hard delete now cleans original/full/card/thumb/tiny paths plus variation media paths.

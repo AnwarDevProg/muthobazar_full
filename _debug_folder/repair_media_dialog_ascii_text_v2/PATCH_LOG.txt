@@ -1,0 +1,8 @@
+﻿Repair media dialog ASCII text v2
+Generated: 05/02/2026 16:01:42
+Target: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_media_dialog_ascii_text_v2\backup\Users__1__AndroidStudioProjects__MuthoBazar__apps__admin_web__lib__features__products__widgets__admin_product_form_support.dart.20260502_160142.bak
+AppliedCopy: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\repair_media_dialog_ascii_text_v2\applied_copy\admin_product_form_support.dart
+
+Scope: admin_product_form_support.dart only.
+Fix: replace unicode/mojibake text with ASCII-safe text.

@@ -281,7 +281,7 @@ class _QuarantineProductsTable extends StatelessWidget {
       fallback: 'Untitled Product',
     );
     final String titleBn = item.titleBn.trim();
-    final String thumbnailUrl = item.resolvedThumbnailUrl.trim();
+    final String thumbnailUrl = item.resolvedThumbImageUrl.trim();
     final String sku = _safeNullableText(item.sku, fallback: '-');
     final String deletedAt = _prettyDate(item.deletedAt);
 
@@ -299,7 +299,7 @@ class _QuarantineProductsTable extends StatelessWidget {
                     thumbnailUrl,
                     width: 56,
                     height: 56,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const _ProductImageFallback(
                       icon: Icons.broken_image_outlined,
                     ),

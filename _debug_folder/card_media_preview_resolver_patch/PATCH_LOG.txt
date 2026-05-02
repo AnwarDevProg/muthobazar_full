@@ -1,0 +1,4 @@
+﻿Card/media preview resolver patch
+Generated: 05/02/2026 16:23:41
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+

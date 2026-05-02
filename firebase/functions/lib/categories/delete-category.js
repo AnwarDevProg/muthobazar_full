@@ -86,6 +86,56 @@ function buildAuditBeforeState(existing) {
         productsCount: existing.productsCount,
     };
 }
+function storagePathFromDownloadUrl(url) {
+    const safeUrl = url.trim();
+    if (safeUrl.length === 0)
+        return "";
+    try {
+        const parsed = new URL(safeUrl);
+        const marker = "/o/";
+        const markerIndex = parsed.pathname.indexOf(marker);
+        if (markerIndex < 0)
+            return "";
+        const encodedPath = parsed.pathname.substring(markerIndex + marker.length);
+        return decodeURIComponent(encodedPath);
+    }
+    catch (_) {
+        return "";
+    }
+}
+function addStoragePath(paths, value) {
+    const path = (0, callable_parsers_1.asTrimmedString)(value);
+    if (path.length > 0)
+        paths.add(path);
+}
+function addStoragePathFromUrl(paths, value) {
+    const path = storagePathFromDownloadUrl((0, callable_parsers_1.asTrimmedString)(value));
+    if (path.length > 0)
+        paths.add(path);
+}
+function collectCategoryStoragePaths(raw, existing) {
+    const paths = new Set();
+    addStoragePath(paths, existing.imagePath);
+    addStoragePath(paths, existing.thumbPath);
+    addStoragePath(paths, raw.iconPath);
+    addStoragePath(paths, raw.imageStoragePath);
+    addStoragePath(paths, raw.thumbStoragePath);
+    addStoragePath(paths, raw.iconStoragePath);
+    addStoragePath(paths, raw.storagePath);
+    addStoragePath(paths, raw.fullPath);
+    addStoragePath(paths, raw.cardPath);
+    addStoragePath(paths, raw.tinyPath);
+    addStoragePath(paths, raw.fullStoragePath);
+    addStoragePath(paths, raw.cardStoragePath);
+    addStoragePath(paths, raw.tinyStoragePath);
+    addStoragePathFromUrl(paths, existing.imageUrl);
+    addStoragePathFromUrl(paths, existing.iconUrl);
+    addStoragePathFromUrl(paths, raw.thumbUrl);
+    addStoragePathFromUrl(paths, raw.fullUrl);
+    addStoragePathFromUrl(paths, raw.cardUrl);
+    addStoragePathFromUrl(paths, raw.tinyUrl);
+    return Array.from(paths);
+}
 async function deleteStoragePath(path) {
     const normalized = path.trim();
     if (normalized.length === 0)
@@ -106,8 +156,7 @@ exports.deleteCategory = (0, https_1.onCall)({
         const reason = (0, callable_parsers_1.normalizeNullableId)(request.data?.reason);
         (0, callable_parsers_1.requireNonEmpty)(categoryId, "categoryId");
         let auditLogId = "";
-        let imagePathToDelete = "";
-        let thumbPathToDelete = "";
+        let storagePathsToDelete = [];
         await db.runTransaction(async (tx) => {
             const categoryRef = db.collection("categories").doc(categoryId);
             const existingSnap = await tx.get(categoryRef);
@@ -142,18 +191,18 @@ exports.deleteCategory = (0, https_1.onCall)({
                     groupId: existing.groupId,
                     parentId: existing.parentId ?? "",
                     productsCount: existing.productsCount,
+                    imagePath: existing.imagePath,
+                    thumbPath: existing.thumbPath,
+                    storageCleanup: "image_icon_paths",
                 },
                 eventSource: "server_action",
             }));
             tx.delete(categoryRef);
-            imagePathToDelete = existing.imagePath;
-            if (existing.thumbPath.length > 0 &&
-                existing.thumbPath !== existing.imagePath) {
-                thumbPathToDelete = existing.thumbPath;
-            }
+            storagePathsToDelete = collectCategoryStoragePaths(existingSnap.data() ?? {}, existing);
         });
-        await deleteStoragePath(imagePathToDelete);
-        await deleteStoragePath(thumbPathToDelete);
+        for (const path of storagePathsToDelete) {
+            await deleteStoragePath(path);
+        }
         return {
             success: true,
             categoryId,

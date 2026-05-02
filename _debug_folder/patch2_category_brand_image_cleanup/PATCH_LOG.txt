@@ -1,0 +1,17 @@
+﻿Patch 2 - Category/Brand image cleanup
+Generated: 05/02/2026 14:39:30
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase\functions\src\categories\delete-category.ts
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\patch2_category_brand_image_cleanup\backup\Users__1__AndroidStudioProjects__MuthoBazar__firebase__functions__src__categories__delete-category.ts.20260502_143930.bak
+  Source: C:\Users\1\Downloads\delete-category_PATCH2_IMAGE_CLEANUP.ts
+
+Patched: C:\Users\1\AndroidStudioProjects\MuthoBazar\firebase\functions\src\brands\delete-brand.ts
+  Backup: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\patch2_category_brand_image_cleanup\backup\Users__1__AndroidStudioProjects__MuthoBazar__firebase__functions__src__brands__delete-brand.ts.20260502_143930.bak
+  Source: C:\Users\1\Downloads\delete-brand_PATCH2_IMAGE_CLEANUP.ts
+
+Changes:
+- deleteCategory now collects and deletes category image/icon storage objects after the category doc is deleted.
+- deleteBrand now collects and deletes brand logo/image storage objects after the brand doc is deleted.
+- Cleanup uses explicit storage path fields first and can also derive Storage paths from Firebase download URLs.
+- Existing delete guards are preserved: category with products/children is not deleted; brand with products is not deleted.

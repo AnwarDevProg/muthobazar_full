@@ -1,0 +1,14 @@
+﻿Image pipeline variant policy patch
+Generated: 05/02/2026 15:29:27
+RepoRoot: C:\Users\1\AndroidStudioProjects\MuthoBazar
+
+Goal:
+Only product media uploads original/full/card/thumb/tiny.
+All other modules such as category, brand, banner, profile use full/thumb only by default.
+
+Patched files:
+- C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_core\lib\media\mb_image_pipeline_service.dart
+- C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_dialog.dart
+- C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\admin_web\lib\features\products\widgets\admin_product_form_support.dart
+
+Backup folder: C:\Users\1\AndroidStudioProjects\MuthoBazar\_debug_folder\image_pipeline_variant_policy_patch\backup
