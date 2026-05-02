@@ -1,4 +1,4 @@
-﻿// File: mb_advanced_product_card_renderer.dart
+// File: mb_advanced_product_card_renderer.dart
 //
 // Advanced Product Card Runtime Renderer
 // --------------------------------------
@@ -1343,7 +1343,7 @@ double _resolveProgress(
 
 String _formatCurrency(num value, _V3DesignNode node) {
   final showCurrency = node.readBool('showCurrency', fallback: true);
-  final currency = node.readString('currencySymbol', fallback: 'à§³');
+  final currency = node.readString('currencySymbol', fallback: '৳');
   final decimals = node.readInt('decimalPlaces', fallback: value % 1 == 0 ? 0 : 1)
       .clamp(0, 3);
 
@@ -1646,5 +1646,4 @@ Alignment _alignmentFromTextAlign(String source) {
       return Alignment.centerLeft;
   }
 }
-
 

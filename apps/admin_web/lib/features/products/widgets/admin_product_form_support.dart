@@ -806,7 +806,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
   }) {
     final theme = Theme.of(context);
     final details = <String>[
-      if (width != null && height != null) '$width Ã- $height px',
+      if (width != null && height != null) '$width x $height px',
       if (byteLength != null) _bytesText(byteLength),
       if (extra.trim().isNotEmpty) extra.trim(),
     ];
@@ -833,7 +833,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
           if (details.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              details.join(' â€¢ '),
+              details.join(' | '),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
               ),
@@ -1313,7 +1313,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                 if (_preparedImage != null) ...[
                   _buildInfoRow(
                     'Original Pixels',
-                    '${_preparedImage!.sourceWidth} Ãƒâ€” ${_preparedImage!.sourceHeight}',
+                    '${_preparedImage!.sourceWidth} x ${_preparedImage!.sourceHeight}',
                   ),
                   _buildInfoRow(
                     'Original Ratio',
@@ -1321,7 +1321,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                   _buildInfoRow(
                     'Card/Crop Pixels',
-                    '${_preparedImage!.croppedWidth} Ãƒâ€” ${_preparedImage!.croppedHeight}',
+                    '${_preparedImage!.croppedWidth} x ${_preparedImage!.croppedHeight}',
                   ),
                   _buildInfoRow(
                     'Crop Ratio',
@@ -1337,7 +1337,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                   _buildInfoRow(
                     'Full Pixels',
-                    '${_preparedImage!.fullWidth} Ãƒâ€” ${_preparedImage!.fullHeight}',
+                    '${_preparedImage!.fullWidth} x ${_preparedImage!.fullHeight}',
                   ),
                   _buildInfoRow(
                     'Full Size',
@@ -1345,7 +1345,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                   _buildInfoRow(
                     'Thumb Pixels',
-                    '${_preparedImage!.thumbWidth} Ãƒâ€” ${_preparedImage!.thumbHeight}',
+                    '${_preparedImage!.thumbWidth} x ${_preparedImage!.thumbHeight}',
                   ),
                   _buildInfoRow(
                     'Thumb Size',
@@ -1353,7 +1353,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   ),
                   _buildInfoRow(
                     'Tiny Pixels',
-                    '${_preparedImage!.tinyWidth} Ã- ${_preparedImage!.tinyHeight}',
+                    '${_preparedImage!.tinyWidth} x ${_preparedImage!.tinyHeight}',
                   ),
                   _buildInfoRow(
                     'Tiny Size',
@@ -1846,7 +1846,7 @@ class _AttributeDialogState extends State<AttributeDialog> {
                       Text(
                         'Example 1\n'
                             'Name (English): Size\n'
-                            'Name (Bangla): Ã Â¦Â¸Ã Â¦Â¾Ã Â¦â€¡Ã Â¦Å“\n'
+                            'Name (Bangla): à¦¸à¦¾à¦‡à¦œ\n'
                             'Code: size\n'
                             'Display Type: text\n'
                             'Values: 500g, 1kg',
@@ -2044,7 +2044,7 @@ class _AttributeDialogState extends State<AttributeDialog> {
                             ? item.value
                             : item.labelEn,
                         subtitle:
-                        'value: ${item.value} Ã¢â‚¬Â¢ order: ${item.sortOrder} Ã¢â‚¬Â¢ enabled: ${item.isEnabled}',
+                        'value: ${item.value} â€¢ order: ${item.sortOrder} â€¢ enabled: ${item.isEnabled}',
                         onEdit: () => _editValue(item),
                         onDelete: () {
                           setState(() {
@@ -2289,15 +2289,15 @@ class _VariationDialogState extends State<VariationDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Original Pixels: ${p.sourceWidth} Ãƒâ€” ${p.sourceHeight}'),
+        Text('Original Pixels: ${p.sourceWidth} Ã— ${p.sourceHeight}'),
         Text('Original Ratio: ${_ratioText(p.sourceWidth, p.sourceHeight)}'),
-        Text('Cropped Pixels: ${p.croppedWidth} Ãƒâ€” ${p.croppedHeight}'),
+        Text('Cropped Pixels: ${p.croppedWidth} Ã— ${p.croppedHeight}'),
         Text('Crop Ratio: ${p.cropAspectRatioX}:${p.cropAspectRatioY}'),
         Text('Crop Zoom: ${p.zoomScale.toStringAsFixed(2)}'),
         Text('Cropped Size: ${_bytesText(p.croppedByteLength)}'),
-        Text('Full Pixels: ${p.fullWidth} Ãƒâ€” ${p.fullHeight}'),
+        Text('Full Pixels: ${p.fullWidth} Ã— ${p.fullHeight}'),
         Text('Full Size: ${_bytesText(p.fullByteLength)}'),
-        Text('Thumb Pixels: ${p.thumbWidth} Ãƒâ€” ${p.thumbHeight}'),
+        Text('Thumb Pixels: ${p.thumbWidth} Ã— ${p.thumbHeight}'),
         Text('Thumb Size: ${_bytesText(p.thumbByteLength)}'),
       ],
     );
@@ -2458,7 +2458,7 @@ class _VariationDialogState extends State<VariationDialog> {
                   (item) => EditableTile(
                     title: item.labelEn.trim().isEmpty ? item.id : item.labelEn,
                     subtitle:
-                        'mode: ${item.mode} Ã¢â‚¬Â¢ price: ${item.price} Ã¢â‚¬Â¢ default: ${item.isDefault}',
+                        'mode: ${item.mode} â€¢ price: ${item.price} â€¢ default: ${item.isDefault}',
                     onEdit: () => _editVariationPurchaseOption(item),
                     onDelete: () {
                       setState(() {
@@ -2597,7 +2597,6 @@ class _VariationDialogState extends State<VariationDialog> {
           await MBImagePipelineService.instance.uploadPreparedImageSet(
         prepared: prepared,
         storageFolder: 'products/variations',
-        uploadOriginalCardTiny: true,
         entityId: variationId,
         fileStem: _titleEnController.text.trim().isEmpty
             ? prepared.baseName
@@ -4434,7 +4433,5 @@ class _PurchaseOptionDialogState extends State<PurchaseOptionDialog> {
     );
   }
 }
-
-
 
 

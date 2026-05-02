@@ -1,4 +1,4 @@
-// MuthoBazar Advanced Product Card Design Studio
+﻿// MuthoBazar Advanced Product Card Design Studio
 // Patch 8 middle responsive canvas.
 //
 // Purpose:
@@ -16,6 +16,7 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1027,6 +1028,7 @@ class _NodeVisual extends StatelessWidget {
       case 'media':
         return _MediaNode(
           imageUrl: _resolveImageUrl(previewContext, node.binding),
+          imageBytes: _resolveImageBytes(previewContext, node.binding),
           node: node,
           scale: scale,
         );
@@ -1254,11 +1256,13 @@ class _MrpStrikePainter extends CustomPainter {
 class _MediaNode extends StatelessWidget {
   const _MediaNode({
     required this.imageUrl,
+    required this.imageBytes,
     required this.node,
     required this.scale,
   });
 
   final String imageUrl;
+  final Uint8List? imageBytes;
   final MBAdvancedDesignNode node;
   final double scale;
 
@@ -1267,6 +1271,7 @@ class _MediaNode extends StatelessWidget {
     final radius = _asDouble(node.style['borderRadius'], 24) * scale;
     final ringWidth = _asDouble(node.style['ringWidth'], 0) * scale;
     final borderColor = _hexColor(node.style['borderHex'], Colors.white);
+    final hasPendingImage = imageBytes != null && imageBytes!.isNotEmpty;
     final hasImage = imageUrl.trim().isNotEmpty;
 
     return Container(
@@ -1284,13 +1289,22 @@ class _MediaNode extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(math.max(0, radius - ringWidth)),
-        child: hasImage
-            ? Image.network(
-                imageUrl,
+        child: hasPendingImage
+            ? Image.memory(
+                imageBytes!,
                 fit: BoxFit.cover,
+                gaplessPlayback: true,
+                filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => const _ImageFallback(),
               )
-            : const _ImageFallback(),
+            : hasImage
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (_, __, ___) => const _ImageFallback(),
+                  )
+                : const _ImageFallback(),
       ),
     );
   }
@@ -1372,6 +1386,93 @@ String _resolveBinding(
   );
 }
 
+
+Uint8List? _pendingOriginalBytes(dynamic media) {
+  try {
+    final value = media.pendingOriginalBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _pendingFullBytes(dynamic media) {
+  try {
+    final value = media.pendingFullBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _pendingCardBytes(dynamic media) {
+  try {
+    final value = media.pendingCardBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _pendingThumbBytes(dynamic media) {
+  try {
+    final value = media.pendingThumbBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _pendingTinyBytes(dynamic media) {
+  try {
+    final value = media.pendingTinyBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _firstPendingBytes(List<Uint8List?> values) {
+  for (final value in values) {
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+Uint8List? _resolveImageBytes(
+  MBAdvancedPreviewContext previewContext,
+  String binding,
+) {
+  dynamic primaryMedia;
+
+  try {
+    primaryMedia = previewContext.product.primaryMediaItem;
+  } catch (_) {
+    return null;
+  }
+
+  if (primaryMedia == null) return null;
+
+  final normalized = binding.trim();
+
+  final original = _pendingOriginalBytes(primaryMedia);
+  final full = _pendingFullBytes(primaryMedia);
+  final card = _pendingCardBytes(primaryMedia);
+  final thumb = _pendingThumbBytes(primaryMedia);
+  final tiny = _pendingTinyBytes(primaryMedia);
+
+  switch (normalized) {
+    case 'product.resolvedOriginalImageUrl':
+      return _firstPendingBytes(<Uint8List?>[original, full, card, thumb, tiny]);
+    case 'product.resolvedFullImageUrl':
+      return _firstPendingBytes(<Uint8List?>[full, original, card, thumb, tiny]);
+    case 'product.resolvedThumbImageUrl':
+    case 'product.thumbnailUrl':
+      return _firstPendingBytes(<Uint8List?>[thumb, card, full, original, tiny]);
+    case 'product.resolvedTinyImageUrl':
+      return _firstPendingBytes(<Uint8List?>[tiny, thumb, card, full, original]);
+    case 'product.resolvedCardImageUrl':
+    case 'product.imageUrl':
+    case 'product.imageUrls.first':
+    default:
+      return _firstPendingBytes(<Uint8List?>[card, full, thumb, original, tiny]);
+  }
+}
 String _resolveImageUrl(
   MBAdvancedPreviewContext previewContext,
   String binding,
@@ -1387,7 +1488,7 @@ String _resolveImageUrl(
 
   return MBAdvancedBindingResolver.resolveImageUrl(
     previewContext,
-    'product.thumbnailUrl',
+    'product.resolvedCardImageUrl',
   );
 }
 
@@ -1449,7 +1550,7 @@ String _fallbackTextForNode(MBAdvancedDesignNode node) {
     case 'timer':
       return '02:15:08';
     case 'rating':
-      return '★ 4.8';
+      return 'â˜… 4.8';
     case 'stock':
       return 'In stock';
     case 'delivery':
@@ -1463,13 +1564,13 @@ String _fallbackTextForNode(MBAdvancedDesignNode node) {
     case 'ribbon':
       return 'NEW';
     case 'wishlist':
-      return '♡';
+      return 'â™¡';
     case 'compare':
-      return '⇄';
+      return 'â‡„';
     case 'share':
-      return '↗';
+      return 'â†—';
     case 'icon':
-      return '✪';
+      return 'âœª';
     case 'quantity':
       return 'Qty 1';
     case 'promoBadge':
@@ -1479,7 +1580,7 @@ String _fallbackTextForNode(MBAdvancedDesignNode node) {
     case 'secondaryCta':
       return 'Details';
     case 'animation':
-      return '●';
+      return 'â—';
     case 'variation':
       return 'Variation';
     case 'purchaseOption':
@@ -1722,3 +1823,4 @@ double _clampDouble(double value, double min, double max) {
   if (max < min) return min;
   return math.min(math.max(value, min), max);
 }
+

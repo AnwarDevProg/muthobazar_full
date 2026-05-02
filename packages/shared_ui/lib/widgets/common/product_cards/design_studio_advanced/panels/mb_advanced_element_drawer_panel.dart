@@ -8,6 +8,8 @@
 // - Keeps drag-only insertion: clicking a drawer item does not add anything.
 // - Keeps the existing MBAdvancedElementVariant drag/drop contract.
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../models/mb_advanced_binding_registry.dart';
@@ -117,9 +119,17 @@ List<MBAdvancedElementGroup> _buildVisibleGroups(
 ) {
   final baseGroups = MBAdvancedElementCatalogV12.groups();
   final visibleGroups = <MBAdvancedElementGroup>[];
+  final showVariationGroups = _isVariableProductPreview(previewContext);
 
   for (final group in baseGroups) {
     if (_hiddenDrawerGroupIds.contains(group.id)) {
+      continue;
+    }
+
+    // Simple/bundle/service-like products must not show variation-only drawer
+    // groups. These groups are useful only when the current product type is
+    // variable and the product has variation-aware data.
+    if (group.id == 'variation' && !showVariationGroups) {
       continue;
     }
 
@@ -139,7 +149,7 @@ List<MBAdvancedElementGroup> _buildVisibleGroups(
       ),
     );
 
-    if (group.id == 'variation') {
+    if (group.id == 'variation' && showVariationGroups) {
       visibleGroups.add(_buildVariationAttributeGroup(previewContext));
     }
   }
@@ -147,6 +157,103 @@ List<MBAdvancedElementGroup> _buildVisibleGroups(
   return visibleGroups;
 }
 
+bool _isVariableProductPreview(MBAdvancedPreviewContext previewContext) {
+  if (previewContext.selectedVariation != null) {
+    return true;
+  }
+
+  final product = previewContext.product;
+  final typeText = _readProductTypeText(product).toLowerCase();
+
+  if (typeText.contains('variable')) {
+    return true;
+  }
+
+  if (_hasNonEmptyCollection(product, const <String>[
+    'variations',
+    'variationItems',
+    'productVariations',
+  ])) {
+    return true;
+  }
+
+  return false;
+}
+
+String _readProductTypeText(dynamic product) {
+  if (product == null) return '';
+
+  try {
+    if (product is Map) {
+      for (final key in const <String>[
+        'productType',
+        'type',
+        'kind',
+        'productKind',
+      ]) {
+        final value = product[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    final value = product.productType?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  } catch (_) {}
+
+  try {
+    final value = product.type?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  } catch (_) {}
+
+  try {
+    final value = product.kind?.toString().trim() ?? '';
+    if (value.isNotEmpty) return value;
+  } catch (_) {}
+
+  return '';
+}
+
+bool _hasNonEmptyCollection(dynamic source, List<String> fields) {
+  if (source == null) return false;
+
+  for (final field in fields) {
+    dynamic value;
+
+    try {
+      if (source is Map && source.containsKey(field)) {
+        value = source[field];
+      }
+    } catch (_) {}
+
+    if (value == null) {
+      try {
+        switch (field) {
+          case 'variations':
+            value = source.variations;
+            break;
+          case 'variationItems':
+            value = source.variationItems;
+            break;
+          case 'productVariations':
+            value = source.productVariations;
+            break;
+        }
+      } catch (_) {}
+    }
+
+    if (value is Iterable && value.isNotEmpty) {
+      return true;
+    }
+
+    if (value is Map && value.isNotEmpty) {
+      return true;
+    }
+  }
+
+  return false;
+}
 const Set<String> _hiddenDrawerGroupIds = <String>{
   'product_attribute',
   'attribute_value',
@@ -935,6 +1042,92 @@ class _PreviewPillOrText extends StatelessWidget {
   }
 }
 
+Uint8List? _drawerPendingOriginalBytes(dynamic media) {
+  try {
+    final value = media.pendingOriginalBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _drawerPendingFullBytes(dynamic media) {
+  try {
+    final value = media.pendingFullBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _drawerPendingCardBytes(dynamic media) {
+  try {
+    final value = media.pendingCardBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _drawerPendingThumbBytes(dynamic media) {
+  try {
+    final value = media.pendingThumbBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _drawerPendingTinyBytes(dynamic media) {
+  try {
+    final value = media.pendingTinyBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
+Uint8List? _drawerFirstPendingBytes(List<Uint8List?> values) {
+  for (final value in values) {
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+dynamic _drawerPrimaryMedia(MBAdvancedPreviewContext previewContext) {
+  try {
+    return previewContext.product.primaryMediaItem;
+  } catch (_) {
+    return null;
+  }
+}
+
+Uint8List? _drawerResolveImageBytes(
+  MBAdvancedPreviewContext previewContext,
+  String binding,
+) {
+  final media = _drawerPrimaryMedia(previewContext);
+  if (media == null) return null;
+
+  final original = _drawerPendingOriginalBytes(media);
+  final full = _drawerPendingFullBytes(media);
+  final card = _drawerPendingCardBytes(media);
+  final thumb = _drawerPendingThumbBytes(media);
+  final tiny = _drawerPendingTinyBytes(media);
+
+  switch (binding.trim()) {
+    case 'product.resolvedOriginalImageUrl':
+      return _drawerFirstPendingBytes(<Uint8List?>[original, full, card, thumb, tiny]);
+    case 'product.resolvedFullImageUrl':
+      return _drawerFirstPendingBytes(<Uint8List?>[full, original, card, thumb, tiny]);
+    case 'product.resolvedThumbImageUrl':
+    case 'product.thumbnailUrl':
+      return _drawerFirstPendingBytes(<Uint8List?>[thumb, card, full, original, tiny]);
+    case 'product.resolvedTinyImageUrl':
+      return _drawerFirstPendingBytes(<Uint8List?>[tiny, thumb, card, full, original]);
+    case 'product.resolvedCardImageUrl':
+    case 'product.imageUrl':
+    case 'product.imageUrls.first':
+    default:
+      return _drawerFirstPendingBytes(<Uint8List?>[card, full, thumb, original, tiny]);
+  }
+}
+
 class _PreviewMedia extends StatelessWidget {
   const _PreviewMedia({required this.variant, required this.previewContext});
 
@@ -943,6 +1136,10 @@ class _PreviewMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageBytes = _drawerResolveImageBytes(
+      previewContext,
+      variant.binding,
+    );
     final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
       previewContext,
       variant.binding,
@@ -954,7 +1151,9 @@ class _PreviewMedia extends StatelessWidget {
       child: Container(
         width: isCircle ? 48 : 62,
         height: isCircle ? 48 : 42,
-        padding: EdgeInsets.all(_asDouble(variant.defaultStyle['ringWidth'], 4) * 0.45),
+        padding: EdgeInsets.all(
+          _asDouble(variant.defaultStyle['ringWidth'], 4) * 0.45,
+        ),
         decoration: BoxDecoration(
           color: _hexColor(variant.defaultStyle['borderHex'], Colors.white),
           borderRadius: BorderRadius.circular(isCircle ? 999 : 14),
@@ -968,19 +1167,27 @@ class _PreviewMedia extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(isCircle ? 999 : 10),
-          child: imageUrl.isEmpty
-              ? const _ImageFallback()
-              : Image.network(
-                  imageUrl,
+          child: imageBytes != null && imageBytes.isNotEmpty
+              ? Image.memory(
+                  imageBytes,
                   fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.high,
                   errorBuilder: (_, __, ___) => const _ImageFallback(),
-                ),
+                )
+              : imageUrl.isEmpty
+                  ? const _ImageFallback()
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (_, __, ___) => const _ImageFallback(),
+                    ),
         ),
       ),
     );
   }
 }
-
 class _PreviewVisualShape extends StatelessWidget {
   const _PreviewVisualShape({required this.variant});
 
@@ -1097,5 +1304,8 @@ double _asDouble(Object? value, double fallback) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString().trim() ?? '') ?? fallback;
 }
+
+
+
 
 

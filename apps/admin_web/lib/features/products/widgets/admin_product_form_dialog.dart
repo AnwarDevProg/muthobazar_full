@@ -4,6 +4,7 @@ import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:shared_ui/widgets/common/product_cards/design_studio_advanced/mb_card_design_studio_advanced_exports.dart';
 
@@ -2012,6 +2013,44 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     );
   }
 
+
+  Widget _buildMediaItemPreview(MBProductMedia item) {
+    final pendingBytes = item.pendingThumbBytes ??
+        item.pendingTinyBytes ??
+        item.pendingCardBytes ??
+        item.pendingFullBytes ??
+        item.pendingOriginalBytes;
+
+    if (pendingBytes != null && pendingBytes.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.memory(
+          pendingBytes,
+          width: 46,
+          height: 46,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
+      );
+    }
+
+    final thumbUrl = item.effectiveThumbUrl.trim();
+    if (thumbUrl.isNotEmpty) {
+      return PreviewImage(url: thumbUrl);
+    }
+
+    final cardUrl = item.effectiveCardUrl.trim();
+    if (cardUrl.isNotEmpty) {
+      return PreviewImage(url: cardUrl);
+    }
+
+    final fullUrl = item.effectiveFullUrl.trim();
+    if (fullUrl.isNotEmpty) {
+      return PreviewImage(url: fullUrl);
+    }
+
+    return const Icon(Icons.image_not_supported_outlined);
+  }
   Widget _buildMediaSection(BuildContext context) {
     return SectionCard(
       title: 'Media',
@@ -2033,10 +2072,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               (item) => EditableTile(
             title: item.labelEn.trim().isEmpty ? item.effectiveFullUrl : item.labelEn,
             subtitle:
-            'role: ${item.role} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ type: ${item.type} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ primary: ${item.isPrimary} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ order: ${item.sortOrder}',
-            leading: item.effectiveThumbUrl.trim().isEmpty
-                ? const Icon(Icons.image_not_supported_outlined)
-                : PreviewImage(url: item.effectiveThumbUrl),
+            'role: ${item.role} | type: ${item.type} | primary: ${item.isPrimary} | order: ${item.sortOrder}${item.hasPendingUpload ? ' | pending upload' : ''}',
+            leading: _buildMediaItemPreview(item),
             onEdit: () => _editMediaItem(item),
             onDelete: () {
               setState(() {
@@ -3465,8 +3502,157 @@ Wrap(
     return normalized.substring(0, 80);
   }
 
+
+  String _mediaFileStemFor(MBProductMedia item) {
+    final label = item.labelEn.trim();
+    if (label.isNotEmpty) return label;
+
+    final base = item.pendingBaseName.trim();
+    if (base.isNotEmpty) return base;
+
+    final id = item.id.trim();
+    if (id.isNotEmpty) return id;
+
+    return 'product_media';
+  }
+
+  MBPreparedImageSet _preparedImageSetFromPendingMedia(MBProductMedia item) {
+    if (!item.hasPendingUpload) {
+      throw StateError('Media item ${item.id} has no pending upload bytes.');
+    }
+
+    final fullWidth = item.fullWidth ?? item.width ?? item.originalWidth ?? 1;
+    final fullHeight = item.fullHeight ?? item.height ?? item.originalHeight ?? 1;
+    final cardWidth = item.cardWidth ?? fullWidth;
+    final cardHeight = item.cardHeight ?? fullHeight;
+    final thumbWidth = item.thumbWidth ?? cardWidth;
+    final thumbHeight = item.thumbHeight ?? cardHeight;
+    final tinyWidth = item.tinyWidth ?? thumbWidth;
+    final tinyHeight = item.tinyHeight ?? thumbHeight;
+    final originalWidth = item.originalWidth ?? fullWidth;
+    final originalHeight = item.originalHeight ?? fullHeight;
+
+    return MBPreparedImageSet(
+      originalBytes: item.pendingOriginalBytes!,
+      fullBytes: item.pendingFullBytes!,
+      cardBytes: item.pendingCardBytes!,
+      thumbBytes: item.pendingThumbBytes!,
+      tinyBytes: item.pendingTinyBytes!,
+      originalWidth: originalWidth,
+      originalHeight: originalHeight,
+      fullWidth: fullWidth,
+      fullHeight: fullHeight,
+      cardWidth: cardWidth,
+      cardHeight: cardHeight,
+      thumbWidth: thumbWidth,
+      thumbHeight: thumbHeight,
+      tinyWidth: tinyWidth,
+      tinyHeight: tinyHeight,
+      originalFileName: item.pendingOriginalFileName.trim().isEmpty
+          ? '${item.id}.jpg'
+          : item.pendingOriginalFileName.trim(),
+      baseName: item.pendingBaseName.trim().isEmpty
+          ? item.id.trim()
+          : item.pendingBaseName.trim(),
+      mimeType: item.pendingMimeType.trim().isEmpty
+          ? 'image/jpeg'
+          : item.pendingMimeType.trim(),
+      originalByteLength: item.pendingOriginalBytes!.lengthInBytes,
+      fullByteLength: item.pendingFullBytes!.lengthInBytes,
+      cardByteLength: item.pendingCardBytes!.lengthInBytes,
+      thumbByteLength: item.pendingThumbBytes!.lengthInBytes,
+      tinyByteLength: item.pendingTinyBytes!.lengthInBytes,
+      sourceWidth: originalWidth,
+      sourceHeight: originalHeight,
+      requestSquareCrop: false,
+      requestAspectCrop: item.fitMode == 'manualCrop',
+      cropAspectRatioX: item.cropAspectRatioX ?? 4,
+      cropAspectRatioY: item.cropAspectRatioY ?? 5,
+      croppedWidth: item.cropWidth ?? cardWidth,
+      croppedHeight: item.cropHeight ?? cardHeight,
+      croppedByteLength: item.cropSizeBytes ?? item.pendingCardBytes!.lengthInBytes,
+      zoomScale: item.cropZoomScale ?? 1.0,
+      fitMode: item.fitMode,
+    );
+  }
+
+  Future<void> _uploadPendingProductMediaItems() async {
+    if (_mediaItems.every((item) => !item.hasPendingUpload)) return;
+
+    for (var i = 0; i < _mediaItems.length; i++) {
+      final item = _mediaItems[i];
+      if (!item.hasPendingUpload) continue;
+
+      final prepared = _preparedImageSetFromPendingMedia(item);
+      final mediaId = item.id.trim().isEmpty ? makeEditorId('media') : item.id.trim();
+
+      final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/media',
+        entityId: mediaId,
+        fileStem: _mediaFileStemFor(item),
+        uploadOriginalCardTiny: true,
+        customMetadata: <String, String>{
+          'mediaId': mediaId,
+          'role': item.role,
+          'type': item.type,
+          'fitMode': item.fitMode,
+          'pipeline': 'muthobazar_deferred_media_v1',
+        },
+      );
+
+      _mediaItems[i] = item.copyWith(
+        id: mediaId,
+        url: uploaded.fullUrl,
+        storagePath: uploaded.fullPath,
+        originalUrl: uploaded.originalUrl,
+        originalStoragePath: uploaded.originalPath,
+        fullUrl: uploaded.fullUrl,
+        fullStoragePath: uploaded.fullPath,
+        cardUrl: uploaded.cardUrl,
+        cardStoragePath: uploaded.cardPath,
+        thumbUrl: uploaded.thumbUrl,
+        thumbStoragePath: uploaded.thumbPath,
+        tinyUrl: uploaded.tinyUrl,
+        tinyStoragePath: uploaded.tinyPath,
+        width: uploaded.fullWidth,
+        height: uploaded.fullHeight,
+        sizeBytes: prepared.fullByteLength,
+        originalWidth: uploaded.originalWidth,
+        originalHeight: uploaded.originalHeight,
+        originalSizeBytes: prepared.originalByteLength,
+        fullWidth: uploaded.fullWidth,
+        fullHeight: uploaded.fullHeight,
+        fullSizeBytes: prepared.fullByteLength,
+        cardWidth: uploaded.cardWidth,
+        cardHeight: uploaded.cardHeight,
+        cardSizeBytes: prepared.cardByteLength,
+        thumbWidth: uploaded.thumbWidth,
+        thumbHeight: uploaded.thumbHeight,
+        thumbSizeBytes: prepared.thumbByteLength,
+        tinyWidth: uploaded.tinyWidth,
+        tinyHeight: uploaded.tinyHeight,
+        tinySizeBytes: prepared.tinyByteLength,
+        clearPendingUpload: true,
+        updatedAt: DateTime.now(),
+      );
+    }
+
+    _normalizeProductMediaPrimary();
+  }
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
+
+    try {
+      await _uploadPendingProductMediaItems();
+    } catch (error) {
+      if (!mounted) return;
+      await _showProductMediaPrompt(
+        'Image Upload Failed',
+        'The product was not saved because one or more pending images failed to upload. Details: $error',
+      );
+      return;
+    }
 
     final product = _buildProductFromForm();
 
@@ -4087,6 +4273,9 @@ Wrap(
     });
   }
 }
+
+
+
 
 
 
