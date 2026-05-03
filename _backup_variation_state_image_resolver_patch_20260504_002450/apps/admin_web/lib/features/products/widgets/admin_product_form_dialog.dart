@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui' as ui;
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
@@ -331,7 +330,6 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   final GlobalKey _auditKey = GlobalKey();
 
   bool _sectionDrawerExpanded = true;
-  bool _isDialogBusy = false;
 
   late final AdminProductController _controller;
   late final bool _ownsController;
@@ -1101,13 +1099,8 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   Widget build(BuildContext context) {
     final isCreate = _source.id.trim().isEmpty;
 
-    return Obx(() {
-      final saving = _isDialogBusy || _controller.isSaving.value;
-
-      return Stack(
-        children: [
-          Column(
-            children: [
+    return Column(
+      children: [
         _buildHeader(context, isCreate),
         Expanded(
           child: Form(
@@ -1226,67 +1219,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
           ),
         ),
         _buildFooter(context),
-            ],
-          ),
-          if (saving) _buildSavingOverlay(context),
-        ],
-      );
-    });
-  }
-
-  Widget _buildSavingOverlay(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Positioned.fill(
-      child: AbsorbPointer(
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.18),
-              alignment: Alignment.center,
-              child: Container(
-                width: 280,
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 42,
-                      height: 42,
-                      child: CircularProgressIndicator(strokeWidth: 3),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Saving product...',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Checking data, uploading images, and writing product safely.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -1746,9 +1679,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
         ),
       ),
       child: Obx(
-            () {
-          final saving = _isDialogBusy || _controller.isSaving.value;
-          return Row(
+            () => Row(
           children: [
             Expanded(
               child: _controller.errorMessage.value.trim().isEmpty
@@ -1762,24 +1693,27 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
               ),
             ),
             TextButton(
-              onPressed: saving ? null : () => Navigator.of(context).pop(),
+              onPressed: _controller.isSaving.value
+                  ? null
+                  : () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             const SizedBox(width: 12),
             FilledButton.icon(
-              onPressed: saving ? null : _handleSave,
-              icon: saving
+              onPressed: _controller.isSaving.value ? null : _handleSave,
+              icon: _controller.isSaving.value
                   ? const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
                   : const Icon(Icons.save_outlined),
-              label: Text(saving ? 'Saving...' : 'Save Product'),
+              label: Text(
+                _controller.isSaving.value ? 'Saving...' : 'Save Product',
+              ),
             ),
           ],
-        );
-        },
+        ),
       ),
     );
   }
@@ -2977,118 +2911,23 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       ),
       child: _attributes.isEmpty
           ? const EmptyBlock(message: 'No attributes added yet.')
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                const gap = 12.0;
-                final width = constraints.maxWidth;
-                final columns = width >= 980
-                    ? 4
-                    : width >= 720
-                        ? 3
-                        : width >= 460
-                            ? 2
-                            : 1;
-                final cardWidth = (width - (gap * (columns - 1))) / columns;
-
-                return Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: _attributes.map((item) {
-                    final title = item.nameEn.trim().isEmpty
-                        ? (item.code.trim().isEmpty ? item.id : item.code)
-                        : item.nameEn.trim();
-                    final values = item.values
-                        .where((value) => value.isEnabled)
-                        .toList()
-                      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
-                    return SizedBox(
-                      width: cardWidth,
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 138),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Theme.of(context).dividerColor),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(fontWeight: FontWeight.w900),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        'code: ${item.code.trim().isEmpty ? '-' : item.code.trim()}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Edit attribute',
-                                  onPressed: () => _editAttribute(item),
-                                  icon: const Icon(Icons.edit_outlined),
-                                ),
-                                IconButton(
-                                  tooltip: 'Delete attribute',
-                                  onPressed: () {
-                                    setState(() {
-                                      _attributes.removeWhere(
-                                        (element) => element.id == item.id,
-                                      );
-                                    });
-                                  },
-                                  icon: const Icon(Icons.delete_outline),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: values.isEmpty
-                                  ? <Widget>[
-                                      buildInfoChip('no values'),
-                                    ]
-                                  : values.map((value) {
-                                      final label = value.labelEn.trim().isEmpty
-                                          ? value.value.trim()
-                                          : value.labelEn.trim();
-                                      return buildInfoChip(label.isEmpty ? '-' : label);
-                                    }).toList(growable: false),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'values: ${item.values.length} | variation: ${item.useForVariation} | order: ${item.sortOrder}',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(growable: false),
-                );
-              },
-            ),
+          : Column(
+        children: _attributes
+            .map(
+              (item) => EditableTile(
+            title: item.nameEn,
+            subtitle:
+            'values: ${item.values.length} | variation: ${item.useForVariation} | order: ${item.sortOrder}',
+            onEdit: () => _editAttribute(item),
+            onDelete: () {
+              setState(() {
+                _attributes.removeWhere((element) => element.id == item.id);
+              });
+            },
+          ),
+        )
+            .toList(),
+      ),
     );
   }
 
@@ -4317,8 +4156,8 @@ Wrap(
   }
 
   MBPreparedImageSet _preparedImageSetFromPendingMedia(MBProductMedia item) {
-    if (item.pendingFullBytes == null) {
-      throw StateError('Media item ${item.id} has no pending full image bytes.');
+    if (!item.hasPendingUpload || item.pendingFullBytes == null) {
+      throw StateError('Media item ${item.id} has no pending upload bytes.');
     }
 
     final fullBytes = item.pendingFullBytes!;
@@ -4388,106 +4227,88 @@ Wrap(
   }
 
   Future<void> _uploadPendingProductMediaItems() async {
-    if (_mediaItems.every((item) => item.pendingFullBytes == null)) return;
+    if (_mediaItems.every((item) => !item.hasPendingUpload)) return;
 
-    final uploadedPaths = <String>[];
-    final originalMediaItems = [..._mediaItems];
+    for (var i = 0; i < _mediaItems.length; i++) {
+      final item = _mediaItems[i];
+      if (!item.hasPendingUpload) continue;
 
-    try {
-      for (var i = 0; i < _mediaItems.length; i++) {
-        final item = _mediaItems[i];
-        if (item.pendingFullBytes == null) continue;
+      final prepared = _preparedImageSetFromPendingMedia(item);
+      final mediaId = item.id.trim().isEmpty ? makeEditorId('media') : item.id.trim();
 
-        final prepared = _preparedImageSetFromPendingMedia(item);
-        final mediaId = item.id.trim().isEmpty ? makeEditorId('media') : item.id.trim();
+      final uploadFullImageSet = !_isVariableProduct &&
+          (item.isPrimary || item.role.trim().toLowerCase() == 'thumbnail');
 
-        final uploadFullImageSet = !_isVariableProduct &&
-            (item.isPrimary || item.role.trim().toLowerCase() == 'thumbnail');
+      final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/media',
+        entityId: mediaId,
+        fileStem: _mediaFileStemFor(item),
+        uploadOriginalCardTiny: uploadFullImageSet,
+        customMetadata: <String, String>{
+          'mediaId': mediaId,
+          'role': uploadFullImageSet ? 'thumbnail' : 'gallery',
+          'type': item.type,
+          'fitMode': item.fitMode,
+          'pipeline': uploadFullImageSet
+              ? 'muthobazar_primary_media_5_size_v1'
+              : 'muthobazar_gallery_full_only_v1',
+        },
+      );
 
-        final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
-          prepared: prepared,
-          storageFolder: 'products/media',
-          entityId: mediaId,
-          fileStem: _mediaFileStemFor(item),
-          uploadOriginalCardTiny: uploadFullImageSet,
-          uploadThumb: uploadFullImageSet,
-          customMetadata: <String, String>{
-            'mediaId': mediaId,
-            'role': uploadFullImageSet ? 'thumbnail' : 'gallery',
-            'type': item.type,
-            'fitMode': item.fitMode,
-            'pipeline': uploadFullImageSet
-                ? 'muthobazar_primary_media_5_size_v1'
-                : 'muthobazar_gallery_full_only_v1',
-          },
-        );
-
-        uploadedPaths.addAll([
-          uploaded.originalPath,
-          uploaded.fullPath,
-          uploaded.cardPath,
-          uploaded.thumbPath,
-          uploaded.tinyPath,
-        ].where((path) => path.trim().isNotEmpty));
-
-        _mediaItems[i] = item.copyWith(
-          id: mediaId,
-          url: uploaded.fullUrl,
-          storagePath: uploaded.fullPath,
-          originalUrl: uploadFullImageSet ? uploaded.originalUrl : '',
-          originalStoragePath: uploadFullImageSet ? uploaded.originalPath : '',
-          fullUrl: uploaded.fullUrl,
-          fullStoragePath: uploaded.fullPath,
-          cardUrl: uploadFullImageSet ? uploaded.cardUrl : '',
-          cardStoragePath: uploadFullImageSet ? uploaded.cardPath : '',
-          thumbUrl: uploadFullImageSet ? uploaded.thumbUrl : '',
-          thumbStoragePath: uploadFullImageSet ? uploaded.thumbPath : '',
-          tinyUrl: uploadFullImageSet ? uploaded.tinyUrl : '',
-          tinyStoragePath: uploadFullImageSet ? uploaded.tinyPath : '',
-          width: uploaded.fullWidth,
-          height: uploaded.fullHeight,
-          sizeBytes: prepared.fullByteLength,
-          originalWidth: uploadFullImageSet ? uploaded.originalWidth : null,
-          clearOriginalWidth: !uploadFullImageSet,
-          originalHeight: uploadFullImageSet ? uploaded.originalHeight : null,
-          clearOriginalHeight: !uploadFullImageSet,
-          originalSizeBytes: uploadFullImageSet ? prepared.originalByteLength : null,
-          clearOriginalSizeBytes: !uploadFullImageSet,
-          fullWidth: uploaded.fullWidth,
-          fullHeight: uploaded.fullHeight,
-          fullSizeBytes: prepared.fullByteLength,
-          cardWidth: uploadFullImageSet ? uploaded.cardWidth : null,
-          clearCardWidth: !uploadFullImageSet,
-          cardHeight: uploadFullImageSet ? uploaded.cardHeight : null,
-          clearCardHeight: !uploadFullImageSet,
-          cardSizeBytes: uploadFullImageSet ? prepared.cardByteLength : null,
-          clearCardSizeBytes: !uploadFullImageSet,
-          thumbWidth: uploadFullImageSet ? uploaded.thumbWidth : null,
-          clearThumbWidth: !uploadFullImageSet,
-          thumbHeight: uploadFullImageSet ? uploaded.thumbHeight : null,
-          clearThumbHeight: !uploadFullImageSet,
-          thumbSizeBytes: uploadFullImageSet ? prepared.thumbByteLength : null,
-          clearThumbSizeBytes: !uploadFullImageSet,
-          tinyWidth: uploadFullImageSet ? uploaded.tinyWidth : null,
-          clearTinyWidth: !uploadFullImageSet,
-          tinyHeight: uploadFullImageSet ? uploaded.tinyHeight : null,
-          clearTinyHeight: !uploadFullImageSet,
-          tinySizeBytes: uploadFullImageSet ? prepared.tinyByteLength : null,
-          clearTinySizeBytes: !uploadFullImageSet,
-          isPrimary: uploadFullImageSet,
-          role: uploadFullImageSet ? 'thumbnail' : 'gallery',
-          type: 'image',
-          clearPendingUpload: true,
-          updatedAt: DateTime.now(),
-        );
-      }
-
-      _normalizeProductMediaPrimary();
-    } catch (_) {
-      _mediaItems = originalMediaItems;
-      await MBImagePipelineService.instance.deleteStoragePaths(uploadedPaths);
-      rethrow;
+      _mediaItems[i] = item.copyWith(
+        id: mediaId,
+        url: uploaded.fullUrl,
+        storagePath: uploaded.fullPath,
+        originalUrl: uploadFullImageSet ? uploaded.originalUrl : '',
+        originalStoragePath: uploadFullImageSet ? uploaded.originalPath : '',
+        fullUrl: uploaded.fullUrl,
+        fullStoragePath: uploaded.fullPath,
+        cardUrl: uploadFullImageSet ? uploaded.cardUrl : '',
+        cardStoragePath: uploadFullImageSet ? uploaded.cardPath : '',
+        thumbUrl: uploadFullImageSet ? uploaded.thumbUrl : '',
+        thumbStoragePath: uploadFullImageSet ? uploaded.thumbPath : '',
+        tinyUrl: uploadFullImageSet ? uploaded.tinyUrl : '',
+        tinyStoragePath: uploadFullImageSet ? uploaded.tinyPath : '',
+        width: uploaded.fullWidth,
+        height: uploaded.fullHeight,
+        sizeBytes: prepared.fullByteLength,
+        originalWidth: uploadFullImageSet ? uploaded.originalWidth : null,
+        clearOriginalWidth: !uploadFullImageSet,
+        originalHeight: uploadFullImageSet ? uploaded.originalHeight : null,
+        clearOriginalHeight: !uploadFullImageSet,
+        originalSizeBytes: uploadFullImageSet ? prepared.originalByteLength : null,
+        clearOriginalSizeBytes: !uploadFullImageSet,
+        fullWidth: uploaded.fullWidth,
+        fullHeight: uploaded.fullHeight,
+        fullSizeBytes: prepared.fullByteLength,
+        cardWidth: uploadFullImageSet ? uploaded.cardWidth : null,
+        clearCardWidth: !uploadFullImageSet,
+        cardHeight: uploadFullImageSet ? uploaded.cardHeight : null,
+        clearCardHeight: !uploadFullImageSet,
+        cardSizeBytes: uploadFullImageSet ? prepared.cardByteLength : null,
+        clearCardSizeBytes: !uploadFullImageSet,
+        thumbWidth: uploadFullImageSet ? uploaded.thumbWidth : null,
+        clearThumbWidth: !uploadFullImageSet,
+        thumbHeight: uploadFullImageSet ? uploaded.thumbHeight : null,
+        clearThumbHeight: !uploadFullImageSet,
+        thumbSizeBytes: uploadFullImageSet ? prepared.thumbByteLength : null,
+        clearThumbSizeBytes: !uploadFullImageSet,
+        tinyWidth: uploadFullImageSet ? uploaded.tinyWidth : null,
+        clearTinyWidth: !uploadFullImageSet,
+        tinyHeight: uploadFullImageSet ? uploaded.tinyHeight : null,
+        clearTinyHeight: !uploadFullImageSet,
+        tinySizeBytes: uploadFullImageSet ? prepared.tinyByteLength : null,
+        clearTinySizeBytes: !uploadFullImageSet,
+        isPrimary: uploadFullImageSet,
+        role: uploadFullImageSet ? 'thumbnail' : 'gallery',
+        type: 'image',
+        clearPendingUpload: true,
+        updatedAt: DateTime.now(),
+      );
     }
+
+    _normalizeProductMediaPrimary();
   }
 
   String _variationMediaFileStemFor(
@@ -4507,87 +4328,69 @@ Wrap(
   Future<void> _uploadPendingVariationImages() async {
     if (_pendingVariationImagesById.isEmpty) return;
 
-    final uploadedPaths = <String>[];
-    final originalVariations = [..._variations];
+    for (var i = 0; i < _variations.length; i++) {
+      final variation = _variations[i];
+      final prepared = _pendingVariationImagesById[variation.id];
+      if (prepared == null) continue;
 
-    try {
-      for (var i = 0; i < _variations.length; i++) {
-        final variation = _variations[i];
-        final prepared = _pendingVariationImagesById[variation.id];
-        if (prepared == null) continue;
+      final variationId = variation.id.trim().isEmpty
+          ? makeEditorId('variation')
+          : variation.id.trim();
 
-        final variationId = variation.id.trim().isEmpty
-            ? makeEditorId('variation')
-            : variation.id.trim();
+      final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
+        prepared: prepared,
+        storageFolder: 'products/variations',
+        entityId: variationId,
+        fileStem: _variationMediaFileStemFor(variation, prepared),
+        uploadOriginalCardTiny: true,
+        customMetadata: <String, String>{
+          'variationId': variationId,
+          'mediaOwner': 'variation',
+          'type': 'image',
+          'fitMode': 'contain',
+          'pipeline': 'muthobazar_variation_deferred_media_v1',
+        },
+      );
 
-        final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
-          prepared: prepared,
-          storageFolder: 'products/variations',
-          entityId: variationId,
-          fileStem: _variationMediaFileStemFor(variation, prepared),
-          uploadOriginalCardTiny: true,
-          uploadThumb: true,
-          customMetadata: <String, String>{
-            'variationId': variationId,
-            'mediaOwner': 'variation',
-            'type': 'image',
-            'fitMode': 'contain',
-            'pipeline': 'muthobazar_variation_deferred_media_v1',
-          },
-        );
-
-        uploadedPaths.addAll([
-          uploaded.originalPath,
-          uploaded.fullPath,
-          uploaded.cardPath,
-          uploaded.thumbPath,
-          uploaded.tinyPath,
-        ].where((path) => path.trim().isNotEmpty));
-
-        _variations[i] = _normalizeVariationForSave(variation.copyWith(
-          id: variationId,
-          imageUrl: uploaded.fullUrl,
-          imageStoragePath: uploaded.fullPath,
-          fullImageUrl: uploaded.fullUrl,
-          fullImageStoragePath: uploaded.fullPath,
-          thumbImageUrl: uploaded.thumbUrl,
-          thumbImageStoragePath: uploaded.thumbPath,
-          originalImageUrl: uploaded.originalUrl,
-          originalImageStoragePath: uploaded.originalPath,
-          cardImageUrl: uploaded.cardUrl,
-          cardImageStoragePath: uploaded.cardPath,
-          tinyImageUrl: uploaded.tinyUrl,
-          tinyImageStoragePath: uploaded.tinyPath,
-          imageWidth: uploaded.fullWidth,
-          imageHeight: uploaded.fullHeight,
-          imageSizeBytes: prepared.fullByteLength,
-          fullImageWidth: uploaded.fullWidth,
-          fullImageHeight: uploaded.fullHeight,
-          fullImageSizeBytes: prepared.fullByteLength,
-          thumbImageWidth: uploaded.thumbWidth,
-          thumbImageHeight: uploaded.thumbHeight,
-          thumbImageSizeBytes: prepared.thumbByteLength,
-          originalImageWidth: uploaded.originalWidth,
-          originalImageHeight: uploaded.originalHeight,
-          originalImageSizeBytes: prepared.originalByteLength,
-          cardImageWidth: uploaded.cardWidth,
-          cardImageHeight: uploaded.cardHeight,
-          cardImageSizeBytes: prepared.cardByteLength,
-          tinyImageWidth: uploaded.tinyWidth,
-          tinyImageHeight: uploaded.tinyHeight,
-          tinyImageSizeBytes: prepared.tinyByteLength,
-          updatedAt: DateTime.now(),
-        ));
-      }
-
-      _pendingVariationImagesById.clear();
-      _pendingVariationImageFileStemsById.clear();
-      _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    } catch (_) {
-      _variations = originalVariations;
-      await MBImagePipelineService.instance.deleteStoragePaths(uploadedPaths);
-      rethrow;
+      _variations[i] = _normalizeVariationForSave(variation.copyWith(
+        id: variationId,
+        imageUrl: uploaded.fullUrl,
+        imageStoragePath: uploaded.fullPath,
+        fullImageUrl: uploaded.fullUrl,
+        fullImageStoragePath: uploaded.fullPath,
+        thumbImageUrl: uploaded.thumbUrl,
+        thumbImageStoragePath: uploaded.thumbPath,
+        originalImageUrl: uploaded.originalUrl,
+        originalImageStoragePath: uploaded.originalPath,
+        cardImageUrl: uploaded.cardUrl,
+        cardImageStoragePath: uploaded.cardPath,
+        tinyImageUrl: uploaded.tinyUrl,
+        tinyImageStoragePath: uploaded.tinyPath,
+        imageWidth: uploaded.fullWidth,
+        imageHeight: uploaded.fullHeight,
+        imageSizeBytes: prepared.fullByteLength,
+        fullImageWidth: uploaded.fullWidth,
+        fullImageHeight: uploaded.fullHeight,
+        fullImageSizeBytes: prepared.fullByteLength,
+        thumbImageWidth: uploaded.thumbWidth,
+        thumbImageHeight: uploaded.thumbHeight,
+        thumbImageSizeBytes: prepared.thumbByteLength,
+        originalImageWidth: uploaded.originalWidth,
+        originalImageHeight: uploaded.originalHeight,
+        originalImageSizeBytes: prepared.originalByteLength,
+        cardImageWidth: uploaded.cardWidth,
+        cardImageHeight: uploaded.cardHeight,
+        cardImageSizeBytes: prepared.cardByteLength,
+        tinyImageWidth: uploaded.tinyWidth,
+        tinyImageHeight: uploaded.tinyHeight,
+        tinyImageSizeBytes: prepared.tinyByteLength,
+        updatedAt: DateTime.now(),
+      ));
     }
+
+    _pendingVariationImagesById.clear();
+    _pendingVariationImageFileStemsById.clear();
+    _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
   MBProductVariation? _firstVariationBySortOrder() {
@@ -4671,34 +4474,11 @@ Wrap(
     return true;
   }
 
-  bool _hasAdminWebNetworkConnection() {
-    return html.window.navigator.onLine ?? false;
-  }
-
-  Future<bool> _runProductPreSaveChecks() async {
-    if (!_formKey.currentState!.validate()) return false;
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
 
     final defaultReady = await _ensureVariableDefaultVariationForSave();
-    if (!defaultReady) return false;
-
-    if (!_hasAdminWebNetworkConnection()) {
-      await _showProductMediaPrompt(
-        'No Internet Connection',
-        'This admin web app needs an active internet connection before uploading images or saving product data.',
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  Future<void> _handleSave() async {
-    if (_isDialogBusy || _controller.isSaving.value) return;
-
-    final canSave = await _runProductPreSaveChecks();
-    if (!canSave) return;
-
-    setState(() => _isDialogBusy = true);
+    if (!defaultReady) return;
 
     try {
       await _uploadPendingProductMediaItems();
@@ -4707,11 +4487,9 @@ Wrap(
       if (!mounted) return;
       await _showProductMediaPrompt(
         'Image Upload Failed',
-        'The product was not saved because one or more pending product/variation images failed to upload. Any images uploaded during this failed save were rolled back. Details: $error',
+        'The product was not saved because one or more pending product/variation images failed to upload. Details: $error',
       );
       return;
-    } finally {
-      if (mounted) setState(() => _isDialogBusy = false);
     }
 
     final product = _buildProductFromForm();
@@ -4719,21 +4497,13 @@ Wrap(
     if (kProductSaveDebugDumpEnabled) {
       await _downloadProductSaveDebugFile(product);
     }
-    if (!mounted) return;
-    setState(() => _isDialogBusy = true);
-
-    MBProduct? saved;
-    try {
-      saved = await _controller.saveProduct(
-        product: product,
-        actorUid: widget.actorUid,
-        actorName: widget.actorName,
-        actorPhone: widget.actorPhone,
-        actorRole: widget.actorRole,
-      );
-    } finally {
-      if (mounted) setState(() => _isDialogBusy = false);
-    }
+    var saved = await _controller.saveProduct(
+      product: product,
+      actorUid: widget.actorUid,
+      actorName: widget.actorName,
+      actorPhone: widget.actorPhone,
+      actorRole: widget.actorRole,
+    );
 
     //saved ??= await _waitForRecoveredSavedProduct(product);
 

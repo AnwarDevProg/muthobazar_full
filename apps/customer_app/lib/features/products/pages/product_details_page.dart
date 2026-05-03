@@ -1,4 +1,4 @@
-import 'package:customer_app/app/routes/customer_app_routes.dart';
+﻿import 'package:customer_app/app/routes/customer_app_routes.dart';
 import 'package:customer_app/features/cart/controllers/cart_controller.dart';
 import 'package:customer_app/features/cart/helpers/cart_item_builder.dart';
 import 'package:flutter/material.dart';
@@ -130,8 +130,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     final variation = _selectedVariation;
     if (variation != null) {
-      final variationImage = variation.effectiveFullImageUrl.trim();
-      if (variationImage.isNotEmpty) return variationImage;
+      final variationFull = variation.effectiveFullImageUrl.trim();
+      if (variationFull.isNotEmpty) return variationFull;
+
+      final variationCard = variation.effectiveCardImageUrl.trim();
+      if (variationCard.isNotEmpty) return variationCard;
 
       final variationThumb = variation.effectiveThumbImageUrl.trim();
       if (variationThumb.isNotEmpty) return variationThumb;
@@ -140,12 +143,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final productFullImage = product.resolvedFullImageUrl.trim();
     if (productFullImage.isNotEmpty) return productFullImage;
 
+    final productCardImage = product.resolvedCardImageUrl.trim();
+    if (productCardImage.isNotEmpty) return productCardImage;
+
     final productThumbImage = product.resolvedThumbImageUrl.trim();
     if (productThumbImage.isNotEmpty) return productThumbImage;
 
     return null;
   }
-
   String _displayTitleEn() {
     final product = _product;
     if (product == null) return 'Product';
@@ -187,7 +192,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     return variation.attributeValues.entries
         .map((entry) => '${entry.key}: ${entry.value}')
-        .join(' • ');
+        .join(' â€¢ ');
   }
 
   double _currentMinOrderQty() {
@@ -435,7 +440,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
 
     return Text(
-      parts.join(' • '),
+      parts.join(' â€¢ '),
       style: MBTextStyles.bodySmall.copyWith(
         color: MBColors.textSecondary,
       ),
@@ -500,13 +505,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   Row(
                     children: [
                       Text(
-                        '৳${resolved.finalUnitPrice.toStringAsFixed(0)}',
+                        'à§³${resolved.finalUnitPrice.toStringAsFixed(0)}',
                         style: MBTextStyles.price,
                       ),
                       if (resolved.isDiscounted) ...[
                         MBSpacing.w(MBSpacing.sm),
                         Text(
-                          '৳${resolved.basePrice.toStringAsFixed(0)}',
+                          'à§³${resolved.basePrice.toStringAsFixed(0)}',
                           style: MBTextStyles.body.copyWith(
                             color: MBColors.textMuted,
                             decoration: TextDecoration.lineThrough,
@@ -596,7 +601,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 Row(
                                   children: [
                                     Text(
-                                      '৳${resolvedVariation.finalUnitPrice.toStringAsFixed(0)}',
+                                      'à§³${resolvedVariation.finalUnitPrice.toStringAsFixed(0)}',
                                       style: MBTextStyles.bodyMedium.copyWith(
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -604,7 +609,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     if (resolvedVariation.isDiscounted) ...[
                                       MBSpacing.w(MBSpacing.xs),
                                       Text(
-                                        '৳${resolvedVariation.basePrice.toStringAsFixed(0)}',
+                                        'à§³${resolvedVariation.basePrice.toStringAsFixed(0)}',
                                         style: MBTextStyles.bodySmall.copyWith(
                                           color: MBColors.textMuted,
                                           decoration: TextDecoration.lineThrough,

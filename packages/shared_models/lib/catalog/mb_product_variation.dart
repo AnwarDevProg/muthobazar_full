@@ -35,6 +35,10 @@ class MBProductVariation {
   final String thumbImageStoragePath;
   final String originalImageUrl;
   final String originalImageStoragePath;
+  final String cardImageUrl;
+  final String cardImageStoragePath;
+  final String tinyImageUrl;
+  final String tinyImageStoragePath;
 
   final int? imageWidth;
   final int? imageHeight;
@@ -51,6 +55,14 @@ class MBProductVariation {
   final int? originalImageWidth;
   final int? originalImageHeight;
   final int? originalImageSizeBytes;
+
+  final int? cardImageWidth;
+  final int? cardImageHeight;
+  final int? cardImageSizeBytes;
+
+  final int? tinyImageWidth;
+  final int? tinyImageHeight;
+  final int? tinyImageSizeBytes;
 
   final String descriptionEn;
   final String descriptionBn;
@@ -155,6 +167,10 @@ class MBProductVariation {
     this.thumbImageStoragePath = '',
     this.originalImageUrl = '',
     this.originalImageStoragePath = '',
+    this.cardImageUrl = '',
+    this.cardImageStoragePath = '',
+    this.tinyImageUrl = '',
+    this.tinyImageStoragePath = '',
     this.imageWidth,
     this.imageHeight,
     this.imageSizeBytes,
@@ -167,6 +183,12 @@ class MBProductVariation {
     this.originalImageWidth,
     this.originalImageHeight,
     this.originalImageSizeBytes,
+    this.cardImageWidth,
+    this.cardImageHeight,
+    this.cardImageSizeBytes,
+    this.tinyImageWidth,
+    this.tinyImageHeight,
+    this.tinyImageSizeBytes,
     this.descriptionEn = '',
     this.descriptionBn = '',
     this.price = 0.0,
@@ -273,6 +295,10 @@ class MBProductVariation {
     String? thumbImageStoragePath,
     String? originalImageUrl,
     String? originalImageStoragePath,
+    String? cardImageUrl,
+    String? cardImageStoragePath,
+    String? tinyImageUrl,
+    String? tinyImageStoragePath,
     int? imageWidth,
     bool clearImageWidth = false,
     int? imageHeight,
@@ -297,6 +323,18 @@ class MBProductVariation {
     bool clearOriginalImageHeight = false,
     int? originalImageSizeBytes,
     bool clearOriginalImageSizeBytes = false,
+    int? cardImageWidth,
+    bool clearCardImageWidth = false,
+    int? cardImageHeight,
+    bool clearCardImageHeight = false,
+    int? cardImageSizeBytes,
+    bool clearCardImageSizeBytes = false,
+    int? tinyImageWidth,
+    bool clearTinyImageWidth = false,
+    int? tinyImageHeight,
+    bool clearTinyImageHeight = false,
+    int? tinyImageSizeBytes,
+    bool clearTinyImageSizeBytes = false,
     String? descriptionEn,
     String? descriptionBn,
     double? price,
@@ -420,6 +458,10 @@ class MBProductVariation {
       originalImageUrl: originalImageUrl ?? this.originalImageUrl,
       originalImageStoragePath:
       originalImageStoragePath ?? this.originalImageStoragePath,
+      cardImageUrl: cardImageUrl ?? this.cardImageUrl,
+      cardImageStoragePath: cardImageStoragePath ?? this.cardImageStoragePath,
+      tinyImageUrl: tinyImageUrl ?? this.tinyImageUrl,
+      tinyImageStoragePath: tinyImageStoragePath ?? this.tinyImageStoragePath,
       imageWidth: clearImageWidth ? null : (imageWidth ?? this.imageWidth),
       imageHeight: clearImageHeight ? null : (imageHeight ?? this.imageHeight),
       imageSizeBytes: clearImageSizeBytes
@@ -452,6 +494,24 @@ class MBProductVariation {
       originalImageSizeBytes: clearOriginalImageSizeBytes
           ? null
           : (originalImageSizeBytes ?? this.originalImageSizeBytes),
+      cardImageWidth: clearCardImageWidth
+          ? null
+          : (cardImageWidth ?? this.cardImageWidth),
+      cardImageHeight: clearCardImageHeight
+          ? null
+          : (cardImageHeight ?? this.cardImageHeight),
+      cardImageSizeBytes: clearCardImageSizeBytes
+          ? null
+          : (cardImageSizeBytes ?? this.cardImageSizeBytes),
+      tinyImageWidth: clearTinyImageWidth
+          ? null
+          : (tinyImageWidth ?? this.tinyImageWidth),
+      tinyImageHeight: clearTinyImageHeight
+          ? null
+          : (tinyImageHeight ?? this.tinyImageHeight),
+      tinyImageSizeBytes: clearTinyImageSizeBytes
+          ? null
+          : (tinyImageSizeBytes ?? this.tinyImageSizeBytes),
       descriptionEn: descriptionEn ?? this.descriptionEn,
       descriptionBn: descriptionBn ?? this.descriptionBn,
       price: price ?? this.price,
@@ -600,21 +660,66 @@ class MBProductVariation {
 
   bool get isPublishedNow => isPublishedAt(DateTime.now());
 
-  String get effectiveFullImageUrl {
+  String get effectiveOriginalImageUrl {
+    if (originalImageUrl.trim().isNotEmpty) return originalImageUrl.trim();
     if (fullImageUrl.trim().isNotEmpty) return fullImageUrl.trim();
     if (imageUrl.trim().isNotEmpty) return imageUrl.trim();
+    if (cardImageUrl.trim().isNotEmpty) return cardImageUrl.trim();
+    if (thumbImageUrl.trim().isNotEmpty) return thumbImageUrl.trim();
+    return tinyImageUrl.trim();
+  }
+
+  String get effectiveFullImageUrl {
+    if (fullImageUrl.trim().isNotEmpty) return fullImageUrl.trim();
     if (originalImageUrl.trim().isNotEmpty) return originalImageUrl.trim();
-    return '';
+    if (imageUrl.trim().isNotEmpty) return imageUrl.trim();
+    if (cardImageUrl.trim().isNotEmpty) return cardImageUrl.trim();
+    if (thumbImageUrl.trim().isNotEmpty) return thumbImageUrl.trim();
+    return tinyImageUrl.trim();
+  }
+
+  String get effectiveCardImageUrl {
+    if (cardImageUrl.trim().isNotEmpty) return cardImageUrl.trim();
+    if (fullImageUrl.trim().isNotEmpty) return fullImageUrl.trim();
+    if (imageUrl.trim().isNotEmpty) return imageUrl.trim();
+    if (thumbImageUrl.trim().isNotEmpty) return thumbImageUrl.trim();
+    if (tinyImageUrl.trim().isNotEmpty) return tinyImageUrl.trim();
+    return originalImageUrl.trim();
   }
 
   String get effectiveThumbImageUrl {
     if (thumbImageUrl.trim().isNotEmpty) return thumbImageUrl.trim();
-    return effectiveFullImageUrl;
+    if (tinyImageUrl.trim().isNotEmpty) return tinyImageUrl.trim();
+    if (cardImageUrl.trim().isNotEmpty) return cardImageUrl.trim();
+    if (fullImageUrl.trim().isNotEmpty) return fullImageUrl.trim();
+    if (imageUrl.trim().isNotEmpty) return imageUrl.trim();
+    return originalImageUrl.trim();
   }
 
-  String get effectiveOriginalImageUrl {
-    if (originalImageUrl.trim().isNotEmpty) return originalImageUrl.trim();
-    return effectiveFullImageUrl;
+  String get effectiveTinyImageUrl {
+    if (tinyImageUrl.trim().isNotEmpty) return tinyImageUrl.trim();
+    if (thumbImageUrl.trim().isNotEmpty) return thumbImageUrl.trim();
+    if (cardImageUrl.trim().isNotEmpty) return cardImageUrl.trim();
+    if (fullImageUrl.trim().isNotEmpty) return fullImageUrl.trim();
+    if (imageUrl.trim().isNotEmpty) return imageUrl.trim();
+    return originalImageUrl.trim();
+  }
+
+  String get effectiveOriginalImageStoragePath {
+    if (originalImageStoragePath.trim().isNotEmpty) {
+      return originalImageStoragePath.trim();
+    }
+    if (fullImageStoragePath.trim().isNotEmpty) {
+      return fullImageStoragePath.trim();
+    }
+    if (imageStoragePath.trim().isNotEmpty) return imageStoragePath.trim();
+    if (cardImageStoragePath.trim().isNotEmpty) {
+      return cardImageStoragePath.trim();
+    }
+    if (thumbImageStoragePath.trim().isNotEmpty) {
+      return thumbImageStoragePath.trim();
+    }
+    return tinyImageStoragePath.trim();
   }
 
   String get effectiveFullImageStoragePath {
@@ -625,19 +730,54 @@ class MBProductVariation {
     if (originalImageStoragePath.trim().isNotEmpty) {
       return originalImageStoragePath.trim();
     }
-    return '';
+    if (cardImageStoragePath.trim().isNotEmpty) {
+      return cardImageStoragePath.trim();
+    }
+    if (thumbImageStoragePath.trim().isNotEmpty) {
+      return thumbImageStoragePath.trim();
+    }
+    return tinyImageStoragePath.trim();
+  }
+
+  String get effectiveCardImageStoragePath {
+    if (cardImageStoragePath.trim().isNotEmpty) {
+      return cardImageStoragePath.trim();
+    }
+    if (fullImageStoragePath.trim().isNotEmpty) {
+      return fullImageStoragePath.trim();
+    }
+    if (imageStoragePath.trim().isNotEmpty) return imageStoragePath.trim();
+    if (thumbImageStoragePath.trim().isNotEmpty) {
+      return thumbImageStoragePath.trim();
+    }
+    if (tinyImageStoragePath.trim().isNotEmpty) {
+      return tinyImageStoragePath.trim();
+    }
+    return originalImageStoragePath.trim();
   }
 
   String get effectiveThumbImageStoragePath {
     if (thumbImageStoragePath.trim().isNotEmpty) {
       return thumbImageStoragePath.trim();
     }
+    if (tinyImageStoragePath.trim().isNotEmpty) {
+      return tinyImageStoragePath.trim();
+    }
+    if (cardImageStoragePath.trim().isNotEmpty) {
+      return cardImageStoragePath.trim();
+    }
     return effectiveFullImageStoragePath;
   }
 
-  String get effectiveOriginalImageStoragePath {
-    if (originalImageStoragePath.trim().isNotEmpty) {
-      return originalImageStoragePath.trim();
+  String get effectiveTinyImageStoragePath {
+    if (tinyImageStoragePath.trim().isNotEmpty) {
+      return tinyImageStoragePath.trim();
+    }
+    if (thumbImageStoragePath.trim().isNotEmpty) {
+      return thumbImageStoragePath.trim();
+    }
+    if (cardImageStoragePath.trim().isNotEmpty) {
+      return cardImageStoragePath.trim();
     }
     return effectiveFullImageStoragePath;
   }
@@ -649,12 +789,25 @@ class MBProductVariation {
   int? get effectiveFullImageSizeBytes =>
       fullImageSizeBytes ?? imageSizeBytes ?? originalImageSizeBytes;
 
+  int? get effectiveCardImageWidth =>
+      cardImageWidth ?? effectiveFullImageWidth ?? thumbImageWidth;
+  int? get effectiveCardImageHeight =>
+      cardImageHeight ?? effectiveFullImageHeight ?? thumbImageHeight;
+  int? get effectiveCardImageSizeBytes =>
+      cardImageSizeBytes ?? effectiveFullImageSizeBytes ?? thumbImageSizeBytes;
+
   int? get effectiveThumbImageWidth =>
-      thumbImageWidth ?? effectiveFullImageWidth;
+      thumbImageWidth ?? tinyImageWidth ?? effectiveCardImageWidth;
   int? get effectiveThumbImageHeight =>
-      thumbImageHeight ?? effectiveFullImageHeight;
+      thumbImageHeight ?? tinyImageHeight ?? effectiveCardImageHeight;
   int? get effectiveThumbImageSizeBytes =>
-      thumbImageSizeBytes ?? effectiveFullImageSizeBytes;
+      thumbImageSizeBytes ?? tinyImageSizeBytes ?? effectiveCardImageSizeBytes;
+
+  int? get effectiveTinyImageWidth => tinyImageWidth ?? effectiveThumbImageWidth;
+  int? get effectiveTinyImageHeight =>
+      tinyImageHeight ?? effectiveThumbImageHeight;
+  int? get effectiveTinyImageSizeBytes =>
+      tinyImageSizeBytes ?? effectiveThumbImageSizeBytes;
 
   int? get effectiveOriginalImageWidth =>
       originalImageWidth ?? effectiveFullImageWidth;
@@ -663,12 +816,12 @@ class MBProductVariation {
   int? get effectiveOriginalImageSizeBytes =>
       originalImageSizeBytes ?? effectiveFullImageSizeBytes;
 
-  String get previewImageUrl => effectiveThumbImageUrl;
+  String get previewImageUrl => effectiveCardImageUrl;
   String get displayImageUrl => effectiveFullImageUrl;
 
   bool get hasImage => displayImageUrl.isNotEmpty;
   bool get hasSeparateThumbnail =>
-      thumbImageUrl.trim().isNotEmpty && previewImageUrl != displayImageUrl;
+      thumbImageUrl.trim().isNotEmpty && effectiveThumbImageUrl != displayImageUrl;
   bool get hasOriginalImage => originalImageUrl.trim().isNotEmpty;
 
   Map<String, dynamic> toMap() {
@@ -689,24 +842,42 @@ class MBProductVariation {
       'fullImageStoragePath': fullImageStoragePath.isNotEmpty
           ? fullImageStoragePath
           : effectiveFullImageStoragePath,
-      'thumbImageUrl': thumbImageUrl.isNotEmpty ? thumbImageUrl : '',
-      'thumbImageStoragePath':
-      thumbImageStoragePath.isNotEmpty ? thumbImageStoragePath : '',
-      'originalImageUrl': originalImageUrl.isNotEmpty ? originalImageUrl : '',
-      'originalImageStoragePath':
-      originalImageStoragePath.isNotEmpty ? originalImageStoragePath : '',
+      'thumbImageUrl': thumbImageUrl.isNotEmpty ? thumbImageUrl : effectiveThumbImageUrl,
+      'thumbImageStoragePath': thumbImageStoragePath.isNotEmpty
+          ? thumbImageStoragePath
+          : effectiveThumbImageStoragePath,
+      'originalImageUrl':
+          originalImageUrl.isNotEmpty ? originalImageUrl : effectiveOriginalImageUrl,
+      'originalImageStoragePath': originalImageStoragePath.isNotEmpty
+          ? originalImageStoragePath
+          : effectiveOriginalImageStoragePath,
+      'cardImageUrl': cardImageUrl.isNotEmpty ? cardImageUrl : effectiveCardImageUrl,
+      'cardImageStoragePath': cardImageStoragePath.isNotEmpty
+          ? cardImageStoragePath
+          : effectiveCardImageStoragePath,
+      'tinyImageUrl': tinyImageUrl.isNotEmpty ? tinyImageUrl : effectiveTinyImageUrl,
+      'tinyImageStoragePath': tinyImageStoragePath.isNotEmpty
+          ? tinyImageStoragePath
+          : effectiveTinyImageStoragePath,
       'imageWidth': imageWidth ?? effectiveFullImageWidth,
       'imageHeight': imageHeight ?? effectiveFullImageHeight,
       'imageSizeBytes': imageSizeBytes ?? effectiveFullImageSizeBytes,
       'fullImageWidth': fullImageWidth ?? effectiveFullImageWidth,
       'fullImageHeight': fullImageHeight ?? effectiveFullImageHeight,
       'fullImageSizeBytes': fullImageSizeBytes ?? effectiveFullImageSizeBytes,
-      'thumbImageWidth': thumbImageWidth,
-      'thumbImageHeight': thumbImageHeight,
-      'thumbImageSizeBytes': thumbImageSizeBytes,
-      'originalImageWidth': originalImageWidth,
-      'originalImageHeight': originalImageHeight,
-      'originalImageSizeBytes': originalImageSizeBytes,
+      'thumbImageWidth': thumbImageWidth ?? effectiveThumbImageWidth,
+      'thumbImageHeight': thumbImageHeight ?? effectiveThumbImageHeight,
+      'thumbImageSizeBytes': thumbImageSizeBytes ?? effectiveThumbImageSizeBytes,
+      'originalImageWidth': originalImageWidth ?? effectiveOriginalImageWidth,
+      'originalImageHeight': originalImageHeight ?? effectiveOriginalImageHeight,
+      'originalImageSizeBytes':
+          originalImageSizeBytes ?? effectiveOriginalImageSizeBytes,
+      'cardImageWidth': cardImageWidth ?? effectiveCardImageWidth,
+      'cardImageHeight': cardImageHeight ?? effectiveCardImageHeight,
+      'cardImageSizeBytes': cardImageSizeBytes ?? effectiveCardImageSizeBytes,
+      'tinyImageWidth': tinyImageWidth ?? effectiveTinyImageWidth,
+      'tinyImageHeight': tinyImageHeight ?? effectiveTinyImageHeight,
+      'tinyImageSizeBytes': tinyImageSizeBytes ?? effectiveTinyImageSizeBytes,
       'descriptionEn': descriptionEn,
       'descriptionBn': descriptionBn,
       'price': price,
@@ -793,11 +964,23 @@ class MBProductVariation {
     final parsedFullImageUrl = _asString(map['fullImageUrl']);
     final parsedThumbImageUrl = _asString(map['thumbImageUrl']);
     final parsedOriginalImageUrl = _asString(map['originalImageUrl']);
+    final parsedCardImageUrl = _asString(
+      map['cardImageUrl'] ?? map['cardUrl'] ?? map['cardImage'],
+    );
+    final parsedTinyImageUrl = _asString(
+      map['tinyImageUrl'] ?? map['tinyUrl'] ?? map['tinyImage'],
+    );
     final parsedFullImageStoragePath = _asString(map['fullImageStoragePath']);
     final parsedThumbImageStoragePath =
     _asString(map['thumbImageStoragePath']);
     final parsedOriginalImageStoragePath =
     _asString(map['originalImageStoragePath']);
+    final parsedCardImageStoragePath = _asString(
+      map['cardImageStoragePath'] ?? map['cardStoragePath'],
+    );
+    final parsedTinyImageStoragePath = _asString(
+      map['tinyImageStoragePath'] ?? map['tinyStoragePath'],
+    );
     final parsedCardDesignJson = _asNullableString(
       map['cardDesignJson'] ?? map['cardDesignJsonV1'],
     );
@@ -830,6 +1013,19 @@ class MBProductVariation {
       thumbImageStoragePath: parsedThumbImageStoragePath,
       originalImageUrl: parsedOriginalImageUrl,
       originalImageStoragePath: parsedOriginalImageStoragePath,
+      cardImageUrl: parsedCardImageUrl.isNotEmpty
+          ? parsedCardImageUrl
+          : (parsedFullImageUrl.isNotEmpty ? parsedFullImageUrl : legacyImageUrl),
+      cardImageStoragePath: parsedCardImageStoragePath.isNotEmpty
+          ? parsedCardImageStoragePath
+          : (parsedFullImageStoragePath.isNotEmpty
+              ? parsedFullImageStoragePath
+              : legacyImageStoragePath),
+      tinyImageUrl:
+          parsedTinyImageUrl.isNotEmpty ? parsedTinyImageUrl : parsedThumbImageUrl,
+      tinyImageStoragePath: parsedTinyImageStoragePath.isNotEmpty
+          ? parsedTinyImageStoragePath
+          : parsedThumbImageStoragePath,
       imageWidth: _asNullableInt(map['imageWidth']),
       imageHeight: _asNullableInt(map['imageHeight']),
       imageSizeBytes: _asNullableInt(map['imageSizeBytes']),
@@ -845,6 +1041,16 @@ class MBProductVariation {
       originalImageWidth: _asNullableInt(map['originalImageWidth']),
       originalImageHeight: _asNullableInt(map['originalImageHeight']),
       originalImageSizeBytes: _asNullableInt(map['originalImageSizeBytes']),
+      cardImageWidth: _asNullableInt(map['cardImageWidth'] ?? map['cardWidth']),
+      cardImageHeight: _asNullableInt(map['cardImageHeight'] ?? map['cardHeight']),
+      cardImageSizeBytes: _asNullableInt(
+        map['cardImageSizeBytes'] ?? map['cardSizeBytes'],
+      ),
+      tinyImageWidth: _asNullableInt(map['tinyImageWidth'] ?? map['tinyWidth']),
+      tinyImageHeight: _asNullableInt(map['tinyImageHeight'] ?? map['tinyHeight']),
+      tinyImageSizeBytes: _asNullableInt(
+        map['tinyImageSizeBytes'] ?? map['tinySizeBytes'],
+      ),
       descriptionEn: _asString(map['descriptionEn']),
       descriptionBn: _asString(map['descriptionBn']),
       price: _asDouble(map['price'], fallback: 0.0),
@@ -941,6 +1147,10 @@ class MBProductVariation {
       shortDescriptionBn: '',
       imageUrl: legacyImage,
       fullImageUrl: legacyImage,
+      thumbImageUrl: legacyImage,
+      originalImageUrl: legacyImage,
+      cardImageUrl: legacyImage,
+      tinyImageUrl: legacyImage,
       descriptionEn: _asString(map['Description']),
       descriptionBn: '',
       price: _asDouble(map['Price'], fallback: 0.0),

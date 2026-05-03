@@ -349,14 +349,12 @@ class MBProductMedia {
   bool get isThumbnail => role == 'thumbnail';
   bool get isGallery => role == 'gallery';
 
-  bool get hasPendingUpload {
-    if (pendingFullBytes == null) return false;
-    if (role.trim().toLowerCase() == 'gallery') return true;
-    return pendingOriginalBytes != null &&
-        pendingCardBytes != null &&
-        pendingThumbBytes != null &&
-        pendingTinyBytes != null;
-  }
+  bool get hasPendingUpload =>
+      pendingOriginalBytes != null &&
+      pendingFullBytes != null &&
+      pendingCardBytes != null &&
+      pendingThumbBytes != null &&
+      pendingTinyBytes != null;
 
   bool get hasPendingCardCrop => pendingCardBytes != null;
 

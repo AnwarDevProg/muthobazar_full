@@ -3005,7 +3005,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
                     return SizedBox(
                       width: cardWidth,
                       child: Container(
-                        constraints: const BoxConstraints(minHeight: 138),
+                        minHeight: 138,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.surface,
@@ -4672,7 +4672,7 @@ Wrap(
   }
 
   bool _hasAdminWebNetworkConnection() {
-    return html.window.navigator.onLine ?? false;
+    return html.window.navigator.onLine;
   }
 
   Future<bool> _runProductPreSaveChecks() async {

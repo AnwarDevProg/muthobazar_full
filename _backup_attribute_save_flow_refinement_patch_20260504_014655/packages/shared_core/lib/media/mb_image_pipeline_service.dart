@@ -443,23 +443,6 @@ class MBImagePipelineService {
     );
   }
 
-  Future<void> deleteStoragePaths(Iterable<String> paths) async {
-    for (final rawPath in paths) {
-      final path = rawPath.trim();
-      if (path.isEmpty) continue;
-      try {
-        await _storage.ref(path).delete();
-      } on FirebaseException catch (error) {
-        if (error.code != 'object-not-found') {
-          // Best-effort rollback. Do not block cleanup of remaining files.
-          continue;
-        }
-      } catch (_) {
-        // Best-effort rollback. Ignore delete failures here.
-      }
-    }
-  }
-
   Future<MBUploadedImageSet> uploadPreparedImageSet({
     required MBPreparedImageSet prepared,
     required String storageFolder,
@@ -467,7 +450,6 @@ class MBImagePipelineService {
     String? fileStem,
     Map<String, String>? customMetadata,
     bool uploadOriginalCardTiny = false,
-    bool uploadThumb = true,
   }) async {
     final String safeFolder = _sanitizePathSegment(storageFolder);
     final String safeEntityId = _sanitizePathSegment(entityId);
@@ -481,12 +463,11 @@ class MBImagePipelineService {
 
     final String fullPath =
         '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_full.jpg';
-    final String thumbPath = uploadThumb
-        ? '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_thumb.jpg'
-        : '';
+    final String thumbPath =
+        '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_thumb.jpg';
 
     final Reference fullRef = _storage.ref(fullPath);
-    final Reference? thumbRef = uploadThumb ? _storage.ref(thumbPath) : null;
+    final Reference thumbRef = _storage.ref(thumbPath);
 
     String originalPath = '';
     String cardPath = '';
@@ -494,129 +475,117 @@ class MBImagePipelineService {
     String originalUrl = '';
     String cardUrl = '';
     String tinyUrl = '';
-    String thumbUrl = '';
 
-    final uploadedPaths = <String>[];
+    // Non-product image modules such as category, brand, banner, and profile
+    // should upload only full + thumb. Product media can opt into the complete
+    // original/full/card/thumb/tiny set with uploadOriginalCardTiny: true.
+    if (uploadOriginalCardTiny) {
+      originalPath =
+          '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_original.jpg';
+      cardPath =
+          '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_card.jpg';
+      tinyPath =
+          '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_tiny.jpg';
 
-    try {
-      if (uploadOriginalCardTiny) {
-        originalPath =
-            '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_original.jpg';
-        cardPath =
-            '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_card.jpg';
-        tinyPath =
-            '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_tiny.jpg';
+      final Reference originalRef = _storage.ref(originalPath);
+      final Reference cardRef = _storage.ref(cardPath);
+      final Reference tinyRef = _storage.ref(tinyPath);
 
-        final Reference originalRef = _storage.ref(originalPath);
-        final Reference cardRef = _storage.ref(cardPath);
-        final Reference tinyRef = _storage.ref(tinyPath);
-
-        await originalRef.putData(
-          prepared.originalBytes,
-          _metadataForVariant(
-            prepared: prepared,
-            variant: 'original',
-            entityId: safeEntityId,
-            width: prepared.originalWidth,
-            height: prepared.originalHeight,
-            byteLength: prepared.originalByteLength,
-            customMetadata: customMetadata,
-          ),
-        );
-        uploadedPaths.add(originalPath);
-
-        await cardRef.putData(
-          prepared.cardBytes,
-          _metadataForVariant(
-            prepared: prepared,
-            variant: 'card',
-            entityId: safeEntityId,
-            width: prepared.cardWidth,
-            height: prepared.cardHeight,
-            byteLength: prepared.cardByteLength,
-            customMetadata: customMetadata,
-          ),
-        );
-        uploadedPaths.add(cardPath);
-
-        await tinyRef.putData(
-          prepared.tinyBytes,
-          _metadataForVariant(
-            prepared: prepared,
-            variant: 'tiny',
-            entityId: safeEntityId,
-            width: prepared.tinyWidth,
-            height: prepared.tinyHeight,
-            byteLength: prepared.tinyByteLength,
-            customMetadata: customMetadata,
-          ),
-        );
-        uploadedPaths.add(tinyPath);
-
-        originalUrl = await originalRef.getDownloadURL();
-        cardUrl = await cardRef.getDownloadURL();
-        tinyUrl = await tinyRef.getDownloadURL();
-      }
-
-      await fullRef.putData(
-        prepared.fullBytes,
+      await originalRef.putData(
+        prepared.originalBytes,
         _metadataForVariant(
           prepared: prepared,
-          variant: 'full',
+          variant: 'original',
           entityId: safeEntityId,
-          width: prepared.fullWidth,
-          height: prepared.fullHeight,
-          byteLength: prepared.fullByteLength,
+          width: prepared.originalWidth,
+          height: prepared.originalHeight,
+          byteLength: prepared.originalByteLength,
           customMetadata: customMetadata,
         ),
       );
-      uploadedPaths.add(fullPath);
 
-      if (thumbRef != null) {
-        await thumbRef.putData(
-          prepared.thumbBytes,
-          _metadataForVariant(
-            prepared: prepared,
-            variant: 'thumb',
-            entityId: safeEntityId,
-            width: prepared.thumbWidth,
-            height: prepared.thumbHeight,
-            byteLength: prepared.thumbByteLength,
-            customMetadata: customMetadata,
-          ),
-        );
-        uploadedPaths.add(thumbPath);
-        thumbUrl = await thumbRef.getDownloadURL();
-      }
-
-      final String fullUrl = await fullRef.getDownloadURL();
-
-      return MBUploadedImageSet(
-        originalUrl: originalUrl,
-        fullUrl: fullUrl,
-        cardUrl: cardUrl,
-        thumbUrl: thumbUrl,
-        tinyUrl: tinyUrl,
-        originalPath: originalPath,
-        fullPath: fullPath,
-        cardPath: cardPath,
-        thumbPath: thumbPath,
-        tinyPath: tinyPath,
-        originalWidth: uploadOriginalCardTiny ? prepared.originalWidth : null,
-        originalHeight: uploadOriginalCardTiny ? prepared.originalHeight : null,
-        fullWidth: prepared.fullWidth,
-        fullHeight: prepared.fullHeight,
-        cardWidth: uploadOriginalCardTiny ? prepared.cardWidth : null,
-        cardHeight: uploadOriginalCardTiny ? prepared.cardHeight : null,
-        thumbWidth: uploadThumb ? prepared.thumbWidth : 0,
-        thumbHeight: uploadThumb ? prepared.thumbHeight : 0,
-        tinyWidth: uploadOriginalCardTiny ? prepared.tinyWidth : null,
-        tinyHeight: uploadOriginalCardTiny ? prepared.tinyHeight : null,
+      await cardRef.putData(
+        prepared.cardBytes,
+        _metadataForVariant(
+          prepared: prepared,
+          variant: 'card',
+          entityId: safeEntityId,
+          width: prepared.cardWidth,
+          height: prepared.cardHeight,
+          byteLength: prepared.cardByteLength,
+          customMetadata: customMetadata,
+        ),
       );
-    } catch (_) {
-      await deleteStoragePaths(uploadedPaths);
-      rethrow;
+
+      await tinyRef.putData(
+        prepared.tinyBytes,
+        _metadataForVariant(
+          prepared: prepared,
+          variant: 'tiny',
+          entityId: safeEntityId,
+          width: prepared.tinyWidth,
+          height: prepared.tinyHeight,
+          byteLength: prepared.tinyByteLength,
+          customMetadata: customMetadata,
+        ),
+      );
+
+      originalUrl = await originalRef.getDownloadURL();
+      cardUrl = await cardRef.getDownloadURL();
+      tinyUrl = await tinyRef.getDownloadURL();
     }
+
+    await fullRef.putData(
+      prepared.fullBytes,
+      _metadataForVariant(
+        prepared: prepared,
+        variant: 'full',
+        entityId: safeEntityId,
+        width: prepared.fullWidth,
+        height: prepared.fullHeight,
+        byteLength: prepared.fullByteLength,
+        customMetadata: customMetadata,
+      ),
+    );
+
+    await thumbRef.putData(
+      prepared.thumbBytes,
+      _metadataForVariant(
+        prepared: prepared,
+        variant: 'thumb',
+        entityId: safeEntityId,
+        width: prepared.thumbWidth,
+        height: prepared.thumbHeight,
+        byteLength: prepared.thumbByteLength,
+        customMetadata: customMetadata,
+      ),
+    );
+
+    final String fullUrl = await fullRef.getDownloadURL();
+    final String thumbUrl = await thumbRef.getDownloadURL();
+
+    return MBUploadedImageSet(
+      originalUrl: originalUrl,
+      fullUrl: fullUrl,
+      cardUrl: cardUrl,
+      thumbUrl: thumbUrl,
+      tinyUrl: tinyUrl,
+      originalPath: originalPath,
+      fullPath: fullPath,
+      cardPath: cardPath,
+      thumbPath: thumbPath,
+      tinyPath: tinyPath,
+      originalWidth: uploadOriginalCardTiny ? prepared.originalWidth : null,
+      originalHeight: uploadOriginalCardTiny ? prepared.originalHeight : null,
+      fullWidth: prepared.fullWidth,
+      fullHeight: prepared.fullHeight,
+      cardWidth: uploadOriginalCardTiny ? prepared.cardWidth : null,
+      cardHeight: uploadOriginalCardTiny ? prepared.cardHeight : null,
+      thumbWidth: prepared.thumbWidth,
+      thumbHeight: prepared.thumbHeight,
+      tinyWidth: uploadOriginalCardTiny ? prepared.tinyWidth : null,
+      tinyHeight: uploadOriginalCardTiny ? prepared.tinyHeight : null,
+    );
   }
 
   MBPreparedImageSet _prepareImageSetFromDecoded({

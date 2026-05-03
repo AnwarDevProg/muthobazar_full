@@ -1614,12 +1614,10 @@ class AttributeValueDialog extends StatefulWidget {
     super.key,
     required this.initialValue,
     this.suggestedValues = const <String>[],
-    this.suggestedValuePresets = const <MBAttributeValuePreset>[],
   });
 
   final MBProductAttributeValue initialValue;
   final List<String> suggestedValues;
-  final List<MBAttributeValuePreset> suggestedValuePresets;
 
   @override
   State<AttributeValueDialog> createState() => _AttributeValueDialogState();
@@ -1636,32 +1634,6 @@ class _AttributeValueDialogState extends State<AttributeValueDialog> {
   late final TextEditingController _imageUrlController;
   late final TextEditingController _sortOrderController;
   late bool _isEnabled;
-
-  List<MBAttributeValuePreset> get _effectiveSuggestions {
-    if (widget.suggestedValuePresets.isNotEmpty) {
-      return widget.suggestedValuePresets;
-    }
-    return widget.suggestedValues
-        .map(
-          (value) => MBAttributeValuePreset(
-            value: value,
-            labelEn: value,
-            labelBn: value,
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  void _applySuggestedValue(MBAttributeValuePreset preset) {
-    _valueController.text = preset.value.trim();
-    _labelEnController.text = preset.labelEn.trim().isEmpty
-        ? preset.value.trim()
-        : preset.labelEn.trim();
-    _labelBnController.text = preset.labelBn.trim().isEmpty
-        ? _labelEnController.text.trim()
-        : preset.labelBn.trim();
-    _colorHexController.text = preset.colorHex?.trim() ?? '';
-  }
 
   @override
   void initState() {
@@ -1725,53 +1697,25 @@ class _AttributeValueDialogState extends State<AttributeValueDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: Autocomplete<MBAttributeValuePreset>(
+                    child: Autocomplete<String>(
                       initialValue: TextEditingValue(text: _valueController.text),
-                      displayStringForOption: (option) => option.value,
                       optionsBuilder: (textEditingValue) {
                         final query = textEditingValue.text.trim().toLowerCase();
-                        final suggestions = _effectiveSuggestions;
-                        if (suggestions.isEmpty) {
-                          return const Iterable<MBAttributeValuePreset>.empty();
+                        if (widget.suggestedValues.isEmpty) {
+                          return const Iterable<String>.empty();
                         }
-                        if (query.isEmpty) return suggestions;
-                        return suggestions.where(
-                          (item) =>
-                              item.value.toLowerCase().contains(query) ||
-                              item.labelEn.toLowerCase().contains(query) ||
-                              item.labelBn.toLowerCase().contains(query),
+                        if (query.isEmpty) {
+                          return widget.suggestedValues;
+                        }
+                        return widget.suggestedValues.where(
+                              (item) => item.toLowerCase().contains(query),
                         );
                       },
                       onSelected: (value) {
-                        setState(() => _applySuggestedValue(value));
-                      },
-                      optionsViewBuilder: (context, onSelected, options) {
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: Material(
-                            elevation: 4,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                maxHeight: 260,
-                                maxWidth: 360,
-                              ),
-                              child: ListView.builder(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                itemCount: options.length,
-                                itemBuilder: (context, index) {
-                                  final option = options.elementAt(index);
-                                  return ListTile(
-                                    dense: true,
-                                    title: Text(option.displayLabel),
-                                    subtitle: Text(option.value),
-                                    onTap: () => onSelected(option),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        );
+                        _valueController.text = value;
+                        if (_labelEnController.text.trim().isEmpty) {
+                          _labelEnController.text = value;
+                        }
                       },
                       fieldViewBuilder:
                           (context, textController, focusNode, onFieldSubmitted) {
@@ -1878,14 +1822,17 @@ class _AttributeDialogState extends State<AttributeDialog> {
   MBAttributePreset? get _matchedPreset {
     return findAttributePreset(
       nameEn: _nameEnController.text,
-      nameBn: _nameBnController.text,
       code: _codeController.text,
     );
   }
 
   void _applyAttributePreset(MBAttributePreset preset) {
     _nameEnController.text = preset.nameEn;
-    _nameBnController.text = preset.nameBn;
+
+    if (_nameBnController.text.trim().isEmpty && preset.nameBn.trim().isNotEmpty) {
+      _nameBnController.text = preset.nameBn;
+    }
+
     _codeController.text = preset.code;
 
     setState(() {
@@ -1933,8 +1880,6 @@ class _AttributeDialogState extends State<AttributeDialog> {
           sortOrder: _values.length,
         ),
         suggestedValues: preset?.suggestedValues ?? const <String>[],
-        suggestedValuePresets:
-            preset?.effectiveSuggestedValuePresets ?? const <MBAttributeValuePreset>[],
       ),
     );
 
@@ -1953,8 +1898,6 @@ class _AttributeDialogState extends State<AttributeDialog> {
       builder: (_) => AttributeValueDialog(
         initialValue: value,
         suggestedValues: preset?.suggestedValues ?? const <String>[],
-        suggestedValuePresets:
-            preset?.effectiveSuggestedValuePresets ?? const <MBAttributeValuePreset>[],
       ),
     );
 
@@ -2025,17 +1968,16 @@ class _AttributeDialogState extends State<AttributeDialog> {
                       Text(
                         'Example 1\n'
                             'Name (English): Size\n'
-                            'Name (Bangla): সাইজ\n'
+                            'Name (Bangla): à¦¸à¦¾à¦‡à¦œ\n'
                             'Code: size\n'
                             'Display Type: text\n'
-                            'Values: Small, Medium, Large',
+                            'Values: 500g, 1kg',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Example 2\n'
                             'Name (English): Color\n'
-                            'Name (Bangla): রং\n'
                             'Code: color\n'
                             'Display Type: color\n'
                             'Values: Red (#FF0000), Green (#00AA00)',
@@ -2099,39 +2041,9 @@ class _AttributeDialogState extends State<AttributeDialog> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Autocomplete<MBAttributePreset>(
-                        initialValue: TextEditingValue(text: _nameBnController.text),
-                        displayStringForOption: (option) => option.nameBn,
-                        optionsBuilder: (textEditingValue) {
-                          final query = textEditingValue.text.trim().toLowerCase();
-                          if (query.isEmpty) return kMbAttributePresets;
-                          return kMbAttributePresets.where(
-                            (item) =>
-                                item.nameBn.toLowerCase().contains(query) ||
-                                item.nameEn.toLowerCase().contains(query) ||
-                                item.code.toLowerCase().contains(query),
-                          );
-                        },
-                        onSelected: _applyAttributePreset,
-                        fieldViewBuilder:
-                            (context, textController, focusNode, onFieldSubmitted) {
-                          return TextFormField(
-                            controller: textController,
-                            focusNode: focusNode,
-                            decoration: const InputDecoration(
-                              labelText: 'Name (Bangla)',
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (value) {
-                              _nameBnController.value = TextEditingValue(
-                                text: value,
-                                selection: TextSelection.collapsed(
-                                  offset: value.length,
-                                ),
-                              );
-                            },
-                          );
-                        },
+                      child: dialogTextField(
+                        _nameBnController,
+                        'Name (Bangla)',
                       ),
                     ),
                   ],
@@ -2254,7 +2166,7 @@ class _AttributeDialogState extends State<AttributeDialog> {
                             ? item.value
                             : item.labelEn,
                         subtitle:
-                        'value: ${item.value} | order: ${item.sortOrder} | enabled: ${item.isEnabled}',
+                        'value: ${item.value} â€¢ order: ${item.sortOrder} â€¢ enabled: ${item.isEnabled}',
                         onEdit: () => _editValue(item),
                         onDelete: () {
                           setState(() {
@@ -2499,15 +2411,15 @@ class _VariationDialogState extends State<VariationDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Original Pixels: ${p.sourceWidth} x ${p.sourceHeight}'),
+        Text('Original Pixels: ${p.sourceWidth} Ã— ${p.sourceHeight}'),
         Text('Original Ratio: ${_ratioText(p.sourceWidth, p.sourceHeight)}'),
-        Text('Cropped Pixels: ${p.croppedWidth} x ${p.croppedHeight}'),
+        Text('Cropped Pixels: ${p.croppedWidth} Ã— ${p.croppedHeight}'),
         Text('Crop Ratio: ${p.cropAspectRatioX}:${p.cropAspectRatioY}'),
         Text('Crop Zoom: ${p.zoomScale.toStringAsFixed(2)}'),
         Text('Cropped Size: ${_bytesText(p.croppedByteLength)}'),
-        Text('Full Pixels: ${p.fullWidth} x ${p.fullHeight}'),
+        Text('Full Pixels: ${p.fullWidth} Ã— ${p.fullHeight}'),
         Text('Full Size: ${_bytesText(p.fullByteLength)}'),
-        Text('Thumb Pixels: ${p.thumbWidth} x ${p.thumbHeight}'),
+        Text('Thumb Pixels: ${p.thumbWidth} Ã— ${p.thumbHeight}'),
         Text('Thumb Size: ${_bytesText(p.thumbByteLength)}'),
       ],
     );
@@ -2668,7 +2580,7 @@ class _VariationDialogState extends State<VariationDialog> {
                   (item) => EditableTile(
                     title: item.labelEn.trim().isEmpty ? item.id : item.labelEn,
                     subtitle:
-                        'mode: ${item.mode} | price: ${item.price} | default: ${item.isDefault}',
+                        'mode: ${item.mode} â€¢ price: ${item.price} â€¢ default: ${item.isDefault}',
                     onEdit: () => _editVariationPurchaseOption(item),
                     onDelete: () {
                       setState(() {

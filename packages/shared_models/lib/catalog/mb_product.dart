@@ -393,60 +393,180 @@ class MBProduct {
     return '';
   }
 
+  String _rootLegacyImageUrl() {
+    for (final item in imageUrls) {
+      final url = item.toString().trim();
+      if (url.isNotEmpty) return url;
+    }
+
+    return thumbnailUrl.trim();
+  }
+
+  List<MBProductVariation> get _publishedVariationsForImageFallback {
+    final items = variations
+        .where((variation) => variation.isPublishedNow)
+        .toList(growable: false);
+
+    final sorted = List<MBProductVariation>.from(items);
+    sorted.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return sorted;
+  }
+
+  String _firstVariationImageUrl(
+    String Function(MBProductVariation variation) selector,
+  ) {
+    final published = _publishedVariationsForImageFallback;
+    if (published.isEmpty) return '';
+
+    for (final variation in published) {
+      if (!variation.isDefault) continue;
+      final url = selector(variation).trim();
+      if (url.isNotEmpty) return url;
+    }
+
+    for (final variation in published) {
+      final url = selector(variation).trim();
+      if (url.isNotEmpty) return url;
+    }
+
+    return '';
+  }
+
+  List<String> _variationImageUrls(
+    String Function(MBProductVariation variation) selector,
+  ) {
+    final urls = <String>[];
+    final published = _publishedVariationsForImageFallback;
+
+    for (final variation in published.where((item) => item.isDefault)) {
+      final url = selector(variation).trim();
+      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+    }
+
+    for (final variation in published.where((item) => !item.isDefault)) {
+      final url = selector(variation).trim();
+      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+    }
+
+    return urls;
+  }
+
   String get resolvedOriginalImageUrl {
+    if (isVariableProduct) {
+      final variationUrl = _firstVariationImageUrl(
+        (variation) => variation.effectiveOriginalImageUrl,
+      );
+      if (variationUrl.isNotEmpty) return variationUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveOriginalUrl,
     );
     if (mediaUrl.isNotEmpty) return mediaUrl;
 
-    if (imageUrls.isNotEmpty) return imageUrls.first.toString().trim();
-    return thumbnailUrl.trim();
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveOriginalImageUrl,
+    );
   }
 
   String get resolvedFullImageUrl {
+    if (isVariableProduct) {
+      final variationUrl = _firstVariationImageUrl(
+        (variation) => variation.effectiveFullImageUrl,
+      );
+      if (variationUrl.isNotEmpty) return variationUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveFullUrl,
     );
     if (mediaUrl.isNotEmpty) return mediaUrl;
 
-    if (imageUrls.isNotEmpty) return imageUrls.first.toString().trim();
-    return thumbnailUrl.trim();
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveFullImageUrl,
+    );
   }
 
   String get resolvedCardImageUrl {
+    if (isVariableProduct) {
+      final variationUrl = _firstVariationImageUrl(
+        (variation) => variation.effectiveCardImageUrl,
+      );
+      if (variationUrl.isNotEmpty) return variationUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveCardUrl,
     );
     if (mediaUrl.isNotEmpty) return mediaUrl;
 
-    if (imageUrls.isNotEmpty) return imageUrls.first.toString().trim();
-    return thumbnailUrl.trim();
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveCardImageUrl,
+    );
   }
 
   String get resolvedThumbImageUrl {
+    if (isVariableProduct) {
+      final variationUrl = _firstVariationImageUrl(
+        (variation) => variation.effectiveThumbImageUrl,
+      );
+      if (variationUrl.isNotEmpty) return variationUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveThumbUrl,
     );
     if (mediaUrl.isNotEmpty) return mediaUrl;
 
-    if (thumbnailUrl.trim().isNotEmpty) return thumbnailUrl.trim();
-    if (imageUrls.isNotEmpty) return imageUrls.first.toString().trim();
-    return '';
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveThumbImageUrl,
+    );
   }
 
   String get resolvedTinyImageUrl {
+    if (isVariableProduct) {
+      final variationUrl = _firstVariationImageUrl(
+        (variation) => variation.effectiveTinyImageUrl,
+      );
+      if (variationUrl.isNotEmpty) return variationUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveTinyUrl,
     );
     if (mediaUrl.isNotEmpty) return mediaUrl;
 
-    return resolvedThumbImageUrl;
-  }
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
 
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveTinyImageUrl,
+    );
+  }
   String get resolvedThumbnailUrl => resolvedThumbImageUrl;
 
   List<String> get resolvedImageUrls {
     final urls = <String>[];
+
+    if (isVariableProduct) {
+      for (final url in _variationImageUrls(
+        (variation) => variation.effectiveFullImageUrl,
+      )) {
+        if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+      }
+    }
 
     for (final item in enabledMediaItems) {
       if (item.type != 'image') continue;
@@ -456,16 +576,18 @@ class MBProduct {
       }
     }
 
-    if (urls.isNotEmpty) return urls;
-
     final legacyUrls = imageUrls
         .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
-    if (legacyUrls.isNotEmpty) return legacyUrls;
+    for (final url in legacyUrls) {
+      if (!urls.contains(url)) urls.add(url);
+    }
 
     final fallback = thumbnailUrl.trim();
-    return fallback.isEmpty ? const <String>[] : <String>[fallback];
+    if (fallback.isNotEmpty && !urls.contains(fallback)) urls.add(fallback);
+
+    return urls.isEmpty ? const <String>[] : urls;
   }
 
   List<String> get resolvedCardImageUrls {
@@ -1226,4 +1348,5 @@ DateTime? _asNullableDateTime(dynamic value) {
 
   return DateTime.tryParse(text);
 }
+
 
