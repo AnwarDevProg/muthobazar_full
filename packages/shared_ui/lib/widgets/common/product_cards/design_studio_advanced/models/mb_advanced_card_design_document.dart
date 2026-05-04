@@ -266,6 +266,7 @@ class MBAdvancedCardDesignDocument {
   static const Set<String> renderableElementTypes = <String>{
     'title',
     'subtitle',
+    'description',
     'brand',
     'category',
     'media',
@@ -670,14 +671,46 @@ class MBAdvancedCardDesignDocument {
 
   factory MBAdvancedCardDesignDocument.defaults() {
     return const MBAdvancedCardDesignDocument(
+      version: 20,
+      type: 'muthobazar_card_design_advanced_v2',
+      templateId: 'hero_poster_circle_diagonal_v1',
+      designFamilyId: 'hero_poster_circle',
+      selectedNodeId: 'delivery_1_1777878724970000',
+      layout: <String, dynamic>{
+        'cardWidth': 200.0,
+        'cardHeight': 342.79828326180296,
+        'borderRadius': 5.0,
+        'resizeMode': 'responsive',
+        'lockElementsToCard': true,
+        'cardLayoutType': 'hero_poster_circle_diagonal_v1',
+      },
+      palette: <String, dynamic>{
+        'presetId': 'orangeGradient',
+        'backgroundHex': '#FF6500',
+        'backgroundHex2': '#FF9A3D',
+        'surfaceHex': '#FFFFFF',
+      },
       nodes: <MBAdvancedDesignNode>[
         MBAdvancedDesignNode(
           id: 'title_01',
           elementType: 'title',
           variantId: 'title_text_bold',
           binding: 'product.titleEn',
-          position: MBAdvancedDesignNodePosition(x: 0.10, y: 0.10, z: 20),
-          size: MBAdvancedDesignNodeSize(width: 184, height: 48),
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.49,
+            y: 0.053967598157051155,
+            z: 20,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 184,
+            height: 29,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
           style: <String, dynamic>{
             'textColorHex': '#FFFFFF',
             'fontSize': 20.0,
@@ -690,8 +723,21 @@ class MBAdvancedCardDesignDocument {
           elementType: 'subtitle',
           variantId: 'subtitle_small_text',
           binding: 'product.shortDescriptionEn',
-          position: MBAdvancedDesignNodePosition(x: 0.10, y: 0.22, z: 20),
-          size: MBAdvancedDesignNodeSize(width: 180, height: 42),
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.505,
+            y: 0.6085211338141009,
+            z: 20,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 180,
+            height: 32,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
           style: <String, dynamic>{
             'textColorHex': '#FFF4E8',
             'fontSize': 11.0,
@@ -704,8 +750,21 @@ class MBAdvancedCardDesignDocument {
           elementType: 'media',
           variantId: 'media_circle_ring',
           binding: 'product.thumbnailUrl',
-          position: MBAdvancedDesignNodePosition(x: 0.50, y: 0.55, z: 30),
-          size: MBAdvancedDesignNodeSize(width: 162, height: 162),
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.49999999999999983,
+            y: 0.3150540865384619,
+            z: 30,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 192,
+            height: 158,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
           style: <String, dynamic>{
             'borderHex': '#FFFFFF',
             'ringWidth': 7.0,
@@ -717,14 +776,29 @@ class MBAdvancedCardDesignDocument {
           elementType: 'price',
           variantId: 'price_circle_badge',
           binding: 'product.finalPrice',
-          position: MBAdvancedDesignNodePosition(x: 0.82, y: 0.16, z: 40),
-          size: MBAdvancedDesignNodeSize(width: 68, height: 68),
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.7922,
+            y: 0.10005884415064084,
+            z: 40,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 68,
+            height: 57,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
           style: <String, dynamic>{
             'backgroundHex': '#FFFFFF',
             'textColorHex': '#FF6500',
-            'fontSize': 14.0,
+            'fontSize': 16.0,
             'fontWeight': 'w900',
             'borderRadius': 999.0,
+            'borderHex': '#12803B',
+            'borderWidth': 2.0,
           },
         ),
         MBAdvancedDesignNode(
@@ -732,17 +806,182 @@ class MBAdvancedCardDesignDocument {
           elementType: 'cta',
           variantId: 'cta_pill_solid',
           binding: 'action.buy',
-          position: MBAdvancedDesignNodePosition(x: 0.75, y: 0.90, z: 40),
-          size: MBAdvancedDesignNodeSize(width: 86, height: 34),
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.745,
+            y: 0.912484975961539,
+            z: 40,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 86,
+            height: 34,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
           style: <String, dynamic>{
             'backgroundHex': '#151922',
             'textColorHex': '#FFFFFF',
             'fontSize': 12.0,
             'fontWeight': 'w900',
+            'borderRadius': 5.0,
+          },
+        ),
+        MBAdvancedDesignNode(
+          id: 'mrp_1_1777878351590000',
+          elementType: 'mrp',
+          variantId: 'mrp_chip_cross',
+          binding: 'product.price',
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.205,
+            y: 0.5011693709935884,
+            z: 41,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 76,
+            height: 25,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
+          style: <String, dynamic>{
+            'backgroundHex': '#FFE8D4',
+            'textColorHex': '#A44500',
+            'fontSize': 14.0,
+            'fontWeight': 'w800',
             'borderRadius': 999.0,
+            'textAlign': 'center',
+            'autoStrikeWhenDiscounted': true,
+            'strikeMode': 'cross',
+            'strikeColorHex': '#FF4A4A',
+            'strikeWidthFactor': 0.6378540772532206,
+            'strikeAngleDeg': -20.124463519313224,
+            'strikeThickness': 1.7536480686695326,
+          },
+        ),
+        MBAdvancedDesignNode(
+          id: 'discount_1_1777878447209000',
+          elementType: 'discount',
+          variantId: 'discount_light_badge',
+          binding: 'static.discount',
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.7820000000000006,
+            y: 0.5010526842948712,
+            z: 42,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 76,
+            height: 28,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
+          style: <String, dynamic>{
+            'backgroundHex': '#151922',
+            'textColorHex': '#FF4A4A',
+            'fontSize': 12.0,
+            'fontWeight': 'w1300',
+            'borderRadius': 999.0,
+            'textAlign': 'center',
+            'borderHex': '#FF4A4A',
+          },
+        ),
+        MBAdvancedDesignNode(
+          id: 'shadow_1_1777878577078000',
+          elementType: 'shadow',
+          variantId: 'shadow_soft',
+          binding: 'static.shadow',
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.5025,
+            y: 0.8424729567307694,
+            z: 1,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 201,
+            height: 108,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
+          style: <String, dynamic>{
+            'backgroundHex': '#000000',
+            'opacity': 0.08,
+            'borderRadius': 5.0,
+          },
+        ),
+        MBAdvancedDesignNode(
+          id: 'timer_1_1777878641100000',
+          elementType: 'timer',
+          variantId: 'timer_chip',
+          binding: 'timer.countdown',
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.25851931330472144,
+            y: 0.912,
+            z: 43,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 86,
+            height: 34,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
+          style: <String, dynamic>{
+            'backgroundHex': '#151922',
+            'textColorHex': '#FFFFFF',
+            'fontSize': 10.5,
+            'fontWeight': 'w900',
+            'borderRadius': 5.0,
+            'textAlign': 'center',
+          },
+        ),
+        MBAdvancedDesignNode(
+          id: 'delivery_1_1777878724970000',
+          elementType: 'delivery',
+          variantId: 'delivery_chip',
+          binding: 'static.delivery',
+          visible: true,
+          locked: false,
+          position: MBAdvancedDesignNodePosition(
+            x: 0.4970000000000004,
+            y: 0.7660456730769227,
+            z: 44,
+          ),
+          size: MBAdvancedDesignNodeSize(
+            width: 118,
+            height: 26,
+            minWidth: 24,
+            minHeight: 18,
+            maxWidth: 420,
+            maxHeight: 520,
+          ),
+          style: <String, dynamic>{
+            'backgroundHex': '#FFFFFF',
+            'textColorHex': '#FF6500',
+            'fontSize': 10.5,
+            'fontWeight': 'w900',
+            'borderRadius': 999.0,
+            'textAlign': 'center',
           },
         ),
       ],
+      metadata: <String, dynamic>{
+        'cardLayoutType': 'hero_poster_circle_diagonal_v1',
+      },
     );
   }
 
@@ -868,6 +1107,8 @@ class MBAdvancedCardDesignDocument {
         return 'title_text';
       case 'subtitle':
         return 'subtitle_text';
+      case 'description':
+        return 'description_text';
       case 'brand':
         return 'brand_text';
       case 'category':
@@ -970,6 +1211,8 @@ class MBAdvancedCardDesignDocument {
         return 'product.titleEn';
       case 'subtitle':
         return 'product.shortDescriptionEn';
+      case 'description':
+        return 'product.descriptionEn';
       case 'brand':
         return 'product.brandName';
       case 'category':
@@ -1072,6 +1315,8 @@ class MBAdvancedCardDesignDocument {
         return <String, dynamic>{'textColorHex': '#FFFFFF', 'fontSize': 20.0, 'fontWeight': 'w900'};
       case 'subtitle':
         return <String, dynamic>{'textColorHex': '#FFF4E8', 'fontSize': 11.0, 'fontWeight': 'w600'};
+      case 'description':
+        return <String, dynamic>{'textColorHex': '#FFF4E8', 'fontSize': 10.5, 'fontWeight': 'w500', 'textAlign': 'left'};
       case 'brand':
       case 'category':
       case 'delivery':

@@ -256,12 +256,18 @@ function collectRootStoragePaths(paths, data) {
 function collectVariationStoragePaths(paths, variation) {
     // Variation legacy/generic fields.
     addStoragePath(paths, variation.imageStoragePath);
+    addStoragePath(paths, variation.originalImageStoragePath);
     addStoragePath(paths, variation.thumbImageStoragePath);
     addStoragePath(paths, variation.fullImageStoragePath);
     addStoragePath(paths, variation.cardImageStoragePath);
     addStoragePath(paths, variation.tinyImageStoragePath);
     addStoragePath(paths, variation.storagePath);
     addStoragePath(paths, variation.imagePath);
+    addStoragePath(paths, variation.originalImagePath);
+    addStoragePath(paths, variation.thumbImagePath);
+    addStoragePath(paths, variation.fullImagePath);
+    addStoragePath(paths, variation.cardImagePath);
+    addStoragePath(paths, variation.tinyImagePath);
     addStoragePath(paths, variation.thumbPath);
     // Variation generated-image fields.
     addStoragePath(paths, variation.originalStoragePath);
@@ -275,6 +281,7 @@ function collectVariationStoragePaths(paths, variation) {
     addStoragePath(paths, variation.tinyPath);
     // Variation URL fallbacks.
     addStoragePathFromUrl(paths, variation.imageUrl);
+    addStoragePathFromUrl(paths, variation.originalImageUrl);
     addStoragePathFromUrl(paths, variation.thumbImageUrl);
     addStoragePathFromUrl(paths, variation.fullImageUrl);
     addStoragePathFromUrl(paths, variation.cardImageUrl);
@@ -303,16 +310,31 @@ function collectStoragePaths(current) {
 }
 async function deleteStorageObjectIfExists(path) {
     const safePath = path.trim();
-    if (!safePath)
-        return;
+    if (!safePath) {
+        return {
+            path: safePath,
+            success: false,
+            errorMessage: "Empty storage path.",
+        };
+    }
     try {
         await storage.bucket().file(safePath).delete({ ignoreNotFound: true });
+        return {
+            path: safePath,
+            success: true,
+        };
     }
     catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.warn("Failed to delete product storage object", {
             path: safePath,
             error,
         });
+        return {
+            path: safePath,
+            success: false,
+            errorMessage,
+        };
     }
 }
 exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
@@ -331,6 +353,7 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
         (0, callable_parsers_1.requireNonEmpty)(productId, "productId");
         const productRef = db.collection("products").doc(productId);
         let auditLogId = "";
+        let auditLogRefPath = "";
         let storagePathsToDelete = [];
         await db.runTransaction(async (tx) => {
             const currentSnap = await tx.get(productRef);
@@ -344,6 +367,7 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
             tx.delete(productRef);
             const logRef = (0, audit_log_core_1.newAdminAuditLogRef)();
             auditLogId = logRef.id;
+            auditLogRefPath = logRef.path;
             const storagePaths = collectStoragePaths(current);
             tx.set(logRef, (0, audit_log_core_1.buildAdminAuditLogDoc)(logRef.id, actor, {
                 action: "hard_delete_product",
@@ -366,24 +390,60 @@ exports.adminHardDeleteProduct = (0, https_1.onCall)(async (request) => {
                     deletedAt: current.deletedAt ?? null,
                     wasQuarantined: current.isDeleted,
                     storageCleanup: "product_media_and_variation_media",
+                    storageCleanupStatus: "pending",
                     storagePathsCount: storagePaths.length,
+                    storageCleanupAttemptedCount: 0,
+                    storageCleanupDeletedCount: 0,
+                    storageCleanupFailedCount: 0,
+                    failedStoragePaths: [],
                 },
                 eventSource: "server_action",
             }));
             storagePathsToDelete = storagePaths;
         });
+        const storageDeleteResults = [];
         for (const path of storagePathsToDelete) {
-            await deleteStorageObjectIfExists(path);
+            storageDeleteResults.push(await deleteStorageObjectIfExists(path));
+        }
+        const failedStorageResults = storageDeleteResults.filter((result) => !result.success);
+        const failedStoragePaths = failedStorageResults.map((result) => result.path);
+        const deletedStorageCount = storageDeleteResults.filter((result) => result.success).length;
+        const failedStorageCount = failedStorageResults.length;
+        const storageCleanupStatus = failedStorageCount > 0 ? "partial_failed" : "success";
+        if (auditLogRefPath) {
+            try {
+                await db.doc(auditLogRefPath).update({
+                    "metadata.storageCleanupStatus": storageCleanupStatus,
+                    "metadata.storageCleanupAttemptedCount": storagePathsToDelete.length,
+                    "metadata.storageCleanupDeletedCount": deletedStorageCount,
+                    "metadata.storageCleanupFailedCount": failedStorageCount,
+                    "metadata.failedStoragePaths": failedStoragePaths,
+                });
+            }
+            catch (error) {
+                logger.warn("Failed to update hard delete storage cleanup metadata", {
+                    productId,
+                    auditLogId,
+                    error,
+                });
+            }
         }
         logger.info("adminHardDeleteProduct storage cleanup complete", {
             productId,
-            storagePathsCount: storagePathsToDelete.length,
+            attemptedStorageCount: storagePathsToDelete.length,
+            deletedStorageCount,
+            failedStorageCount,
+            failedStoragePaths,
         });
         return {
             success: true,
             productId,
             auditLogId,
-            deletedStorageCount: storagePathsToDelete.length,
+            attemptedStorageCount: storagePathsToDelete.length,
+            deletedStorageCount,
+            failedStorageCount,
+            failedStoragePaths,
+            storageCleanupStatus,
         };
     }
     catch (error) {

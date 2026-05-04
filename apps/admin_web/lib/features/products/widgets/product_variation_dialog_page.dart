@@ -23,12 +23,14 @@ class ProductVariationDialog extends StatefulWidget {
     super.key,
     required this.initialValue,
     this.variationAttributes = const <MBProductAttribute>[],
+    this.existingVariations = const <MBProductVariation>[],
     this.initialPendingImage,
     this.currentDefaultVariationId,
   });
 
   final MBProductVariation initialValue;
   final List<MBProductAttribute> variationAttributes;
+  final List<MBProductVariation> existingVariations;
   final MBPreparedImageSet? initialPendingImage;
   final String? currentDefaultVariationId;
 
@@ -1027,6 +1029,15 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
 
   void _handleSave() {
     if (!_formKey.currentState!.validate()) return;
+
+    final duplicateMessage = _duplicateSelectedCombinationMessage();
+    if (duplicateMessage != null) {
+      setState(() {
+        _imageErrorText = duplicateMessage;
+      });
+      return;
+    }
+
     final hasExistingImage = _imageUrlController.text.trim().isNotEmpty ||
         widget.initialValue.effectiveFullImageUrl.trim().isNotEmpty;
     final hasPendingImage = _preparedImage != null;
@@ -1360,6 +1371,145 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     return lines;
   }
 
+  String _attributeLabel(MBProductAttribute attribute) {
+    final name = attribute.nameEn.trim();
+    if (name.isNotEmpty) return name;
+    final code = attribute.code.trim();
+    if (code.isNotEmpty) return code;
+    return attribute.id;
+  }
+
+  String _attributeValueLabel(MBProductAttribute attribute, String rawValue) {
+    final selected = rawValue.trim();
+    if (selected.isEmpty) return '-';
+    for (final value in attribute.values) {
+      if (value.value.trim() != selected) continue;
+      final label = value.labelEn.trim();
+      return label.isEmpty ? value.value.trim() : '$label (${value.value.trim()})';
+    }
+    return selected;
+  }
+
+  String _variationCombinationLine(MBProductVariation variation) {
+    final parts = <String>[];
+    for (final attribute in widget.variationAttributes) {
+      final code = attribute.code.trim();
+      final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+      final byCode = code.isEmpty ? '' : (variation.attributeValues[code]?.trim() ?? '');
+      final selected = byId.isNotEmpty ? byId : byCode;
+      if (selected.isEmpty) continue;
+      parts.add('${_attributeLabel(attribute)}: ${_attributeValueLabel(attribute, selected)}');
+    }
+    return parts.join(' | ');
+  }
+
+  String _combinationKeyFromSelectedValues() {
+    final parts = <String>[];
+    for (final attribute in widget.variationAttributes) {
+      if (!attribute.useForVariation) continue;
+      final selected = (_selectedAttributeValues[attribute.id] ?? '').trim();
+      if (selected.isEmpty) return '';
+      parts.add('${attribute.id.trim().toLowerCase()}=${selected.toLowerCase()}');
+    }
+    return parts.join('|');
+  }
+
+  String _combinationKeyFromVariation(MBProductVariation variation) {
+    final parts = <String>[];
+    for (final attribute in widget.variationAttributes) {
+      if (!attribute.useForVariation) continue;
+      final code = attribute.code.trim();
+      final byId = variation.attributeValues[attribute.id]?.trim() ?? '';
+      final byCode = code.isEmpty ? '' : (variation.attributeValues[code]?.trim() ?? '');
+      final selected = byId.isNotEmpty ? byId : byCode;
+      if (selected.isEmpty) return '';
+      parts.add('${attribute.id.trim().toLowerCase()}=${selected.toLowerCase()}');
+    }
+    return parts.join('|');
+  }
+
+  MBProductVariation? _duplicateVariationForSelectedCombination() {
+    final selectedKey = _combinationKeyFromSelectedValues();
+    if (selectedKey.isEmpty) return null;
+
+    final currentId = widget.initialValue.id.trim();
+    for (final variation in widget.existingVariations) {
+      final variationId = variation.id.trim();
+      if (variationId.isNotEmpty && variationId == currentId) continue;
+      if (_combinationKeyFromVariation(variation) == selectedKey) {
+        return variation;
+      }
+    }
+
+    return null;
+  }
+
+  String? _duplicateSelectedCombinationMessage() {
+    final duplicate = _duplicateVariationForSelectedCombination();
+    if (duplicate == null) return null;
+
+    final duplicateTitle = duplicate.titleEn.trim().isEmpty
+        ? duplicate.id.trim()
+        : duplicate.titleEn.trim();
+    final combo = _variationCombinationLine(duplicate).trim();
+    final suffix = combo.isEmpty ? '' : ': $combo';
+    return 'This variation combination already exists in $duplicateTitle$suffix';
+  }
+
+  List<String> _existingVariationCombinationLines() {
+    final currentId = widget.initialValue.id.trim();
+    final items = widget.existingVariations
+        .where((variation) => variation.id.trim().isNotEmpty && variation.id.trim() != currentId)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    final lines = <String>[];
+    for (final variation in items) {
+      final combo = _variationCombinationLine(variation).trim();
+      if (combo.isEmpty) continue;
+      final title = variation.titleEn.trim().isEmpty ? variation.id : variation.titleEn.trim();
+      lines.add('$title: $combo');
+    }
+    return lines;
+  }
+
+  Widget _buildExistingVariationCombinationsBox(BuildContext context) {
+    final lines = _existingVariationCombinationLines();
+    if (lines.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Existing variation combinations',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ...lines.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: 5),
+              child: Text(
+                line,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAttributeValuesSection(BuildContext context) {
     if (widget.variationAttributes.isEmpty) {
       return const SectionCard(
@@ -1377,28 +1527,52 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildExistingVariationCombinationsBox(context),
           Builder(
             builder: (context) {
               final lines = _selectedAttributeCombinationLines();
+              final duplicateMessage = _duplicateSelectedCombinationMessage();
+              final hasDuplicate = duplicateMessage != null;
+              final colorScheme = Theme.of(context).colorScheme;
+              final textTheme = Theme.of(context).textTheme;
+
               return Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 14),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest
-                      .withValues(alpha: 0.28),
+                  color: hasDuplicate
+                      ? colorScheme.errorContainer.withValues(alpha: 0.28)
+                      : colorScheme.surfaceContainerHighest.withValues(alpha: 0.28),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Theme.of(context).dividerColor),
+                  border: Border.all(
+                    color: hasDuplicate ? colorScheme.error : Theme.of(context).dividerColor,
+                    width: hasDuplicate ? 1.6 : 1.0,
+                  ),
                 ),
-                child: Text(
-                  lines.isEmpty
-                      ? 'Selected combination: none yet'
-                      : 'Selected combination: ${lines.join(' | ')}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lines.isEmpty
+                          ? 'Selected combination: none yet'
+                          : 'Selected combination: ${lines.join(' | ')}',
+                      style: textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: hasDuplicate ? colorScheme.error : null,
                       ),
+                    ),
+                    if (hasDuplicate) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        duplicateMessage,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               );
             },
@@ -1429,7 +1603,10 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
                     ),
                   )
                   .toList(),
-              onChanged: (value) => setState(() => _selectedAttributeValues[attribute.id] = value),
+              onChanged: (value) => setState(() {
+                _selectedAttributeValues[attribute.id] = value;
+                _imageErrorText = null;
+              }),
               validator: (value) {
                 if (!attribute.useForVariation) return null;
                 if ((value ?? '').trim().isEmpty) {

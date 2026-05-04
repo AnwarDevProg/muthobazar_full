@@ -39,6 +39,8 @@ class AdminProductLookupSupport {
         nameEn: item.nameEn,
         nameBn: item.nameBn,
         slug: item.slug,
+        imageUrl: item.imageUrl,
+        iconUrl: item.iconUrl,
       ),
     )
         .toList(growable: false);
@@ -69,6 +71,8 @@ class AdminProductLookupSupport {
         nameEn: item.nameEn,
         nameBn: item.nameBn,
         slug: item.slug,
+        imageUrl: item.imageUrl,
+        logoUrl: item.logoUrl,
       ),
     )
         .toList(growable: false);

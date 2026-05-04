@@ -1866,6 +1866,10 @@ class _AttributeDialogState extends State<AttributeDialog> {
   late final TextEditingController _codeController;
   late final TextEditingController _sortOrderController;
 
+  TextEditingController? _nameEnAutocompleteController;
+  TextEditingController? _nameBnAutocompleteController;
+  TextEditingController? _codeAutocompleteController;
+
   late bool _isVisible;
   late bool _useForVariation;
   late bool _isRequired;
@@ -1883,14 +1887,62 @@ class _AttributeDialogState extends State<AttributeDialog> {
     );
   }
 
+  void _setControllerText(
+    TextEditingController? controller,
+    String value,
+  ) {
+    if (controller == null || controller.text == value) {
+      return;
+    }
+
+    controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
+  }
+
+  Iterable<MBAttributePreset> _attributePresetOptions(String rawQuery) {
+    final query = rawQuery.trim().toLowerCase();
+    if (query.isEmpty) return kMbAttributePresets;
+
+    return kMbAttributePresets.where((item) {
+      final nameEn = item.nameEn.trim().toLowerCase();
+      final nameBn = item.nameBn.trim().toLowerCase();
+      final code = item.code.trim().toLowerCase();
+
+      return nameEn.contains(query) ||
+          nameBn.contains(query) ||
+          code.contains(query);
+    });
+  }
+
   void _applyAttributePreset(MBAttributePreset preset) {
-    _nameEnController.text = preset.nameEn;
-    _nameBnController.text = preset.nameBn;
-    _codeController.text = preset.code;
+    _setControllerText(_nameEnController, preset.nameEn);
+    _setControllerText(_nameBnController, preset.nameBn);
+    _setControllerText(_codeController, preset.code);
+
+    _setControllerText(_nameEnAutocompleteController, preset.nameEn);
+    _setControllerText(_nameBnAutocompleteController, preset.nameBn);
+    _setControllerText(_codeAutocompleteController, preset.code);
 
     setState(() {
       _displayType = preset.displayType;
     });
+  }
+
+  void _maybeApplyPresetFromInput({
+    String? nameEn,
+    String? nameBn,
+    String? code,
+  }) {
+    final preset = findAttributePreset(
+      nameEn: nameEn,
+      nameBn: nameBn,
+      code: code,
+    );
+
+    if (preset == null) return;
+    _applyAttributePreset(preset);
   }
 
   @override
@@ -2066,17 +2118,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
                         initialValue: TextEditingValue(text: _nameEnController.text),
                         displayStringForOption: (option) => option.nameEn,
                         optionsBuilder: (textEditingValue) {
-                          final query = textEditingValue.text.trim().toLowerCase();
-                          if (query.isEmpty) return kMbAttributePresets;
-                          return kMbAttributePresets.where(
-                                (item) =>
-                            item.nameEn.toLowerCase().contains(query) ||
-                                item.code.toLowerCase().contains(query),
-                          );
+                          return _attributePresetOptions(textEditingValue.text);
                         },
                         onSelected: _applyAttributePreset,
                         fieldViewBuilder:
                             (context, textController, focusNode, onFieldSubmitted) {
+                          _nameEnAutocompleteController = textController;
+                          _setControllerText(textController, _nameEnController.text);
+
                           return TextFormField(
                             controller: textController,
                             focusNode: focusNode,
@@ -2086,12 +2135,8 @@ class _AttributeDialogState extends State<AttributeDialog> {
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (value) {
-                              _nameEnController.value = TextEditingValue(
-                                text: value,
-                                selection: TextSelection.collapsed(
-                                  offset: value.length,
-                                ),
-                              );
+                              _setControllerText(_nameEnController, value);
+                              _maybeApplyPresetFromInput(nameEn: value);
                             },
                           );
                         },
@@ -2103,18 +2148,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
                         initialValue: TextEditingValue(text: _nameBnController.text),
                         displayStringForOption: (option) => option.nameBn,
                         optionsBuilder: (textEditingValue) {
-                          final query = textEditingValue.text.trim().toLowerCase();
-                          if (query.isEmpty) return kMbAttributePresets;
-                          return kMbAttributePresets.where(
-                            (item) =>
-                                item.nameBn.toLowerCase().contains(query) ||
-                                item.nameEn.toLowerCase().contains(query) ||
-                                item.code.toLowerCase().contains(query),
-                          );
+                          return _attributePresetOptions(textEditingValue.text);
                         },
                         onSelected: _applyAttributePreset,
                         fieldViewBuilder:
                             (context, textController, focusNode, onFieldSubmitted) {
+                          _nameBnAutocompleteController = textController;
+                          _setControllerText(textController, _nameBnController.text);
+
                           return TextFormField(
                             controller: textController,
                             focusNode: focusNode,
@@ -2123,12 +2164,8 @@ class _AttributeDialogState extends State<AttributeDialog> {
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (value) {
-                              _nameBnController.value = TextEditingValue(
-                                text: value,
-                                selection: TextSelection.collapsed(
-                                  offset: value.length,
-                                ),
-                              );
+                              _setControllerText(_nameBnController, value);
+                              _maybeApplyPresetFromInput(nameBn: value);
                             },
                           );
                         },
@@ -2145,17 +2182,14 @@ class _AttributeDialogState extends State<AttributeDialog> {
                         initialValue: TextEditingValue(text: _codeController.text),
                         displayStringForOption: (option) => option.code,
                         optionsBuilder: (textEditingValue) {
-                          final query = textEditingValue.text.trim().toLowerCase();
-                          if (query.isEmpty) return kMbAttributePresets;
-                          return kMbAttributePresets.where(
-                                (item) =>
-                            item.code.toLowerCase().contains(query) ||
-                                item.nameEn.toLowerCase().contains(query),
-                          );
+                          return _attributePresetOptions(textEditingValue.text);
                         },
                         onSelected: _applyAttributePreset,
                         fieldViewBuilder:
                             (context, textController, focusNode, onFieldSubmitted) {
+                          _codeAutocompleteController = textController;
+                          _setControllerText(textController, _codeController.text);
+
                           return TextFormField(
                             controller: textController,
                             focusNode: focusNode,
@@ -2164,12 +2198,8 @@ class _AttributeDialogState extends State<AttributeDialog> {
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (value) {
-                              _codeController.value = TextEditingValue(
-                                text: value,
-                                selection: TextSelection.collapsed(
-                                  offset: value.length,
-                                ),
-                              );
+                              _setControllerText(_codeController, value);
+                              _maybeApplyPresetFromInput(code: value);
                             },
                           );
                         },

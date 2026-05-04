@@ -191,6 +191,25 @@ function normalizeObjectList(value) {
         .map((item) => sanitizeFirestoreValue(item))
         .filter((item) => isJsonMap(item));
 }
+function normalizeRootMediaItems(value, productType) {
+    const productTypeText = (0, callable_parsers_1.asTrimmedString)(productType).toLowerCase();
+    const isVariableProduct = productTypeText === "variable";
+    return normalizeObjectList(value).map((item, index) => {
+        const normalized = {
+            ...item,
+            sortOrder: asInteger(item.sortOrder, index),
+        };
+        if (isVariableProduct) {
+            normalized.role = "gallery";
+            normalized.isPrimary = false;
+            return normalized;
+        }
+        const role = (0, callable_parsers_1.asTrimmedString)(item.role);
+        normalized.role = role.length > 0 ? role : index === 0 ? "thumbnail" : "gallery";
+        normalized.isPrimary = asBool(item.isPrimary, index === 0);
+        return normalized;
+    });
+}
 function normalizePurchaseOptions(value) {
     return normalizeObjectList(value);
 }
@@ -500,6 +519,9 @@ function normalizeMergedProductPayload(currentData, patchInput, actorUid, produc
         normalized[key] =
             typeof raw === "number" && Number.isFinite(raw) ? raw : null;
     }
+    normalized.mediaItems = normalizeRootMediaItems(mergedBase.mediaItems, normalized.productType);
+    normalized.imageUrls = asStringArray(mergedBase.imageUrls);
+    normalized.thumbnailUrl = asNullableString(mergedBase.thumbnailUrl);
     normalized.variations = normalizeVariations(mergedBase.variations, currentData.variations, actorUid, admin.firestore.Timestamp.now(), normalized, reason);
     return normalized;
 }

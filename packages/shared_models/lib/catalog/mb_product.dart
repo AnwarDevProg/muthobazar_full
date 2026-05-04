@@ -296,13 +296,36 @@ class MBProduct {
   bool get usesEstimatedSchedulePrice =>
       schedulePriceType == 'estimated' || schedulePriceType == 'market';
 
+  String? get advancedCardLayoutType {
+    final raw = _cardDesignLayoutTypeFromJson(cardDesignJson)?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    if (raw == 'advanced_v3') return 'hero_poster_circle_diagonal_v1';
+    return raw;
+  }
+
   MBCardInstanceConfig get effectiveCardConfig {
     return cardConfig.normalized();
   }
 
-  String get normalizedCardLayoutType => effectiveCardConfig.variantId;
-  String get effectiveCardVariantId => effectiveCardConfig.variantId;
-  String get effectiveCardFamilyId => effectiveCardConfig.familyId;
+  String get normalizedCardLayoutType =>
+      advancedCardLayoutType ?? effectiveCardConfig.variantId;
+  String get effectiveCardVariantId => normalizedCardLayoutType;
+  String get effectiveCardFamilyId =>
+      advancedCardLayoutType == null ? effectiveCardConfig.familyId : 'advanced_v3';
+
+  Map<String, Object?> get effectiveCardConfigMap {
+    final designLayoutType = advancedCardLayoutType;
+    if (designLayoutType != null) {
+      return <String, Object?>{
+        'familyId': 'advanced_v3',
+        'variantId': designLayoutType,
+        'presetId': null,
+        'settings': <String, Object?>{},
+      };
+    }
+
+    return effectiveCardConfig.normalized().toMap();
+  }
 
   bool get usesCompactCardLayout =>
       effectiveCardConfig.family == MBCardFamily.compact;
@@ -432,33 +455,7 @@ class MBProduct {
     return '';
   }
 
-  List<String> _variationImageUrls(
-    String Function(MBProductVariation variation) selector,
-  ) {
-    final urls = <String>[];
-    final published = _publishedVariationsForImageFallback;
-
-    for (final variation in published.where((item) => item.isDefault)) {
-      final url = selector(variation).trim();
-      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
-    }
-
-    for (final variation in published.where((item) => !item.isDefault)) {
-      final url = selector(variation).trim();
-      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
-    }
-
-    return urls;
-  }
-
   String get resolvedOriginalImageUrl {
-    if (isVariableProduct) {
-      final variationUrl = _firstVariationImageUrl(
-        (variation) => variation.effectiveOriginalImageUrl,
-      );
-      if (variationUrl.isNotEmpty) return variationUrl;
-    }
-
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveOriginalUrl,
     );
@@ -473,13 +470,6 @@ class MBProduct {
   }
 
   String get resolvedFullImageUrl {
-    if (isVariableProduct) {
-      final variationUrl = _firstVariationImageUrl(
-        (variation) => variation.effectiveFullImageUrl,
-      );
-      if (variationUrl.isNotEmpty) return variationUrl;
-    }
-
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveFullUrl,
     );
@@ -494,13 +484,6 @@ class MBProduct {
   }
 
   String get resolvedCardImageUrl {
-    if (isVariableProduct) {
-      final variationUrl = _firstVariationImageUrl(
-        (variation) => variation.effectiveCardImageUrl,
-      );
-      if (variationUrl.isNotEmpty) return variationUrl;
-    }
-
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveCardUrl,
     );
@@ -515,13 +498,6 @@ class MBProduct {
   }
 
   String get resolvedThumbImageUrl {
-    if (isVariableProduct) {
-      final variationUrl = _firstVariationImageUrl(
-        (variation) => variation.effectiveThumbImageUrl,
-      );
-      if (variationUrl.isNotEmpty) return variationUrl;
-    }
-
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveThumbUrl,
     );
@@ -536,13 +512,6 @@ class MBProduct {
   }
 
   String get resolvedTinyImageUrl {
-    if (isVariableProduct) {
-      final variationUrl = _firstVariationImageUrl(
-        (variation) => variation.effectiveTinyImageUrl,
-      );
-      if (variationUrl.isNotEmpty) return variationUrl;
-    }
-
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveTinyUrl,
     );
@@ -560,14 +529,6 @@ class MBProduct {
   List<String> get resolvedImageUrls {
     final urls = <String>[];
 
-    if (isVariableProduct) {
-      for (final url in _variationImageUrls(
-        (variation) => variation.effectiveFullImageUrl,
-      )) {
-        if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
-      }
-    }
-
     for (final item in enabledMediaItems) {
       if (item.type != 'image') continue;
       final url = item.effectiveFullUrl.trim();
@@ -576,18 +537,16 @@ class MBProduct {
       }
     }
 
+    if (urls.isNotEmpty) return urls;
+
     final legacyUrls = imageUrls
         .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList(growable: false);
-    for (final url in legacyUrls) {
-      if (!urls.contains(url)) urls.add(url);
-    }
+    if (legacyUrls.isNotEmpty) return legacyUrls;
 
     final fallback = thumbnailUrl.trim();
-    if (fallback.isNotEmpty && !urls.contains(fallback)) urls.add(fallback);
-
-    return urls.isEmpty ? const <String>[] : urls;
+    return fallback.isEmpty ? const <String>[] : <String>[fallback];
   }
 
   List<String> get resolvedCardImageUrls {
@@ -923,9 +882,8 @@ class MBProduct {
       'attributes': attributes.map((e) => e.toMap()).toList(),
       'variations': variations.map((e) => e.toMap()).toList(),
       'purchaseOptions': purchaseOptions.map((e) => e.toMap()).toList(),
-      'cardLayoutType': _cardDesignLayoutTypeFromJson(cardDesignJson) ?? normalizedConfig.variantId,
-      if (!(cardDesignJson?.trim().isNotEmpty ?? false))
-        'cardConfig': normalizedConfig.toMap(),
+      'cardLayoutType': advancedCardLayoutType ?? normalizedConfig.variantId,
+      'cardConfig': effectiveCardConfigMap,
       if (cardDesignJson?.trim().isNotEmpty ?? false)
         'cardDesignJson': cardDesignJson!.trim(),
       'isFeatured': isFeatured,

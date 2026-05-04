@@ -22,12 +22,30 @@ class AdminProductRelationOption {
     required this.nameEn,
     this.nameBn = '',
     this.slug = '',
+    this.imageUrl = '',
+    this.logoUrl = '',
+    this.iconUrl = '',
   });
 
   final String id;
   final String nameEn;
   final String nameBn;
   final String slug;
+  final String imageUrl;
+  final String logoUrl;
+  final String iconUrl;
+
+  String get effectiveLogoUrl {
+    final logo = logoUrl.trim();
+    if (logo.isNotEmpty) return logo;
+    return imageUrl.trim();
+  }
+
+  String get effectiveIconUrl {
+    final icon = iconUrl.trim();
+    if (icon.isNotEmpty) return icon;
+    return imageUrl.trim();
+  }
 }
 
 
@@ -449,6 +467,19 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   String? _selectedCategoryId;
   String? _selectedBrandId;
+
+  AdminProductRelationOption? get _selectedCategoryOption {
+    final id = _selectedCategoryId?.trim();
+    if (id == null || id.isEmpty) return null;
+    return widget.availableCategories.firstWhereOrNull((item) => item.id == id);
+  }
+
+  AdminProductRelationOption? get _selectedBrandOption {
+    final id = _selectedBrandId?.trim();
+    if (id == null || id.isEmpty) return null;
+    return widget.availableBrands.firstWhereOrNull((item) => item.id == id);
+  }
+
   bool get _isVariableProduct => _productType.trim().toLowerCase() == 'variable';
 
   /// New design-family card JSON returned from MBCardDesignStudio.
@@ -4849,6 +4880,21 @@ Wrap(
       _metadataJsonController.text,
       fallback: _source.metadata,
     );
+    final relationMetadata = <String, dynamic>{...parsedMetadata};
+    final selectedBrand = _selectedBrandOption;
+    final selectedCategory = _selectedCategoryOption;
+    if (selectedBrand != null) {
+      final brandLogo = selectedBrand.effectiveLogoUrl.trim();
+      final brandImage = selectedBrand.imageUrl.trim();
+      if (brandLogo.isNotEmpty) relationMetadata['brandLogoUrl'] = brandLogo;
+      if (brandImage.isNotEmpty) relationMetadata['brandImageUrl'] = brandImage;
+    }
+    if (selectedCategory != null) {
+      final categoryIcon = selectedCategory.effectiveIconUrl.trim();
+      final categoryImage = selectedCategory.imageUrl.trim();
+      if (categoryIcon.isNotEmpty) relationMetadata['categoryIconUrl'] = categoryIcon;
+      if (categoryImage.isNotEmpty) relationMetadata['categoryImageUrl'] = categoryImage;
+    }
     final derivedThumbnail = _effectiveThumbnailUrl;
     final derivedImageUrls = _effectiveImageUrls;
     final rootCardVariation = _isVariableProduct
@@ -5041,7 +5087,7 @@ Wrap(
           ? null
           : _adminNoteController.text.trim(),
       clearAdminNote: _adminNoteController.text.trim().isEmpty,
-      metadata: parsedMetadata,
+      metadata: relationMetadata,
 
       isDeleted: _isDeleted,
       deletedAt: _isDeleted ? (_deletedAt ?? now) : null,
@@ -5389,6 +5435,7 @@ Wrap(
           sortOrder: _variations.length,
         ),
         variationAttributes: variationAttributes,
+        existingVariations: _variations,
         currentDefaultVariationId: _currentDefaultVariationId(),
       ),
     );
@@ -5428,6 +5475,7 @@ Wrap(
       builder: (_) => ProductVariationDialog(
         initialValue: item,
         variationAttributes: variationAttributes,
+        existingVariations: _variations,
         initialPendingImage: _pendingVariationImagesById[item.id],
         currentDefaultVariationId: _currentDefaultVariationId(
           excludingVariationId: item.id,

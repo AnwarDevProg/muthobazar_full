@@ -324,11 +324,17 @@ class MBAdvancedBindingResolver {
       case MBAdvancedBindingKey.productResolvedTinyImageUrl:
         return _resolveProductTinyImageUrl(context.product, fallback: fallback);
       case MBAdvancedBindingKey.brandLogoUrl:
-        return _readAny(context.brand, const <String>['logoUrl', 'imageUrl'], fallback);
+        final brandImage = _readAny(context.brand, const <String>['logoUrl', 'imageUrl'], '');
+        if (brandImage.isNotEmpty) return brandImage;
+        return _readAny(context.product, const <String>['brandLogoUrl', 'brandImageUrl'], fallback);
       case MBAdvancedBindingKey.categoryImageUrl:
-        return _readAny(context.category, const <String>['imageUrl'], fallback);
+        final categoryImage = _readAny(context.category, const <String>['imageUrl'], '');
+        if (categoryImage.isNotEmpty) return categoryImage;
+        return _readAny(context.product, const <String>['categoryImageUrl', 'categoryIconUrl'], fallback);
       case MBAdvancedBindingKey.categoryIconUrl:
-        return _readAny(context.category, const <String>['iconUrl'], fallback);
+        final categoryIcon = _readAny(context.category, const <String>['iconUrl', 'imageUrl'], '');
+        if (categoryIcon.isNotEmpty) return categoryIcon;
+        return _readAny(context.product, const <String>['categoryIconUrl', 'categoryImageUrl'], fallback);
       case MBAdvancedBindingKey.variationThumbnailUrl:
         return _resolveVariationImageUrl(context.selectedVariation, fallback: fallback);
       case MBAdvancedBindingKey.variationFirstImageUrl:
@@ -761,8 +767,24 @@ class MBAdvancedBindingResolver {
     if (source == null) return '';
 
     try {
-      if (source is Map && source.containsKey(fieldName)) {
-        final text = source[fieldName]?.toString().trim() ?? '';
+      if (source is Map) {
+        if (source.containsKey(fieldName)) {
+          final text = source[fieldName]?.toString().trim() ?? '';
+          if (text.isNotEmpty) return text;
+        }
+
+        final metadata = source['metadata'];
+        if (metadata is Map && metadata.containsKey(fieldName)) {
+          final text = metadata[fieldName]?.toString().trim() ?? '';
+          if (text.isNotEmpty) return text;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final dynamic metadata = source?.metadata;
+      if (metadata is Map && metadata.containsKey(fieldName)) {
+        final text = metadata[fieldName]?.toString().trim() ?? '';
         if (text.isNotEmpty) return text;
       }
     } catch (_) {}

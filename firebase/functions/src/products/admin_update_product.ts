@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+﻿import * as admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 
@@ -222,6 +222,31 @@ function normalizeObjectList(value: unknown): JsonMap[] {
   return value
     .map((item) => sanitizeFirestoreValue(item))
     .filter((item): item is JsonMap => isJsonMap(item));
+}
+function normalizeRootMediaItems(
+  value: unknown,
+  productType: unknown,
+): JsonMap[] {
+  const productTypeText = asTrimmedString(productType).toLowerCase();
+  const isVariableProduct = productTypeText === "variable";
+
+  return normalizeObjectList(value).map((item, index) => {
+    const normalized: JsonMap = {
+      ...item,
+      sortOrder: asInteger(item.sortOrder, index),
+    };
+
+    if (isVariableProduct) {
+      normalized.role = "gallery";
+      normalized.isPrimary = false;
+      return normalized;
+    }
+
+    const role = asTrimmedString(item.role);
+    normalized.role = role.length > 0 ? role : index === 0 ? "thumbnail" : "gallery";
+    normalized.isPrimary = asBool(item.isPrimary, index === 0);
+    return normalized;
+  });
 }
 
 function normalizePurchaseOptions(value: unknown): JsonMap[] {
@@ -660,6 +685,13 @@ function normalizeMergedProductPayload(
       typeof raw === "number" && Number.isFinite(raw) ? raw : null;
   }
 
+  normalized.mediaItems = normalizeRootMediaItems(
+    mergedBase.mediaItems,
+    normalized.productType,
+  );
+  normalized.imageUrls = asStringArray(mergedBase.imageUrls);
+  normalized.thumbnailUrl = asNullableString(mergedBase.thumbnailUrl);
+
   normalized.variations = normalizeVariations(
     mergedBase.variations,
     currentData.variations,
@@ -794,3 +826,4 @@ export const adminUpdateProduct = onCall<
     throw new HttpsError("internal", "Failed to update product.");
   }
 });
+

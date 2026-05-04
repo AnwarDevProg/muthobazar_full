@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:admin_web/features/products/controllers/admin_product_controller.dart';
 import 'package:admin_web/features/products/pages/admin_product_lookup_support.dart';
@@ -40,6 +41,10 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   List<AdminProductRelationOption> _categoryOptions = const [];
   List<AdminProductRelationOption> _brandOptions = const [];
   bool _isLookupLoading = false;
+
+  bool _isPageActionRunning = false;
+  String _pageActionMessage = '';
+  String? _pageActionNote;
 
   @override
   void initState() {
@@ -98,15 +103,88 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     return Scaffold(
       body: SafeArea(
         child: Obx(
-              () => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              _buildToolbar(context),
-              _buildStats(context),
-              if (_controller.hasError) _buildErrorBanner(context),
-              Expanded(child: _buildBody(context)),
-            ],
+          () {
+            final pageContent = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                _buildToolbar(context),
+                _buildStats(context),
+                if (_controller.hasError) _buildErrorBanner(context),
+                Expanded(child: _buildBody(context)),
+              ],
+            );
+
+            return Stack(
+              children: [
+                AbsorbPointer(
+                  absorbing: _isPageActionRunning,
+                  child: pageContent,
+                ),
+                if (_isPageActionRunning)
+                  Positioned.fill(
+                    child: _buildPageActionOverlay(context),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageActionOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final note = _pageActionNote?.trim();
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.28),
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Material(
+              color: colorScheme.surface,
+              elevation: 18,
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.all(26),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: CircularProgressIndicator(strokeWidth: 4),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      _pageActionMessage.trim().isEmpty
+                          ? 'Processing product...'
+                          : _pageActionMessage,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (note != null && note.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        note,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -421,7 +499,50 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
     return options.contains(normalized) ? normalized : null;
   }
 
+  String _productActionName(MBProduct product) {
+    final title = product.titleEn.trim();
+    if (title.isNotEmpty) return title;
+
+    final titleBn = product.titleBn.trim();
+    if (titleBn.isNotEmpty) return titleBn;
+
+    final slug = product.slug.trim();
+    if (slug.isNotEmpty) return slug;
+
+    return product.id.trim().isEmpty ? 'Untitled product' : product.id;
+  }
+
+  Future<T?> _runPageProductAction<T>({
+    required String message,
+    String? note,
+    required Future<T> Function() action,
+  }) async {
+    if (_isPageActionRunning) return null;
+
+    if (mounted) {
+      setState(() {
+        _isPageActionRunning = true;
+        _pageActionMessage = message;
+        _pageActionNote = note;
+      });
+    }
+
+    try {
+      return await action();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPageActionRunning = false;
+          _pageActionMessage = '';
+          _pageActionNote = null;
+        });
+      }
+    }
+  }
+
   Future<void> _handleCreate() async {
+    if (_isPageActionRunning) return;
+
     final MBProduct? saved = await AdminProductFormDialog.show(
       context,
       actorUid: widget.actorUid,
@@ -440,6 +561,8 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   }
 
   Future<void> _handleEdit(MBProduct product) async {
+    if (_isPageActionRunning) return;
+
     final MBProduct? saved = await AdminProductFormDialog.show(
       context,
       actorUid: widget.actorUid,
@@ -460,13 +583,21 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   }
 
   Future<void> _handleToggleEnabled(MBProduct product) async {
-    await _controller.setProductEnabled(
-      productId: product.id,
-      isEnabled: !product.isEnabled,
-      actorUid: widget.actorUid,
-      actorName: widget.actorName,
-      actorPhone: widget.actorPhone,
-      actorRole: widget.actorRole,
+    final nextEnabled = !product.isEnabled;
+    final productName = _productActionName(product);
+
+    await _runPageProductAction<bool>(
+      message: nextEnabled
+          ? 'Enabling product: $productName'
+          : 'Disabling product: $productName',
+      action: () => _controller.setProductEnabled(
+        productId: product.id,
+        isEnabled: nextEnabled,
+        actorUid: widget.actorUid,
+        actorName: widget.actorName,
+        actorPhone: widget.actorPhone,
+        actorRole: widget.actorRole,
+      ),
     );
   }
 
@@ -491,22 +622,33 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
 
     if (confirmed != true) return;
 
-    await _controller.deleteProduct(
-      productId: product.id,
-      actorUid: widget.actorUid,
-      actorName: widget.actorName,
-      actorPhone: widget.actorPhone,
-      actorRole: widget.actorRole,
+    final productName = _productActionName(product);
+
+    await _runPageProductAction<bool>(
+      message: 'Soft deleting product: $productName',
+      note: 'Note: go Quarantine Products page to restore or delete completely.',
+      action: () => _controller.deleteProduct(
+        productId: product.id,
+        actorUid: widget.actorUid,
+        actorName: widget.actorName,
+        actorPhone: widget.actorPhone,
+        actorRole: widget.actorRole,
+      ),
     );
   }
 
   Future<void> _handleRestore(MBProduct product) async {
-    await _controller.restoreProduct(
-      productId: product.id,
-      actorUid: widget.actorUid,
-      actorName: widget.actorName,
-      actorPhone: widget.actorPhone,
-      actorRole: widget.actorRole,
+    final productName = _productActionName(product);
+
+    await _runPageProductAction<bool>(
+      message: 'Restoring product: $productName',
+      action: () => _controller.restoreProduct(
+        productId: product.id,
+        actorUid: widget.actorUid,
+        actorName: widget.actorName,
+        actorPhone: widget.actorPhone,
+        actorRole: widget.actorRole,
+      ),
     );
   }
 }

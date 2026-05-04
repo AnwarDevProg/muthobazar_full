@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
 // Patch 12.4 adds preview-only contrast-safe text colors.
 //
@@ -1101,6 +1101,16 @@ Uint8List? _drawerResolveImageBytes(
   MBAdvancedPreviewContext previewContext,
   String binding,
 ) {
+  final normalizedBinding = binding.trim();
+
+  // Pending in-memory bytes belong to the product image only.
+  // Brand/category media bindings must resolve through their own URL bindings
+  // (brand.logoUrl, category.imageUrl, category.iconUrl) instead of accidentally
+  // reusing the product image preview bytes.
+  if (!normalizedBinding.startsWith('product.')) {
+    return null;
+  }
+
   final media = _drawerPrimaryMedia(previewContext);
   if (media == null) return null;
 

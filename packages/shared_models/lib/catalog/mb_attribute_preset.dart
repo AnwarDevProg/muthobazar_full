@@ -141,7 +141,7 @@ MBAttributePreset? findAttributePreset({
   String? code,
 }) {
   final normalizedName = (nameEn ?? '').trim().toLowerCase();
-  final normalizedNameBn = (nameBn ?? '').trim();
+  final normalizedNameBn = (nameBn ?? '').trim().toLowerCase();
   final normalizedCode = (code ?? '').trim().toLowerCase();
 
   if (normalizedName.isEmpty && normalizedNameBn.isEmpty && normalizedCode.isEmpty) {
@@ -155,7 +155,8 @@ MBAttributePreset? findAttributePreset({
     if (normalizedName.isNotEmpty && preset.nameEn.toLowerCase() == normalizedName) {
       return preset;
     }
-    if (normalizedNameBn.isNotEmpty && preset.nameBn == normalizedNameBn) {
+    if (normalizedNameBn.isNotEmpty &&
+        preset.nameBn.trim().toLowerCase() == normalizedNameBn) {
       return preset;
     }
   }
