@@ -1,176 +1,6 @@
 Folder PATH listing
 Path: C:\Users\1\AndroidStudioProjects\MuthoBazar
 C.
-+---.backup_import_rewrite_20260327_230859
-+---_backup_advanced_card_patch_1_20260428_230528
-+---_backup_advanced_card_patch_1_fix_20260428_230828
-+---_backup_advanced_card_patch_10_3_20260430_011917
-|   +---panels
-|   |   \---mb_advanced_canvas_panel.dart
-|   \---mb_card_design_studio_advanced.dart
-+---_backup_advanced_card_patch_11_20260430_003744
-|   \---packages
-|       \---shared_ui
-|           \---lib
-|               \---widgets
-|                   \---common
-|                       \---product_cards
-|                           \---mb_product_card_renderer.dart
-+---_backup_advanced_card_patch_2_20260428_233155
-|   \---design_studio_advanced
-|       +---models
-|       |   +---mb_advanced_card_design_document.dart
-|       |   \---mb_advanced_element_variant.dart
-|       +---panels
-|       |   +---mb_advanced_canvas_panel.dart
-|       |   +---mb_advanced_element_drawer_panel.dart
-|       |   \---mb_advanced_inspector_panel.dart
-|       +---mb_card_design_studio_advanced.dart
-|       \---mb_card_design_studio_advanced_exports.dart
-+---_backup_advanced_card_patch_2b_20260429_001933
-|   \---design_studio_advanced
-|       +---models
-|       |   +---mb_advanced_card_design_document.dart
-|       |   \---mb_advanced_element_variant.dart
-|       +---panels
-|       |   +---mb_advanced_canvas_panel.dart
-|       |   +---mb_advanced_element_drawer_panel.dart
-|       |   \---mb_advanced_inspector_panel.dart
-|       +---mb_card_design_studio_advanced.dart
-|       \---mb_card_design_studio_advanced_exports.dart
-+---_backup_advanced_card_patch_3_20260429_002552
-|   \---design_studio_advanced
-|       +---models
-|       |   +---mb_advanced_card_design_document.dart
-|       |   \---mb_advanced_element_variant.dart
-|       +---panels
-|       |   +---mb_advanced_canvas_panel.dart
-|       |   +---mb_advanced_element_drawer_panel.dart
-|       |   \---mb_advanced_inspector_panel.dart
-|       +---mb_card_design_studio_advanced.dart
-|       \---mb_card_design_studio_advanced_exports.dart
-+---_backup_advanced_card_patch_3_fixed_20260429_003458
-|   \---design_studio_advanced
-|       +---models
-|       |   +---mb_advanced_card_design_document.dart
-|       |   \---mb_advanced_element_variant.dart
-|       +---panels
-|       |   +---mb_advanced_canvas_panel.dart
-|       |   +---mb_advanced_element_drawer_panel.dart
-|       |   \---mb_advanced_inspector_panel.dart
-|       +---mb_card_design_studio_advanced.dart
-|       \---mb_card_design_studio_advanced_exports.dart
-+---_backup_advanced_card_patch_4_connect_v3_20260429_005134
-|   \---admin_product_form_dialog.dart
-+---_backup_advanced_card_patch_5_20260429_013516
-|   +---design_studio_advanced
-|   |   +---models
-|   |   |   +---mb_advanced_card_design_document.dart
-|   |   |   \---mb_advanced_element_variant.dart
-|   |   +---panels
-|   |   |   +---mb_advanced_canvas_panel.dart
-|   |   |   +---mb_advanced_element_drawer_panel.dart
-|   |   |   \---mb_advanced_inspector_panel.dart
-|   |   +---mb_card_design_studio_advanced.dart
-|   |   \---mb_card_design_studio_advanced_exports.dart
-|   +---admin_product_repository.dart
-|   \---mb_product.dart
-+---_backup_advanced_card_patch_6_20260429_021740
-|   \---design_studio_advanced
-|       +---models
-|       |   +---mb_advanced_card_design_document.dart
-|       |   \---mb_advanced_element_variant.dart
-|       +---panels
-|       |   +---mb_advanced_canvas_panel.dart
-|       |   +---mb_advanced_element_drawer_panel.dart
-|       |   \---mb_advanced_inspector_panel.dart
-|       +---mb_card_design_studio_advanced.dart
-|       \---mb_card_design_studio_advanced_exports.dart
-+---_backup_advanced_studio_patch_12_1_20260430_164236
-|   +---mb_card_design_studio_advanced.dart
-|   \---packages_shared_ui_lib_widgets_common_product_cards_design_studio_advanced_panels_mb_advanced_element_drawer_panel.dart
-+---_backup_advanced_studio_patch_12_2_20260430_164640
-|   \---mb_advanced_inspector_panel.dart
-+---_backup_advanced_studio_patch_12_3_20260430_165117
-|   \---mb_advanced_product_card_renderer.dart
-+---_backup_advanced_studio_patch_12_4_20260430_174246
-|   +---C__Users_1_AndroidStudioProjects_MuthoBazar_packages_shared_ui_lib_widgets_common_product_cards_design_studio_advanced_models_mb_advanced_card_design_document.dart
-|   +---C__Users_1_AndroidStudioProjects_MuthoBazar_packages_shared_ui_lib_widgets_common_product_cards_design_studio_advanced_panels_mb_advanced_element_drawer_panel.dart
-|   \---C__Users_1_AndroidStudioProjects_MuthoBazar_packages_shared_ui_lib_widgets_common_product_cards_design_studio_advanced_panels_mb_advanced_inspector_panel.dart
-+---_backup_advanced_studio_patch_12_7_1_20260430_224327
-|   +---mb_advanced_canvas_panel.dart
-|   \---mb_advanced_element_drawer_panel.dart
-+---_backup_advanced_studio_patch_12_7_2_20260430_232324
-|   \---mb_advanced_card_design_document.dart
-+---_backup_advanced_studio_patch_12_7_20260430_214050
-|   +---admin_product_form_dialog.dart
-|   +---mb_advanced_canvas_panel.dart
-|   +---mb_advanced_element_drawer_panel.dart
-|   \---mb_card_design_studio_advanced.dart
-+---_backup_advanced_studio_patch_12_7_3_20260501_000750
-+---_backup_advanced_studio_patch_12_7_3_fixed_20260501_001041
-|   +---mb_advanced_binding_resolver.dart
-|   \---mb_advanced_element_drawer_panel.dart
-+---_backup_home_v3_patch_11_1_20260430_131033
-|   +---mb_home_product_grid_section.dart
-|   \---mb_home_product_horizontal_section.dart
-+---_backup_home_v3_patch_11_2_20260430_131900
-|   \---mb_advanced_product_card_renderer.dart
-+---_backup_home_v3_patch_11_3_20260430_132545
-|   \---mb_advanced_product_card_renderer.dart
-+---_backup_home_v3_render_patch_11_4_20260430_134106
-|   \---mb_advanced_product_card_renderer.dart
-+---_backup_home_v3_render_patch_11_5_20260430_135233
-|   \---mb_advanced_product_card_renderer.dart
-+---_backup_home_v3_render_patch_11_6_20260430_143952
-|   \---mb_home_product_grid_section.dart
-+---_backup_home_v3_render_patch_11_7_20260430_144616
-|   \---apps
-|       \---customer_app
-|           \---lib
-|               \---features
-|                   \---home
-|                       \---widgets
-|                           \---sections
-|                               \---mb_home_product_grid_section.dart
-+---_backup_home_v3_render_patch_11_8_20260430_152436
-|   \---mb_home_product_grid_section.dart
-+---_backup_home_v3_render_patch_11_9_20260430_153101
-|   \---mb_home_product_grid_section.dart
-+---_backup_patch_11_fix_20260430_003934
-|   \---mb_product_card_renderer.dart
-+---_debug_patch_12_7_3
-|   +---git_status_before_patch_12_7_3.txt
-|   +---mb_advanced_binding_resolver.dart
-|   +---mb_advanced_canvas_panel.dart
-|   +---mb_advanced_card_design_document.dart
-|   +---mb_advanced_element_catalog_v12.dart
-|   +---mb_advanced_element_drawer_panel.dart
-|   \---mb_advanced_product_card_renderer.dart
-+---_wrong_shared_ui_from_patch_1_20260428_230847
-|   \---lib
-|       \---widgets
-|           \---common
-|               \---product_cards
-|                   \---design_studio_advanced
-|                       +---models
-|                       |   +---mb_advanced_card_design_document.dart
-|                       |   \---mb_advanced_element_variant.dart
-|                       +---panels
-|                       |   +---mb_advanced_canvas_panel.dart
-|                       |   +---mb_advanced_element_drawer_panel.dart
-|                       |   \---mb_advanced_inspector_panel.dart
-|                       +---mb_card_design_studio_advanced.dart
-|                       \---mb_card_design_studio_advanced_exports.dart
-+---_wrong_shared_ui_from_patch_11_20260430_003945
-|   \---lib
-|       \---widgets
-|           \---common
-|               \---product_cards
-|                   +---design_studio_advanced
-|                   |   \---rendering
-|                   |       \---mb_advanced_product_card_renderer.dart
-|                   \---mb_product_card_renderer.dart
 +---apps
 |   +---admin_web
 |   |   +---android
@@ -440,28 +270,14 @@ C.
 |   |   |   |   |   |   +---admin_product_controller.dart
 |   |   |   |   |   |   \---admin_product_controller.dart.bak_card_config_fix_20260424_224312
 |   |   |   |   |   +---pages
-|   |   |   |   |   |   +---admin_product_card_picker_test_page.dart
 |   |   |   |   |   |   +---admin_product_lookup_support.dart
 |   |   |   |   |   |   +---admin_product_page_support.dart
 |   |   |   |   |   |   +---admin_products_page.dart
 |   |   |   |   |   |   \---admin_quarantine_products_page.dart
 |   |   |   |   |   +---widgets
-|   |   |   |   |   |   +---card_design
-|   |   |   |   |   |   |   \---admin_card_design_studio_dialog.dart
-|   |   |   |   |   |   +---card_studio
-|   |   |   |   |   |   |   \---admin_product_card_studio_dialog.dart
-|   |   |   |   |   |   +---admin_product_card_picker_dialog.dart
-|   |   |   |   |   |   +---admin_product_card_settings_dialog.dart
 |   |   |   |   |   |   +---admin_product_form_dialog.dart
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_card_studio_phase1_20260426_020520
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_fix_debug_return_20260426_020905
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_fix_missing_card_studio_method_20260426_023708
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_fix_selected_variant_debug_20260426_021221
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_save_debug_20260424_231514
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_v3_button_20260429_005725
-|   |   |   |   |   |   +---admin_product_form_dialog.dart.bak_wire_card_studio_20260426_023312
-|   |   |   |   |   |   +---admin_product_form_dialog_old.dart
-|   |   |   |   |   |   \---admin_product_form_support.dart
+|   |   |   |   |   |   +---admin_product_form_support.dart
+|   |   |   |   |   |   \---product_variation_dialog_page.dart
 |   |   |   |   |   \---read.md
 |   |   |   |   +---profile
 |   |   |   |   |   +---controllers
@@ -1307,7 +1123,8 @@ C.
 |   +---Admin panel card design.txt
 |   +---firebase rules.txt
 |   +---first super admin creation.txt
-|   \---muthobazar_home_grid_card_picking_and_filler_rules.txt
+|   +---muthobazar_home_grid_card_picking_and_filler_rules.txt
+|   \---MUTHOBAZAR_MEDIA_URL_USAGE_RULES.md
 +---firebase
 |   +---emulators
 |   |   \---README.md
@@ -1719,8 +1536,6 @@ C.
 |   |   |   |   |   |   |   +---mb_design_runtime_palette.dart
 |   |   |   |   |   |   |   +---mb_saved_design_card_config_resolver.dart
 |   |   |   |   |   |   |   \---mb_saved_design_product_card.dart
-|   |   |   |   |   |   +---design_studio
-|   |   |   |   |   |   |   \---mb_card_design_studio.dart
 |   |   |   |   |   |   +---design_studio_advanced
 |   |   |   |   |   |   |   +---models
 |   |   |   |   |   |   |   |   +---mb_advanced_binding_registry.dart
@@ -1737,16 +1552,6 @@ C.
 |   |   |   |   |   |   |   |   \---mb_advanced_product_card_renderer.dart
 |   |   |   |   |   |   |   +---mb_card_design_studio_advanced.dart
 |   |   |   |   |   |   |   \---mb_card_design_studio_advanced_exports.dart
-|   |   |   |   |   |   +---design_studio_v2
-|   |   |   |   |   |   |   +---models
-|   |   |   |   |   |   |   |   +---mb_design_node.dart
-|   |   |   |   |   |   |   |   \---mb_design_node_variant.dart
-|   |   |   |   |   |   |   +---panels
-|   |   |   |   |   |   |   |   +---mb_design_canvas_panel.dart
-|   |   |   |   |   |   |   |   +---mb_design_element_drawer.dart
-|   |   |   |   |   |   |   |   \---mb_design_inspector_panel.dart
-|   |   |   |   |   |   |   +---mb_card_design_studio_v2.dart
-|   |   |   |   |   |   |   \---mb_card_design_studio_v2_exports.dart
 |   |   |   |   |   |   +---system
 |   |   |   |   |   |   |   +---mb_card_config_resolver.dart
 |   |   |   |   |   |   |   +---mb_card_variant_registry.dart
@@ -1945,4 +1750,5 @@ C.
 +---README_PHASE3_ANALYZE_FIX.md
 +---repo_structure.txt
 +---repo_structure_clean.txt
-\---tools_structure_clean.txt
++---tools_structure_clean.txt
+\---WORK_TO_DO.txt

@@ -300,8 +300,6 @@ C.
 |   |   |   |   |   |   +---mb_design_runtime_palette.dart
 |   |   |   |   |   |   +---mb_saved_design_card_config_resolver.dart
 |   |   |   |   |   |   \---mb_saved_design_product_card.dart
-|   |   |   |   |   +---design_studio
-|   |   |   |   |   |   \---mb_card_design_studio.dart
 |   |   |   |   |   +---design_studio_advanced
 |   |   |   |   |   |   +---models
 |   |   |   |   |   |   |   +---mb_advanced_binding_registry.dart
@@ -318,16 +316,6 @@ C.
 |   |   |   |   |   |   |   \---mb_advanced_product_card_renderer.dart
 |   |   |   |   |   |   +---mb_card_design_studio_advanced.dart
 |   |   |   |   |   |   \---mb_card_design_studio_advanced_exports.dart
-|   |   |   |   |   +---design_studio_v2
-|   |   |   |   |   |   +---models
-|   |   |   |   |   |   |   +---mb_design_node.dart
-|   |   |   |   |   |   |   \---mb_design_node_variant.dart
-|   |   |   |   |   |   +---panels
-|   |   |   |   |   |   |   +---mb_design_canvas_panel.dart
-|   |   |   |   |   |   |   +---mb_design_element_drawer.dart
-|   |   |   |   |   |   |   \---mb_design_inspector_panel.dart
-|   |   |   |   |   |   +---mb_card_design_studio_v2.dart
-|   |   |   |   |   |   \---mb_card_design_studio_v2_exports.dart
 |   |   |   |   |   +---system
 |   |   |   |   |   |   +---mb_card_config_resolver.dart
 |   |   |   |   |   |   +---mb_card_variant_registry.dart
