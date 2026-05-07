@@ -1,7 +1,6 @@
 // MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
 // Patch 12.4 adds preview-only contrast-safe text colors.
-// Patch 12.8 adds a dedicated transparent-product-image drawer item.
 //
 // Purpose:
 // - Uses the data-driven V12 element catalog.
@@ -76,7 +75,7 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
     final groups = _buildVisibleGroups(previewContext);
 
     return Container(
-      width: 322,
+      width: 348,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -89,7 +88,7 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
           const _DrawerHeader(),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
               itemCount: groups.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
@@ -97,9 +96,7 @@ class MBAdvancedElementDrawerPanel extends StatelessWidget {
                 return _ElementGroupTile(
                   group: group,
                   previewContext: previewContext,
-                  initiallyExpanded: index < 3 ||
-                      group.id == 'media' ||
-                      group.id == 'price',
+                  initiallyExpanded: index == 0 || group.id == 'media',
                   onTapVariant: (_) {
                     // Patch 12.1 keeps drawer click as safe/no-op.
                     // Drag to canvas is the only way to insert a node.
@@ -138,13 +135,8 @@ List<MBAdvancedElementGroup> _buildVisibleGroups(
         ? group.variants
             .where((variant) =>
                 variant.binding != MBAdvancedBindingKey.variationAttributeSummary)
-            .toList(growable: true)
-        : group.variants.toList(growable: true);
-
-    if (group.id == 'media' &&
-        !filteredVariants.any((variant) => variant.id == 'media_transparent_cutout')) {
-      filteredVariants.add(_transparentMediaVariant());
-    }
+            .toList(growable: false)
+        : group.variants;
 
     visibleGroups.add(
       MBAdvancedElementGroup(
@@ -283,7 +275,7 @@ MBAdvancedElementGroup _buildVariationAttributeGroup(
           binding: 'variation.attribute.attribute',
           x: 0.50,
           y: 0.76,
-          width: 148,
+          width: 132,
           height: 24,
           style: _textStyle(
             textHex: '#FFF4E8',
@@ -322,7 +314,7 @@ MBAdvancedElementGroup _buildVariationAttributeGroup(
           binding: binding,
           x: 0.50,
           y: 0.76,
-          width: 148,
+          width: 132,
           height: 24,
           style: _textStyle(
             textHex: '#FFF4E8',
@@ -509,33 +501,6 @@ MBAdvancedElementVariant _variationAttributeVariant({
   );
 }
 
-MBAdvancedElementVariant _transparentMediaVariant() {
-  return MBAdvancedElementVariant(
-    id: 'media_transparent_cutout',
-    groupId: 'media',
-    elementType: 'media',
-    title: 'Transparent image',
-    description: 'product.resolvedCardTransparentImageUrl',
-    binding: 'product.resolvedCardTransparentImageUrl',
-    defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.33, z: 32),
-    defaultSize: MBAdvancedDesignNodeSize(width: 150, height: 120),
-    defaultStyle: const <String, dynamic>{
-      'imageSourceMode': 'transparent',
-      'imageFit': 'contain',
-      'imageAlignment': 'center',
-      'imageScale': 1.0,
-      'backgroundHex': '#00000000',
-      'borderHex': '#00000000',
-      'ringWidth': 0.0,
-      'borderRadius': 0.0,
-      'shadowBlur': 0.0,
-      'shadowOffsetY': 0.0,
-      'opacity': 1.0,
-    },
-  );
-}
-
-
 Map<String, dynamic> _textStyle({
   required String textHex,
   required double fontSize,
@@ -579,7 +544,7 @@ class _DrawerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 11),
       decoration: const BoxDecoration(
         color: Color(0xFFFFFBF8),
         border: Border(
@@ -611,7 +576,7 @@ class _DrawerHeader extends StatelessWidget {
           ),
           SizedBox(height: 4),
           Text(
-            'Patch 12.7.3: variation-aware drawer previews. Drag items to the canvas.',
+            'Compact drawer · drag items to the canvas.',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -640,24 +605,19 @@ class _ElementGroupTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFE9ECF3)),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 16,
-              offset: Offset(0, 8),
-            ),
-          ],
         ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-            childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 9),
             initiallyExpanded: initiallyExpanded,
             title: Row(
               children: <Widget>[
@@ -672,7 +632,7 @@ class _ElementGroupTile extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF2E8),
                     borderRadius: BorderRadius.circular(999),
@@ -699,15 +659,15 @@ class _ElementGroupTile extends StatelessWidget {
             children: <Widget>[
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF7F8FB),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE6E8EF)),
                 ),
                 child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 7,
+                  runSpacing: 7,
                   children: <Widget>[
                     for (final variant in group.variants)
                       _VariantBox(
@@ -740,7 +700,7 @@ class _VariantBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final box = SizedBox(
-      width: 134,
+      width: 102,
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -748,9 +708,9 @@ class _VariantBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: null,
           child: Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE2E6EF)),
             ),
             child: Column(
@@ -758,31 +718,31 @@ class _VariantBox extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 SizedBox(
-                  height: 48,
+                  height: 34,
                   child: _VariantPreview(
                     variant: variant,
                     previewContext: previewContext,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   variant.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF172033),
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   variant.description,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF747B8A),
-                    fontSize: 9.5,
+                    fontSize: 9,
                     height: 1.15,
                   ),
                 ),
@@ -822,7 +782,7 @@ class _VariantDragFeedback extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 148,
+        width: 132,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -841,7 +801,7 @@ class _VariantDragFeedback extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             SizedBox(
-              height: 42,
+              height: 36,
               child: _VariantPreview(
                 variant: variant,
                 previewContext: previewContext,
@@ -946,7 +906,7 @@ class _PreviewCardShape extends StatelessWidget {
       variant.cardPalettePatch['backgroundHex2'],
       const Color(0xFFFF9A3D),
     );
-    final width = _asDouble(variant.cardLayoutPatch['cardWidth'], 185) >= 300 ? 108.0 : 56.0;
+    final width = _asDouble(variant.cardLayoutPatch['cardWidth'], 185) >= 300 ? 82.0 : 48.0;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -992,7 +952,7 @@ class _PreviewText extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 118),
+        constraints: const BoxConstraints(maxWidth: 92),
         padding: isChip
             ? const EdgeInsets.symmetric(horizontal: 9, vertical: 6)
             : EdgeInsets.zero,
@@ -1099,14 +1059,6 @@ Uint8List? _drawerPendingCardBytes(dynamic media) {
   return null;
 }
 
-Uint8List? _drawerPendingCardTransparentBytes(dynamic media) {
-  try {
-    final value = media.pendingCardTransparentBytes;
-    if (value is Uint8List && value.isNotEmpty) return value;
-  } catch (_) {}
-  return null;
-}
-
 Uint8List? _drawerPendingThumbBytes(dynamic media) {
   try {
     final value = media.pendingThumbBytes;
@@ -1158,7 +1110,6 @@ Uint8List? _drawerResolveImageBytes(
   final original = _drawerPendingOriginalBytes(media);
   final full = _drawerPendingFullBytes(media);
   final card = _drawerPendingCardBytes(media);
-  final cardTransparent = _drawerPendingCardTransparentBytes(media);
   final thumb = _drawerPendingThumbBytes(media);
   final tiny = _drawerPendingTinyBytes(media);
 
@@ -1172,63 +1123,12 @@ Uint8List? _drawerResolveImageBytes(
       return _drawerFirstPendingBytes(<Uint8List?>[thumb, card, full, original, tiny]);
     case 'product.resolvedTinyImageUrl':
       return _drawerFirstPendingBytes(<Uint8List?>[tiny, thumb, card, full, original]);
-    case 'product.resolvedCardTransparentImageUrl':
-      return _drawerFirstPendingBytes(<Uint8List?>[cardTransparent, card, full, thumb, original, tiny]);
     case 'product.resolvedCardImageUrl':
     case 'product.imageUrl':
     case 'product.imageUrls.first':
     default:
       return _drawerFirstPendingBytes(<Uint8List?>[card, full, thumb, original, tiny]);
   }
-}
-
-
-String _drawerReadDynamicString(dynamic source, String key) {
-  if (source == null) return '';
-  try {
-    final value = switch (key) {
-      'cardTransparentUrl' => source.cardTransparentUrl,
-      'resolvedCardTransparentImageUrl' => source.resolvedCardTransparentImageUrl,
-      _ => null,
-    };
-    return value?.toString().trim() ?? '';
-  } catch (_) {
-    return '';
-  }
-}
-
-String _drawerResolveImageUrl(
-  MBAdvancedPreviewContext previewContext,
-  String binding,
-) {
-  final normalizedBinding = binding.trim();
-  if (normalizedBinding == 'product.resolvedCardTransparentImageUrl') {
-    final media = _drawerPrimaryMedia(previewContext);
-    final mediaUrl = _drawerReadDynamicString(media, 'cardTransparentUrl');
-    if (mediaUrl.isNotEmpty) return mediaUrl;
-
-    final productUrl = _drawerReadDynamicString(
-      previewContext.product,
-      'resolvedCardTransparentImageUrl',
-    );
-    if (productUrl.isNotEmpty) return productUrl;
-  }
-
-  return MBAdvancedBindingResolver.resolveImageUrl(
-    previewContext,
-    normalizedBinding,
-  );
-}
-
-bool _isTransparentMediaVariant(MBAdvancedElementVariant variant) {
-  final id = variant.id.trim().toLowerCase();
-  final binding = variant.binding.trim().toLowerCase();
-  final mode = variant.defaultStyle['imageSourceMode']?.toString().trim().toLowerCase() ?? '';
-  return id.contains('transparent') ||
-      binding.contains('transparent') ||
-      mode == 'transparent' ||
-      mode == 'cardtransparent' ||
-      mode == 'card_transparent';
 }
 
 class _PreviewMedia extends StatelessWidget {
@@ -1243,41 +1143,11 @@ class _PreviewMedia extends StatelessWidget {
       previewContext,
       variant.binding,
     );
-    final imageUrl = _drawerResolveImageUrl(
+    final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
       previewContext,
       variant.binding,
     );
-    final isTransparent = _isTransparentMediaVariant(variant);
-    final isCircle = !isTransparent && _asDouble(variant.defaultStyle['borderRadius'], 0) >= 500;
-    final previewFit = isTransparent ? BoxFit.contain : BoxFit.cover;
-
-    final mediaChild = imageBytes != null && imageBytes.isNotEmpty
-        ? Image.memory(
-            imageBytes,
-            fit: previewFit,
-            gaplessPlayback: true,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (_, __, ___) => const _ImageFallback(),
-          )
-        : imageUrl.isEmpty
-            ? const _ImageFallback()
-            : Image.network(
-                imageUrl,
-                fit: previewFit,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (_, __, ___) => const _ImageFallback(),
-              );
-
-    if (isTransparent) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: 62,
-          height: 48,
-          child: mediaChild,
-        ),
-      );
-    }
+    final isCircle = _asDouble(variant.defaultStyle['borderRadius'], 0) >= 500;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -1300,7 +1170,22 @@ class _PreviewMedia extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(isCircle ? 999 : 10),
-          child: mediaChild,
+          child: imageBytes != null && imageBytes.isNotEmpty
+              ? Image.memory(
+                  imageBytes,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, __, ___) => const _ImageFallback(),
+                )
+              : imageUrl.isEmpty
+                  ? const _ImageFallback()
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (_, __, ___) => const _ImageFallback(),
+                    ),
         ),
       ),
     );

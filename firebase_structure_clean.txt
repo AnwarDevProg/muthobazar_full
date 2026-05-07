@@ -43,7 +43,8 @@ C.
 |   |   |   +---admin_hard_delete_product.js
 |   |   |   +---admin_restore_product.js
 |   |   |   +---admin_set_product_enabled.js
-|   |   |   \---admin_update_product.js
+|   |   |   +---admin_update_product.js
+|   |   |   \---generate-card-transparent-image.js
 |   |   +---utils
 |   |   |   +---callable_parsers.js
 |   |   |   \---callable-parsers.js
@@ -87,7 +88,8 @@ C.
 |   |   |   +---admin_hard_delete_product.ts
 |   |   |   +---admin_restore_product.ts
 |   |   |   +---admin_set_product_enabled.ts
-|   |   |   \---admin_update_product.ts
+|   |   |   +---admin_update_product.ts
+|   |   |   \---generate-card-transparent-image.ts
 |   |   +---purchases
 |   |   +---services
 |   |   +---support

@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 12.2 right inspector panel.
 //
 // Purpose:
@@ -16,9 +16,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/mb_advanced_card_design_document.dart';
-
 import '../../system/mb_responsive_card_grid_resolver.dart';
-import '../../system/mb_responsive_card_grid_resolver.dart';class MBAdvancedInspectorPanel extends StatelessWidget {
+
+class MBAdvancedInspectorPanel extends StatelessWidget {
   const MBAdvancedInspectorPanel({
     super.key,
     required this.document,
@@ -43,7 +43,7 @@ import '../../system/mb_responsive_card_grid_resolver.dart';class MBAdvancedInsp
     final selectedNode = document.selectedNode;
 
     return Container(
-      width: 336,
+      width: 420,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -334,252 +334,296 @@ class _NodeInspector extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = node.style;
 
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: <Widget>[
-        _SectionCard(
-          title: 'Element',
-          subtitle: 'Identity, binding, and variant-level settings.',
-          children: <Widget>[
-            _ReadOnlyInfoRow(label: 'Node ID', value: node.id),
-            _ReadOnlyInfoRow(label: 'Element type', value: node.elementType),
-            _TextInputRow(
-              label: 'Variant',
-              value: node.variantId,
-              hintText: 'variant id',
-              onSubmitted: (value) => onUpdateNode(node.copyWith(variantId: value)),
-            ),
-            _TextInputRow(
-              label: 'Binding',
-              value: node.binding,
-              hintText: 'product.titleEn / product.finalPrice / static.badge',
-              onSubmitted: (value) => onUpdateNode(node.copyWith(binding: value)),
-            ),
-            _TextInputRow(
-              label: 'Label / text',
-              value: _styleString(style, 'label', _styleString(style, 'text', '')),
-              hintText: 'optional manual label override',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'label': value})),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Position',
-          subtitle: 'Normalized position on the card. Layer Z controls overlap priority.',
-          children: <Widget>[
-            _NumberFieldRow(
-              label: 'X',
-              value: node.position.x,
-              min: 0,
-              max: 1,
-              decimals: 3,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(position: node.position.copyWith(x: value)),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Y',
-              value: node.position.y,
-              min: 0,
-              max: 1,
-              decimals: 3,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(position: node.position.copyWith(y: value)),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Layer Z',
-              value: node.position.z.toDouble(),
-              min: 0,
-              max: 100,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(position: node.position.copyWith(z: value.round())),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Size',
-          subtitle: 'Direct element footprint control. Resize keeps top-left anchored.',
-          children: <Widget>[
-            _NumberFieldRow(
-              label: 'Width',
-              value: node.size.width,
-              min: 8,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                _resizeNodeFromTopLeft(
-                  node,
-                  cardWidth: document.cardWidth,
-                  cardHeight: document.cardHeight,
-                  width: value,
-                  height: node.size.height,
+    return DefaultTabController(
+      length: 5,
+      child: Column(
+        children: <Widget>[
+          _NodeQuickInspector(node: node),
+          const _InspectorTabStrip(),
+          Expanded(
+            child: TabBarView(
+              children: <Widget>[
+                _InspectorTabPage(
+                  children: <Widget>[
+                    _SectionCard(
+                      title: 'Basic',
+                      subtitle: 'Most-used identity and manual text settings.',
+                      children: <Widget>[
+                        _ReadOnlyInfoRow(label: 'Element', value: node.elementType),
+                        _TextInputRow(
+                          label: 'Variant',
+                          value: node.variantId,
+                          hintText: 'variant id',
+                          onSubmitted: (value) => onUpdateNode(node.copyWith(variantId: value)),
+                        ),
+                        _TextInputRow(
+                          label: 'Label / text',
+                          value: _styleString(style, 'label', _styleString(style, 'text', '')),
+                          hintText: 'optional manual label override',
+                          onSubmitted: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'label': value})),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: 'Text / variant-specific',
+                      subtitle: 'Useful for text, chips, badges, buttons, and labels.',
+                      children: <Widget>[
+                        _TextInputRow(
+                          label: 'Prefix text',
+                          value: _styleString(style, 'prefixText', ''),
+                          hintText: 'ex: MRP ',
+                          onSubmitted: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'prefixText': value})),
+                          ),
+                        ),
+                        _TextInputRow(
+                          label: 'Suffix text',
+                          value: _styleString(style, 'suffixText', ''),
+                          hintText: 'ex: /kg',
+                          onSubmitted: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'suffixText': value})),
+                          ),
+                        ),
+                        _TextInputRow(
+                          label: 'Text align',
+                          value: _styleString(style, 'textAlign', 'center'),
+                          hintText: 'left / center / right',
+                          onSubmitted: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'textAlign': value})),
+                          ),
+                        ),
+                        _TextInputRow(
+                          label: 'Font weight',
+                          value: _styleString(style, 'fontWeight', 'w800'),
+                          hintText: 'w400 - w900',
+                          onSubmitted: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'fontWeight': value})),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Height',
-              value: node.size.height,
-              min: 4,
-              max: MBResponsiveCardGridResolver.maxCardWidthPx,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                _resizeNodeFromTopLeft(
-                  node,
-                  cardWidth: document.cardWidth,
-                  cardHeight: document.cardHeight,
-                  width: node.size.width,
-                  height: value,
+                _InspectorTabPage(
+                  children: <Widget>[
+                    _SectionCard(
+                      title: 'Position',
+                      subtitle: 'Normalized position on the card. Layer Z controls overlap priority.',
+                      children: <Widget>[
+                        _NumberFieldRow(
+                          label: 'X',
+                          value: node.position.x,
+                          min: 0,
+                          max: 1,
+                          decimals: 3,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(position: node.position.copyWith(x: value)),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Y',
+                          value: node.position.y,
+                          min: 0,
+                          max: 1,
+                          decimals: 3,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(position: node.position.copyWith(y: value)),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Layer Z',
+                          value: node.position.z.toDouble(),
+                          min: 0,
+                          max: 100,
+                          decimals: 0,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(position: node.position.copyWith(z: value.round())),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: 'Size',
+                      subtitle: 'Direct element footprint control. Resize keeps top-left anchored.',
+                      children: <Widget>[
+                        _NumberFieldRow(
+                          label: 'Width',
+                          value: node.size.width,
+                          min: 8,
+                          max: MBResponsiveCardGridResolver.maxCardWidthPx,
+                          decimals: 0,
+                          onChanged: (value) => onUpdateNode(
+                            _resizeNodeFromTopLeft(
+                              node,
+                              cardWidth: document.cardWidth,
+                              cardHeight: document.cardHeight,
+                              width: value,
+                              height: node.size.height,
+                            ),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Height',
+                          value: node.size.height,
+                          min: 4,
+                          max: MBResponsiveCardGridResolver.maxCardWidthPx,
+                          decimals: 0,
+                          onChanged: (value) => onUpdateNode(
+                            _resizeNodeFromTopLeft(
+                              node,
+                              cardWidth: document.cardWidth,
+                              cardHeight: document.cardHeight,
+                              width: node.size.width,
+                              height: value,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
+                _InspectorTabPage(
+                  children: <Widget>[
+                    _SectionCard(
+                      title: 'Common style',
+                      subtitle: 'Core controls shared by most design elements.',
+                      children: <Widget>[
+                        _NumberFieldRow(
+                          label: 'Font size',
+                          value: _styleDouble(style, 'fontSize', 12),
+                          min: 6,
+                          max: 42,
+                          decimals: 1,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'fontSize': value})),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Radius',
+                          value: _styleDouble(style, 'borderRadius', 0),
+                          min: 0,
+                          max: 999,
+                          decimals: 0,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderRadius': value})),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Opacity',
+                          value: _styleDouble(style, 'opacity', 1),
+                          min: 0,
+                          max: 1,
+                          decimals: 2,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'opacity': value})),
+                          ),
+                        ),
+                        _NumberFieldRow(
+                          label: 'Border width',
+                          value: _styleDouble(style, 'borderWidth', 1),
+                          min: 0,
+                          max: 16,
+                          decimals: 1,
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderWidth': value})),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: 'Colors',
+                      subtitle: 'Use swatches or paste exact hex values.',
+                      children: <Widget>[
+                        _ColorFieldRow(
+                          label: 'Text',
+                          value: _styleString(style, 'textColorHex', '#FF6500'),
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'textColorHex': value})),
+                          ),
+                        ),
+                        _ColorFieldRow(
+                          label: 'Background',
+                          value: _styleString(style, 'backgroundHex', '#FFFFFF'),
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'backgroundHex': value})),
+                          ),
+                        ),
+                        _ColorFieldRow(
+                          label: 'Border',
+                          value: _styleString(style, 'borderHex', '#00000000'),
+                          onChanged: (value) => onUpdateNode(
+                            node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderHex': value})),
+                          ),
+                        ),
+                      ],
+                    ),
+                    ..._buildTypeSpecificSections(style),
+                    if (node.elementType == 'mrp') ..._buildMrpStrikeSection(style),
+                  ],
+                ),
+                _InspectorTabPage(
+                  children: <Widget>[
+                    _SectionCard(
+                      title: 'Data binding',
+                      subtitle: 'Binding path and source information.',
+                      children: <Widget>[
+                        _TextInputRow(
+                          label: 'Binding',
+                          value: node.binding,
+                          hintText: 'product.titleEn / product.finalPrice / static.badge',
+                          onSubmitted: (value) => onUpdateNode(node.copyWith(binding: value)),
+                        ),
+                        _ReadOnlyInfoRow(label: 'Element type', value: node.elementType),
+                        _ReadOnlyInfoRow(label: 'Variant', value: node.variantId),
+                      ],
+                    ),
+                  ],
+                ),
+                _InspectorTabPage(
+                  children: <Widget>[
+                    _SectionCard(
+                      title: 'State',
+                      subtitle: 'Visibility, lock and delete.',
+                      children: <Widget>[
+                        _ToggleRow(
+                          label: 'Visible',
+                          value: node.visible,
+                          onChanged: (value) => onUpdateNode(node.copyWith(visible: value)),
+                        ),
+                        _ToggleRow(
+                          label: 'Locked',
+                          value: node.locked,
+                          onChanged: (value) => onUpdateNode(node.copyWith(locked: value)),
+                        ),
+                        const SizedBox(height: 8),
+                        _DangerButton(
+                          label: 'Delete element',
+                          onTap: () => onDeleteNode(node.id),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      title: 'Debug',
+                      subtitle: 'Read-only technical fields.',
+                      children: <Widget>[
+                        _ReadOnlyInfoRow(label: 'Node ID', value: node.id),
+                        _ReadOnlyInfoRow(label: 'Z layer', value: node.position.z.toString()),
+                        _ReadOnlyInfoRow(label: 'Element', value: node.elementType),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Common style',
-          subtitle: 'Core controls shared by most design elements.',
-          children: <Widget>[
-            _NumberFieldRow(
-              label: 'Font size',
-              value: _styleDouble(style, 'fontSize', 12),
-              min: 6,
-              max: 42,
-              decimals: 1,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'fontSize': value})),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Radius',
-              value: _styleDouble(style, 'borderRadius', 0),
-              min: 0,
-              max: 999,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderRadius': value})),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Opacity',
-              value: _styleDouble(style, 'opacity', 1),
-              min: 0,
-              max: 1,
-              decimals: 2,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'opacity': value})),
-              ),
-            ),
-            _NumberFieldRow(
-              label: 'Border width',
-              value: _styleDouble(style, 'borderWidth', 1),
-              min: 0,
-              max: 16,
-              decimals: 1,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderWidth': value})),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Colors',
-          subtitle: 'Use swatches or paste exact hex values.',
-          children: <Widget>[
-            _ColorFieldRow(
-              label: 'Text',
-              value: _styleString(style, 'textColorHex', '#FF6500'),
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'textColorHex': value})),
-              ),
-            ),
-            _ColorFieldRow(
-              label: 'Background',
-              value: _styleString(style, 'backgroundHex', '#FFFFFF'),
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'backgroundHex': value})),
-              ),
-            ),
-            _ColorFieldRow(
-              label: 'Border',
-              value: _styleString(style, 'borderHex', '#00000000'),
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'borderHex': value})),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Text / variant-specific',
-          subtitle: 'Useful for text, chips, badges, buttons, and labels.',
-          children: <Widget>[
-            _TextInputRow(
-              label: 'Prefix text',
-              value: _styleString(style, 'prefixText', ''),
-              hintText: 'ex: MRP ',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'prefixText': value})),
-              ),
-            ),
-            _TextInputRow(
-              label: 'Suffix text',
-              value: _styleString(style, 'suffixText', ''),
-              hintText: 'ex: /kg',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'suffixText': value})),
-              ),
-            ),
-            _TextInputRow(
-              label: 'Text align',
-              value: _styleString(style, 'textAlign', 'center'),
-              hintText: 'left / center / right',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'textAlign': value})),
-              ),
-            ),
-            _TextInputRow(
-              label: 'Font weight',
-              value: _styleString(style, 'fontWeight', 'w800'),
-              hintText: 'w400 - w900',
-              onSubmitted: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'fontWeight': value})),
-              ),
-            ),
-          ],
-        ),
-        ..._buildTypeSpecificSections(style),
-        if (node.elementType == 'mrp') ..._buildMrpStrikeSection(style),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'State',
-          subtitle: 'Visibility, lock and delete.',
-          children: <Widget>[
-            _ToggleRow(
-              label: 'Visible',
-              value: node.visible,
-              onChanged: (value) => onUpdateNode(node.copyWith(visible: value)),
-            ),
-            _ToggleRow(
-              label: 'Locked',
-              value: node.locked,
-              onChanged: (value) => onUpdateNode(node.copyWith(locked: value)),
-            ),
-            const SizedBox(height: 8),
-            _DangerButton(
-              label: 'Delete element',
-              onTap: () => onDeleteNode(node.id),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -698,21 +742,15 @@ class _NodeInspector extends StatelessWidget {
   }
 
   List<Widget> _buildMediaElementSections(Map<String, dynamic> style) {
-    final isTransparentCutout = node.variantId.trim() == 'media_transparent_cutout' ||
-        _styleString(style, 'imageSourceMode', '').trim() == 'transparent' ||
-        node.binding.trim() == 'product.resolvedCardTransparentImageUrl';
-
     return <Widget>[
       const SizedBox(height: 12),
       _SectionCard(
-        title: isTransparentCutout ? 'Transparent image controls' : 'Media controls',
-        subtitle: isTransparentCutout
-            ? 'Cutout image controls. This node has no white media surface, ring or forced clipping.'
-            : 'Image binding, fit, alignment, ring, crop and shadow controls.',
+        title: 'Media controls',
+        subtitle: 'Image binding, fit, alignment, ring, crop and shadow controls.',
         children: <Widget>[
           _TextInputRow(
             label: 'Image fit',
-            value: _styleString(style, 'imageFit', isTransparentCutout ? 'contain' : 'cover'),
+            value: _styleString(style, 'imageFit', 'cover'),
             hintText: 'cover / contain / fill / fitWidth / fitHeight',
             onSubmitted: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageFit': value})),
@@ -729,55 +767,43 @@ class _NodeInspector extends StatelessWidget {
           _NumberFieldRow(
             label: 'Image scale',
             value: _styleDouble(style, 'imageScale', 1),
-            min: 0.2,
-            max: 5,
+            min: 0.5,
+            max: 3,
             decimals: 2,
             onChanged: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageScale': value})),
             ),
           ),
           _NumberFieldRow(
-            label: 'Opacity',
-            value: _styleDouble(style, 'opacity', 1),
+            label: 'Ring width',
+            value: _styleDouble(style, 'ringWidth', 0),
             min: 0,
-            max: 1,
-            decimals: 2,
+            max: 28,
+            decimals: 1,
             onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'opacity': value})),
+              node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
             ),
           ),
-          if (!isTransparentCutout) ...<Widget>[
-            _NumberFieldRow(
-              label: 'Ring width',
-              value: _styleDouble(style, 'ringWidth', 0),
-              min: 0,
-              max: 28,
-              decimals: 1,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
-              ),
+          _NumberFieldRow(
+            label: 'Shadow blur',
+            value: _styleDouble(style, 'shadowBlur', 18),
+            min: 0,
+            max: 48,
+            decimals: 0,
+            onChanged: (value) => onUpdateNode(
+              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowBlur': value})),
             ),
-            _NumberFieldRow(
-              label: 'Shadow blur',
-              value: _styleDouble(style, 'shadowBlur', 18),
-              min: 0,
-              max: 48,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowBlur': value})),
-              ),
+          ),
+          _NumberFieldRow(
+            label: 'Shadow Y',
+            value: _styleDouble(style, 'shadowOffsetY', 10),
+            min: -12,
+            max: 32,
+            decimals: 0,
+            onChanged: (value) => onUpdateNode(
+              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowOffsetY': value})),
             ),
-            _NumberFieldRow(
-              label: 'Shadow Y',
-              value: _styleDouble(style, 'shadowOffsetY', 10),
-              min: -12,
-              max: 32,
-              decimals: 0,
-              onChanged: (value) => onUpdateNode(
-                node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowOffsetY': value})),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     ];
@@ -1061,6 +1087,114 @@ class _NodeInspector extends StatelessWidget {
         ],
       ),
     ];
+  }
+}
+
+
+class _NodeQuickInspector extends StatelessWidget {
+  const _NodeQuickInspector({required this.node});
+
+  final MBAdvancedDesignNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE6E8EF)),
+        ),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: <Widget>[
+          _QuickChip(label: 'X', value: node.position.x.toStringAsFixed(3)),
+          _QuickChip(label: 'Y', value: node.position.y.toStringAsFixed(3)),
+          _QuickChip(label: 'W', value: node.size.width.toStringAsFixed(0)),
+          _QuickChip(label: 'H', value: node.size.height.toStringAsFixed(0)),
+          _QuickChip(label: 'Z', value: node.position.z.toString()),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4EC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFDFC8)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Text(
+          '$label: $value',
+          style: const TextStyle(
+            color: Color(0xFFFF6500),
+            fontSize: 10.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InspectorTabStrip extends StatelessWidget {
+  const _InspectorTabStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF9FAFC),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE6E8EF)),
+        ),
+      ),
+      child: TabBar(
+        isScrollable: true,
+        labelColor: const Color(0xFFFF6500),
+        unselectedLabelColor: const Color(0xFF747B8A),
+        indicatorColor: const Color(0xFFFF6500),
+        labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900),
+        unselectedLabelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+        tabs: const <Widget>[
+          Tab(text: 'Basic'),
+          Tab(text: 'Layout'),
+          Tab(text: 'Style'),
+          Tab(text: 'Data'),
+          Tab(text: 'Advanced'),
+        ],
+      ),
+    );
+  }
+}
+
+class _InspectorTabPage extends StatelessWidget {
+  const _InspectorTabPage({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: children,
+    );
   }
 }
 

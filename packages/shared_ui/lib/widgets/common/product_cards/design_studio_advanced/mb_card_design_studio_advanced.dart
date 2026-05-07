@@ -68,6 +68,9 @@ class _MBCardDesignStudioAdvancedState
     extends State<MBCardDesignStudioAdvanced> {
   late int _productIndex;
   late MBAdvancedCardDesignDocument _document;
+  bool _isDrawerCollapsed = false;
+  bool _isInspectorCollapsed = false;
+  bool _isFocusMode = false;
 
   dynamic get _product {
     if (widget.products.isEmpty) {
@@ -104,29 +107,57 @@ class _MBCardDesignStudioAdvancedState
           productCount: widget.products.length,
           selectedProductIndex: _productIndex,
           products: widget.products,
+          isDrawerCollapsed: _isDrawerCollapsed,
+          isInspectorCollapsed: _isInspectorCollapsed,
+          isFocusMode: _isFocusMode,
           onProductChanged: widget.products.isEmpty
               ? null
               : (index) => setState(() => _productIndex = index),
+          onToggleDrawer: _toggleDrawer,
+          onToggleInspector: _toggleInspector,
+          onToggleFocusMode: _toggleFocusMode,
+          onResetWorkspace: _resetWorkspace,
           onClose: _closeStudio,
         ),
         Expanded(
           child: Row(
             children: <Widget>[
-              MBAdvancedElementDrawerPanel(
-                productTitle: _productTitle(_product),
-                productSubtitle: _productSubtitle(_product),
-                
-          previewProduct: _product,
-                previewBrand: widget.previewBrand,
-                previewCategory: widget.previewCategory,
-                previewVariation: widget.previewVariation,
-                previewPurchaseOption: widget.previewPurchaseOption,
-                previewProductAttribute: widget.previewProductAttribute,
-                previewAttributeValue: widget.previewAttributeValue,
-                previewAttributePreset: widget.previewAttributePreset,
-                onAddVariant: _addVariant,
-                onApplyCardVariant: _applyCardVariant,
-              ),
+              if (_isDrawerCollapsed)
+                _CollapsedStudioRail(
+                  icon: Icons.widgets_rounded,
+                  label: 'Elements',
+                  tooltip: 'Expand element drawer',
+                  isLeft: true,
+                  onTap: () => setState(() => _isDrawerCollapsed = false),
+                )
+              else
+                Stack(
+                  children: <Widget>[
+                    MBAdvancedElementDrawerPanel(
+                      productTitle: _productTitle(_product),
+                      productSubtitle: _productSubtitle(_product),
+                      previewProduct: _product,
+                      previewBrand: widget.previewBrand,
+                      previewCategory: widget.previewCategory,
+                      previewVariation: widget.previewVariation,
+                      previewPurchaseOption: widget.previewPurchaseOption,
+                      previewProductAttribute: widget.previewProductAttribute,
+                      previewAttributeValue: widget.previewAttributeValue,
+                      previewAttributePreset: widget.previewAttributePreset,
+                      onAddVariant: _addVariant,
+                      onApplyCardVariant: _applyCardVariant,
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _PanelCollapseButton(
+                        icon: Icons.chevron_left_rounded,
+                        tooltip: 'Collapse element drawer',
+                        onTap: () => setState(() => _isDrawerCollapsed = true),
+                      ),
+                    ),
+                  ],
+                ),
               MBAdvancedCanvasPanel(
                 product: _product,
                 previewBrand: widget.previewBrand,
@@ -148,17 +179,39 @@ class _MBCardDesignStudioAdvancedState
                 onDeleteNode: _deleteNode,
                 onCardLayoutTypeChanged: _updateCardLayoutType,
               ),
-              MBAdvancedInspectorPanel(
-                document: _document,
-                onUpdateDocument: (document) {
-                  setState(() => _document = document);
-                },
-                onUpdateNode: _updateNode,
-                onDeleteNode: _deleteNode,
-                onCopyJson: _copyJson,
-                onPasteJson: _pasteJson,
-                onSave: _saveDesign,
-              ),
+              if (_isInspectorCollapsed)
+                _CollapsedStudioRail(
+                  icon: Icons.tune_rounded,
+                  label: 'Inspector',
+                  tooltip: 'Expand element inspector',
+                  isLeft: false,
+                  onTap: () => setState(() => _isInspectorCollapsed = false),
+                )
+              else
+                Stack(
+                  children: <Widget>[
+                    MBAdvancedInspectorPanel(
+                      document: _document,
+                      onUpdateDocument: (document) {
+                        setState(() => _document = document);
+                      },
+                      onUpdateNode: _updateNode,
+                      onDeleteNode: _deleteNode,
+                      onCopyJson: _copyJson,
+                      onPasteJson: _pasteJson,
+                      onSave: _saveDesign,
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _PanelCollapseButton(
+                        icon: Icons.chevron_right_rounded,
+                        tooltip: 'Collapse inspector',
+                        onTap: () => setState(() => _isInspectorCollapsed = true),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -176,6 +229,42 @@ class _MBCardDesignStudioAdvancedState
       color: const Color(0xFFF6F7FB),
       child: content,
     );
+  }
+
+  void _toggleDrawer() {
+    setState(() {
+      _isDrawerCollapsed = !_isDrawerCollapsed;
+      _isFocusMode = _isDrawerCollapsed && _isInspectorCollapsed;
+    });
+  }
+
+  void _toggleInspector() {
+    setState(() {
+      _isInspectorCollapsed = !_isInspectorCollapsed;
+      _isFocusMode = _isDrawerCollapsed && _isInspectorCollapsed;
+    });
+  }
+
+  void _toggleFocusMode() {
+    setState(() {
+      if (_isFocusMode) {
+        _isFocusMode = false;
+        _isDrawerCollapsed = false;
+        _isInspectorCollapsed = false;
+      } else {
+        _isFocusMode = true;
+        _isDrawerCollapsed = true;
+        _isInspectorCollapsed = true;
+      }
+    });
+  }
+
+  void _resetWorkspace() {
+    setState(() {
+      _isFocusMode = false;
+      _isDrawerCollapsed = false;
+      _isInspectorCollapsed = false;
+    });
   }
 
   void _applyCardVariant(MBAdvancedElementVariant variant) {
@@ -317,13 +406,138 @@ class _MBCardDesignStudioAdvancedState
   }
 }
 
+class _PanelCollapseButton extends StatelessWidget {
+  const _PanelCollapseButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        elevation: 3,
+        shadowColor: const Color(0x22000000),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFFFD8BD)),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: const Color(0xFFFF6500),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollapsedStudioRail extends StatelessWidget {
+  const _CollapsedStudioRail({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.isLeft,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final bool isLeft;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            width: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBF8),
+              border: Border(
+                left: isLeft
+                    ? BorderSide.none
+                    : const BorderSide(color: Color(0xFFE6E8EF)),
+                right: isLeft
+                    ? const BorderSide(color: Color(0xFFE6E8EF))
+                    : BorderSide.none,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6500),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RotatedBox(
+                  quarterTurns: isLeft ? 3 : 1,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF172033),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
     required this.productCount,
     required this.selectedProductIndex,
     required this.products,
+    required this.isDrawerCollapsed,
+    required this.isInspectorCollapsed,
+    required this.isFocusMode,
     required this.onProductChanged,
+    required this.onToggleDrawer,
+    required this.onToggleInspector,
+    required this.onToggleFocusMode,
+    required this.onResetWorkspace,
     required this.onClose,
   });
 
@@ -331,14 +545,21 @@ class _TopBar extends StatelessWidget {
   final int productCount;
   final int selectedProductIndex;
   final List<dynamic> products;
+  final bool isDrawerCollapsed;
+  final bool isInspectorCollapsed;
+  final bool isFocusMode;
   final ValueChanged<int>? onProductChanged;
+  final VoidCallback onToggleDrawer;
+  final VoidCallback onToggleInspector;
+  final VoidCallback onToggleFocusMode;
+  final VoidCallback onResetWorkspace;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -348,8 +569,8 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Container(
-            width: 38,
-            height: 38,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: <Color>[Color(0xFFFF6500), Color(0xFFFF9A3D)],
@@ -372,13 +593,13 @@ class _TopBar extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     color: Color(0xFF172033),
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 3),
                 const Text(
-                  'Patch 10.3 active - true card-only preview',
+                  'Studio UI v3 - compact workspace controls',
                   style: TextStyle(
                     color: Color(0xFF747B8A),
                     fontSize: 12,
@@ -390,7 +611,7 @@ class _TopBar extends StatelessWidget {
           ),
           if (productCount > 1)
             SizedBox(
-              width: 220,
+              width: 190,
               child: DropdownButtonFormField<int>(
                 value: selectedProductIndex,
                 decoration: InputDecoration(
@@ -421,7 +642,50 @@ class _TopBar extends StatelessWidget {
                 },
               ),
             ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          _TopBarButton(
+            icon: isDrawerCollapsed
+                ? Icons.keyboard_double_arrow_right_rounded
+                : Icons.keyboard_double_arrow_left_rounded,
+            label: isDrawerCollapsed ? 'Elements' : 'Hide left',
+            tooltip: isDrawerCollapsed
+                ? 'Expand element drawer'
+                : 'Collapse element drawer',
+            selected: isDrawerCollapsed,
+            onTap: onToggleDrawer,
+          ),
+          const SizedBox(width: 6),
+          _TopBarButton(
+            icon: isInspectorCollapsed
+                ? Icons.keyboard_double_arrow_left_rounded
+                : Icons.keyboard_double_arrow_right_rounded,
+            label: isInspectorCollapsed ? 'Inspector' : 'Hide right',
+            tooltip: isInspectorCollapsed
+                ? 'Expand element inspector'
+                : 'Collapse element inspector',
+            selected: isInspectorCollapsed,
+            onTap: onToggleInspector,
+          ),
+          const SizedBox(width: 6),
+          _TopBarButton(
+            icon: isFocusMode
+                ? Icons.fullscreen_exit_rounded
+                : Icons.fullscreen_rounded,
+            label: isFocusMode ? 'Exit focus' : 'Focus',
+            tooltip: isFocusMode
+                ? 'Exit focus mode'
+                : 'Collapse both panels and maximize canvas',
+            selected: isFocusMode,
+            onTap: onToggleFocusMode,
+          ),
+          const SizedBox(width: 6),
+          _TopBarButton(
+            icon: Icons.restart_alt_rounded,
+            label: 'Reset',
+            tooltip: 'Reset workspace panels',
+            onTap: onResetWorkspace,
+          ),
+          const SizedBox(width: 8),
           TextButton.icon(
             onPressed: onClose,
             icon: const Icon(Icons.close_rounded, size: 18),
@@ -432,6 +696,68 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+class _TopBarButton extends StatelessWidget {
+  const _TopBarButton({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onTap,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected ? Colors.white : const Color(0xFFFF6500);
+    final background = selected ? const Color(0xFFFF6500) : const Color(0xFFFFF3EA);
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFFFF6500)
+                    : const Color(0xFFFFD8BD),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(icon, size: 17, color: foreground),
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,4 +1,4 @@
-﻿// MuthoBazar Advanced Product Card Design Studio
+// MuthoBazar Advanced Product Card Design Studio
 // Patch 8 middle responsive canvas.
 //
 // Purpose:
@@ -13,6 +13,7 @@
 // Patch 10.3 hides the visible preview-slot shell and shows the true card-only preview.
 // Patch 12.7 uses the shared advanced preview context for canvas rendering.
 // Patch 12.7.1 renders new model-bound element aliases and prevents invisible drops.
+// Patch SUI v1 enlarges the preview workspace and compacts the bottom dock.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -300,7 +301,7 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                                 previewConstraints.maxHeight - 24,
                               );
                               final scale = math.min(
-                                1.0,
+                                1.28,
                                 math.min(
                                   availableStageWidth / stageDesignWidth,
                                   availableStageHeight / stageDesignHeight,
@@ -371,7 +372,7 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
@@ -384,9 +385,9 @@ class _MBAdvancedCanvasPanelState extends State<MBAdvancedCanvasPanel> {
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 7),
                               SizedBox(
-                                width: math.min(560, math.max(320, outerConstraints.maxWidth - 96)),
+                                width: math.min(720, math.max(360, outerConstraints.maxWidth - 96)),
                                 child: _CardLayoutTypeEditor(
                                   value: widget.document.cardLayoutType,
                                   onChanged: widget.onCardLayoutTypeChanged,
@@ -455,96 +456,99 @@ class _CardLayoutTypeEditorState extends State<_CardLayoutTypeEditor> {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE6E8EF)),
         boxShadow: const <BoxShadow>[
           BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 14,
-            offset: Offset(0, 8),
+            color: Color(0x06000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+        child: Row(
           children: <Widget>[
-            const Text(
-              'cardLayoutType',
-              style: TextStyle(
-                color: Color(0xFFFF6500),
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+            const SizedBox(
+              width: 112,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'cardLayoutType',
+                    style: TextStyle(
+                      color: Color(0xFFFF6500),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Saved with design',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Color(0xFF747B8A),
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'This value is written to product.cardLayoutType when copying/saving this V3 design.',
-              style: TextStyle(
-                color: Color(0xFF747B8A),
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 36,
+                child: TextField(
+                  controller: _controller,
+                  onSubmitted: (_) => _commit(),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'hero_poster_circle_diagonal_v1',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(11),
+                      borderSide: const BorderSide(color: Color(0xFFE0E5EF)),
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (_) => _commit(),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'hero_poster_circle_diagonal_v1',
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE0E5EF)),
-                      ),
-                    ),
-                  ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                _controller.text = 'hero_poster_circle_diagonal_v1';
+                _commit();
+              },
+              style: TextButton.styleFrom(
+                minimumSize: const Size(82, 36),
+                maximumSize: const Size(82, 36),
+                padding: EdgeInsets.zero,
+              ),
+              child: const Text('Suggested'),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 74,
+              height: 36,
+              child: ElevatedButton(
+                onPressed: _commit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6500),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 96,
-                  height: 40,
-                  child: TextButton(
-                    onPressed: () {
-                      _controller.text = 'hero_poster_circle_diagonal_v1';
-                      _commit();
-                    },
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(96, 40),
-                      maximumSize: const Size(96, 40),
-                    ),
-                    child: const Text('Suggested'),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 82,
-                  height: 40,
-                  child: ElevatedButton(
-                    onPressed: _commit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6500),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(82, 40),
-                      maximumSize: const Size(82, 40),
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: const Text('Apply'),
-                  ),
-                ),
-              ],
+                child: const Text('Apply'),
+              ),
             ),
           ],
         ),
@@ -559,7 +563,7 @@ class _CanvasHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 58,
+      height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -577,7 +581,7 @@ class _CanvasHeader extends StatelessWidget {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Responsive Preview Canvas',
+              'Preview Canvas',
               style: TextStyle(
                 color: Color(0xFF172033),
                 fontSize: 14,
@@ -619,7 +623,7 @@ class _CanvasHeader extends StatelessWidget {
           ),
           SizedBox(width: 14),
           Text(
-            'Drop | Mouse move | Arrow move | Ctrl+Arrow resize',
+            'Drop · Mouse move · Arrow/Ctrl resize',
             style: TextStyle(
               color: Color(0xFF747B8A),
               fontSize: 11,
@@ -1027,8 +1031,8 @@ class _NodeVisual extends StatelessWidget {
         );
       case 'media':
         return _MediaNode(
-          imageUrl: _resolveImageUrl(previewContext, node.binding, node: node),
-          imageBytes: _resolveImageBytes(previewContext, node.binding, node: node),
+          imageUrl: _resolveImageUrl(previewContext, node.binding),
+          imageBytes: _resolveImageBytes(previewContext, node.binding),
           node: node,
           scale: scale,
         );
@@ -1268,50 +1272,11 @@ class _MediaNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTransparentCutout = _isTransparentMediaNode(node);
-    final hasPendingImage = imageBytes != null && imageBytes!.isNotEmpty;
-    final hasImage = imageUrl.trim().isNotEmpty;
-
-    if (isTransparentCutout) {
-      final opacity = _asDouble(node.style['opacity'], 1.0).clamp(0.0, 1.0).toDouble();
-      final imageScale = _asDouble(node.style['imageScale'], 1.0).clamp(0.2, 5.0).toDouble();
-      final fit = _boxFit(node.style['imageFit'], fallback: BoxFit.contain);
-      final alignment = _imageAlignment(node.style['imageAlignment']);
-      final Widget image = hasPendingImage
-          ? Image.memory(
-              imageBytes!,
-              fit: fit,
-              alignment: alignment,
-              gaplessPlayback: true,
-              filterQuality: FilterQuality.high,
-              errorBuilder: (_, __, ___) => const _TransparentImageFallback(),
-            )
-          : hasImage
-              ? Image.network(
-                  imageUrl,
-                  fit: fit,
-                  alignment: alignment,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (_, __, ___) => const _TransparentImageFallback(),
-                )
-              : const _TransparentImageFallback();
-
-      return Opacity(
-        opacity: opacity,
-        child: ClipRect(
-          child: Transform.scale(
-            scale: imageScale,
-            child: SizedBox.expand(child: image),
-          ),
-        ),
-      );
-    }
-
     final radius = _asDouble(node.style['borderRadius'], 24) * scale;
     final ringWidth = _asDouble(node.style['ringWidth'], 0) * scale;
     final borderColor = _hexColor(node.style['borderHex'], Colors.white);
-    final fit = _boxFit(node.style['imageFit'], fallback: BoxFit.cover);
-    final alignment = _imageAlignment(node.style['imageAlignment']);
+    final hasPendingImage = imageBytes != null && imageBytes!.isNotEmpty;
+    final hasImage = imageUrl.trim().isNotEmpty;
 
     return Container(
       padding: EdgeInsets.all(ringWidth),
@@ -1331,8 +1296,7 @@ class _MediaNode extends StatelessWidget {
         child: hasPendingImage
             ? Image.memory(
                 imageBytes!,
-                fit: fit,
-                alignment: alignment,
+                fit: BoxFit.cover,
                 gaplessPlayback: true,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => const _ImageFallback(),
@@ -1340,23 +1304,13 @@ class _MediaNode extends StatelessWidget {
             : hasImage
                 ? Image.network(
                     imageUrl,
-                    fit: fit,
-                    alignment: alignment,
+                    fit: BoxFit.cover,
                     filterQuality: FilterQuality.high,
                     errorBuilder: (_, __, ___) => const _ImageFallback(),
                   )
                 : const _ImageFallback(),
       ),
     );
-  }
-}
-
-class _TransparentImageFallback extends StatelessWidget {
-  const _TransparentImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
   }
 }
 
@@ -1424,129 +1378,6 @@ class _SubtleGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-
-bool _isTransparentMediaNode(MBAdvancedDesignNode node) {
-  final variant = node.variantId.trim().toLowerCase();
-  final binding = node.binding.trim().toLowerCase();
-  final sourceMode = node.style['imageSourceMode']?.toString().trim().toLowerCase();
-  return variant == 'media_transparent_cutout' ||
-      sourceMode == 'transparent' ||
-      binding == 'product.resolvedcardtransparentimageurl' ||
-      binding == 'product.cardtransparenturl';
-}
-
-bool _isTransparentImageRequest(String binding, {MBAdvancedDesignNode? node}) {
-  final normalized = binding.trim().toLowerCase();
-  return normalized == 'product.resolvedcardtransparentimageurl' ||
-      normalized == 'product.cardtransparenturl' ||
-      (node != null && _isTransparentMediaNode(node));
-}
-
-String _resolveCardTransparentUrlFromProduct(dynamic product) {
-  String readString(dynamic source, String fieldName) {
-    if (source == null) return '';
-    try {
-      if (source is Map && source.containsKey(fieldName)) {
-        final value = source[fieldName]?.toString().trim() ?? '';
-        if (value.isNotEmpty) return value;
-      }
-    } catch (_) {}
-    try {
-      late final Object? value;
-      switch (fieldName) {
-        case 'resolvedCardTransparentImageUrl':
-          value = source.resolvedCardTransparentImageUrl;
-          break;
-        case 'cardTransparentUrl':
-          value = source.cardTransparentUrl;
-          break;
-        case 'effectiveCardTransparentUrl':
-          value = source.effectiveCardTransparentUrl;
-          break;
-        default:
-          value = null;
-      }
-      final text = value?.toString().trim() ?? '';
-      if (text.isNotEmpty) return text;
-    } catch (_) {}
-    return '';
-  }
-
-  for (final field in const <String>[
-    'resolvedCardTransparentImageUrl',
-    'cardTransparentUrl',
-    'effectiveCardTransparentUrl',
-  ]) {
-    final direct = readString(product, field);
-    if (direct.isNotEmpty) return direct;
-  }
-
-  try {
-    final dynamic mediaItems = product is Map ? product['mediaItems'] : product.mediaItems;
-    if (mediaItems is Iterable) {
-      for (final item in mediaItems) {
-        for (final field in const <String>[
-          'effectiveCardTransparentUrl',
-          'cardTransparentUrl',
-          'cardTransparentImageUrl',
-        ]) {
-          final value = readString(item, field);
-          if (value.isNotEmpty) return value;
-        }
-      }
-    }
-  } catch (_) {}
-
-  return '';
-}
-
-BoxFit _boxFit(Object? value, {required BoxFit fallback}) {
-  switch (value?.toString().trim()) {
-    case 'contain':
-      return BoxFit.contain;
-    case 'fill':
-      return BoxFit.fill;
-    case 'fitWidth':
-      return BoxFit.fitWidth;
-    case 'fitHeight':
-      return BoxFit.fitHeight;
-    case 'none':
-      return BoxFit.none;
-    case 'scaleDown':
-      return BoxFit.scaleDown;
-    case 'cover':
-      return BoxFit.cover;
-    default:
-      return fallback;
-  }
-}
-
-Alignment _imageAlignment(Object? value) {
-  switch (value?.toString().trim()) {
-    case 'topLeft':
-      return Alignment.topLeft;
-    case 'topCenter':
-      return Alignment.topCenter;
-    case 'topRight':
-      return Alignment.topRight;
-    case 'centerLeft':
-    case 'left':
-      return Alignment.centerLeft;
-    case 'centerRight':
-    case 'right':
-      return Alignment.centerRight;
-    case 'bottomLeft':
-      return Alignment.bottomLeft;
-    case 'bottomCenter':
-      return Alignment.bottomCenter;
-    case 'bottomRight':
-      return Alignment.bottomRight;
-    case 'center':
-    default:
-      return Alignment.center;
-  }
-}
-
 String _resolveBinding(
   MBAdvancedPreviewContext previewContext,
   String binding,
@@ -1584,22 +1415,6 @@ Uint8List? _pendingCardBytes(dynamic media) {
   return null;
 }
 
-Uint8List? _pendingCardTransparentBytes(dynamic media) {
-  try {
-    final value = media.pendingCardTransparentBytes;
-    if (value is Uint8List && value.isNotEmpty) return value;
-  } catch (_) {}
-
-  try {
-    if (media is Map) {
-      final value = media['pendingCardTransparentBytes'];
-      if (value is Uint8List && value.isNotEmpty) return value;
-    }
-  } catch (_) {}
-
-  return null;
-}
-
 Uint8List? _pendingThumbBytes(dynamic media) {
   try {
     final value = media.pendingThumbBytes;
@@ -1625,9 +1440,8 @@ Uint8List? _firstPendingBytes(List<Uint8List?> values) {
 
 Uint8List? _resolveImageBytes(
   MBAdvancedPreviewContext previewContext,
-  String binding, {
-  MBAdvancedDesignNode? node,
-}) {
+  String binding,
+) {
   dynamic primaryMedia;
 
   try {
@@ -1643,13 +1457,8 @@ Uint8List? _resolveImageBytes(
   final original = _pendingOriginalBytes(primaryMedia);
   final full = _pendingFullBytes(primaryMedia);
   final card = _pendingCardBytes(primaryMedia);
-  final cardTransparent = _pendingCardTransparentBytes(primaryMedia);
   final thumb = _pendingThumbBytes(primaryMedia);
   final tiny = _pendingTinyBytes(primaryMedia);
-
-  if (_isTransparentImageRequest(normalized, node: node)) {
-    return _firstPendingBytes(<Uint8List?>[cardTransparent]);
-  }
 
   switch (normalized) {
     case 'product.resolvedOriginalImageUrl':
@@ -1670,21 +1479,15 @@ Uint8List? _resolveImageBytes(
 }
 String _resolveImageUrl(
   MBAdvancedPreviewContext previewContext,
-  String binding, {
-  MBAdvancedDesignNode? node,
-}) {
-  final normalized = binding.trim();
+  String binding,
+) {
   final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
     previewContext,
-    normalized,
+    binding,
   );
 
   if (imageUrl.trim().isNotEmpty) {
     return imageUrl;
-  }
-
-  if (_isTransparentImageRequest(normalized, node: node)) {
-    return _resolveCardTransparentUrlFromProduct(previewContext.product);
   }
 
   return MBAdvancedBindingResolver.resolveImageUrl(
