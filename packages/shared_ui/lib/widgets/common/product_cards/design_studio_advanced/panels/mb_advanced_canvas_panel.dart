@@ -1027,8 +1027,8 @@ class _NodeVisual extends StatelessWidget {
         );
       case 'media':
         return _MediaNode(
-          imageUrl: _resolveImageUrl(previewContext, node.binding),
-          imageBytes: _resolveImageBytes(previewContext, node.binding),
+          imageUrl: _resolveImageUrl(previewContext, node.binding, node: node),
+          imageBytes: _resolveImageBytes(previewContext, node.binding, node: node),
           node: node,
           scale: scale,
         );
@@ -1268,11 +1268,50 @@ class _MediaNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTransparentCutout = _isTransparentMediaNode(node);
+    final hasPendingImage = imageBytes != null && imageBytes!.isNotEmpty;
+    final hasImage = imageUrl.trim().isNotEmpty;
+
+    if (isTransparentCutout) {
+      final opacity = _asDouble(node.style['opacity'], 1.0).clamp(0.0, 1.0).toDouble();
+      final imageScale = _asDouble(node.style['imageScale'], 1.0).clamp(0.2, 5.0).toDouble();
+      final fit = _boxFit(node.style['imageFit'], fallback: BoxFit.contain);
+      final alignment = _imageAlignment(node.style['imageAlignment']);
+      final Widget image = hasPendingImage
+          ? Image.memory(
+              imageBytes!,
+              fit: fit,
+              alignment: alignment,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, __, ___) => const _TransparentImageFallback(),
+            )
+          : hasImage
+              ? Image.network(
+                  imageUrl,
+                  fit: fit,
+                  alignment: alignment,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, __, ___) => const _TransparentImageFallback(),
+                )
+              : const _TransparentImageFallback();
+
+      return Opacity(
+        opacity: opacity,
+        child: ClipRect(
+          child: Transform.scale(
+            scale: imageScale,
+            child: SizedBox.expand(child: image),
+          ),
+        ),
+      );
+    }
+
     final radius = _asDouble(node.style['borderRadius'], 24) * scale;
     final ringWidth = _asDouble(node.style['ringWidth'], 0) * scale;
     final borderColor = _hexColor(node.style['borderHex'], Colors.white);
-    final hasPendingImage = imageBytes != null && imageBytes!.isNotEmpty;
-    final hasImage = imageUrl.trim().isNotEmpty;
+    final fit = _boxFit(node.style['imageFit'], fallback: BoxFit.cover);
+    final alignment = _imageAlignment(node.style['imageAlignment']);
 
     return Container(
       padding: EdgeInsets.all(ringWidth),
@@ -1292,7 +1331,8 @@ class _MediaNode extends StatelessWidget {
         child: hasPendingImage
             ? Image.memory(
                 imageBytes!,
-                fit: BoxFit.cover,
+                fit: fit,
+                alignment: alignment,
                 gaplessPlayback: true,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => const _ImageFallback(),
@@ -1300,13 +1340,23 @@ class _MediaNode extends StatelessWidget {
             : hasImage
                 ? Image.network(
                     imageUrl,
-                    fit: BoxFit.cover,
+                    fit: fit,
+                    alignment: alignment,
                     filterQuality: FilterQuality.high,
                     errorBuilder: (_, __, ___) => const _ImageFallback(),
                   )
                 : const _ImageFallback(),
       ),
     );
+  }
+}
+
+class _TransparentImageFallback extends StatelessWidget {
+  const _TransparentImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
   }
 }
 
@@ -1374,6 +1424,129 @@ class _SubtleGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+
+bool _isTransparentMediaNode(MBAdvancedDesignNode node) {
+  final variant = node.variantId.trim().toLowerCase();
+  final binding = node.binding.trim().toLowerCase();
+  final sourceMode = node.style['imageSourceMode']?.toString().trim().toLowerCase();
+  return variant == 'media_transparent_cutout' ||
+      sourceMode == 'transparent' ||
+      binding == 'product.resolvedcardtransparentimageurl' ||
+      binding == 'product.cardtransparenturl';
+}
+
+bool _isTransparentImageRequest(String binding, {MBAdvancedDesignNode? node}) {
+  final normalized = binding.trim().toLowerCase();
+  return normalized == 'product.resolvedcardtransparentimageurl' ||
+      normalized == 'product.cardtransparenturl' ||
+      (node != null && _isTransparentMediaNode(node));
+}
+
+String _resolveCardTransparentUrlFromProduct(dynamic product) {
+  String readString(dynamic source, String fieldName) {
+    if (source == null) return '';
+    try {
+      if (source is Map && source.containsKey(fieldName)) {
+        final value = source[fieldName]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    } catch (_) {}
+    try {
+      late final Object? value;
+      switch (fieldName) {
+        case 'resolvedCardTransparentImageUrl':
+          value = source.resolvedCardTransparentImageUrl;
+          break;
+        case 'cardTransparentUrl':
+          value = source.cardTransparentUrl;
+          break;
+        case 'effectiveCardTransparentUrl':
+          value = source.effectiveCardTransparentUrl;
+          break;
+        default:
+          value = null;
+      }
+      final text = value?.toString().trim() ?? '';
+      if (text.isNotEmpty) return text;
+    } catch (_) {}
+    return '';
+  }
+
+  for (final field in const <String>[
+    'resolvedCardTransparentImageUrl',
+    'cardTransparentUrl',
+    'effectiveCardTransparentUrl',
+  ]) {
+    final direct = readString(product, field);
+    if (direct.isNotEmpty) return direct;
+  }
+
+  try {
+    final dynamic mediaItems = product is Map ? product['mediaItems'] : product.mediaItems;
+    if (mediaItems is Iterable) {
+      for (final item in mediaItems) {
+        for (final field in const <String>[
+          'effectiveCardTransparentUrl',
+          'cardTransparentUrl',
+          'cardTransparentImageUrl',
+        ]) {
+          final value = readString(item, field);
+          if (value.isNotEmpty) return value;
+        }
+      }
+    }
+  } catch (_) {}
+
+  return '';
+}
+
+BoxFit _boxFit(Object? value, {required BoxFit fallback}) {
+  switch (value?.toString().trim()) {
+    case 'contain':
+      return BoxFit.contain;
+    case 'fill':
+      return BoxFit.fill;
+    case 'fitWidth':
+      return BoxFit.fitWidth;
+    case 'fitHeight':
+      return BoxFit.fitHeight;
+    case 'none':
+      return BoxFit.none;
+    case 'scaleDown':
+      return BoxFit.scaleDown;
+    case 'cover':
+      return BoxFit.cover;
+    default:
+      return fallback;
+  }
+}
+
+Alignment _imageAlignment(Object? value) {
+  switch (value?.toString().trim()) {
+    case 'topLeft':
+      return Alignment.topLeft;
+    case 'topCenter':
+      return Alignment.topCenter;
+    case 'topRight':
+      return Alignment.topRight;
+    case 'centerLeft':
+    case 'left':
+      return Alignment.centerLeft;
+    case 'centerRight':
+    case 'right':
+      return Alignment.centerRight;
+    case 'bottomLeft':
+      return Alignment.bottomLeft;
+    case 'bottomCenter':
+      return Alignment.bottomCenter;
+    case 'bottomRight':
+      return Alignment.bottomRight;
+    case 'center':
+    default:
+      return Alignment.center;
+  }
+}
+
 String _resolveBinding(
   MBAdvancedPreviewContext previewContext,
   String binding,
@@ -1411,6 +1584,22 @@ Uint8List? _pendingCardBytes(dynamic media) {
   return null;
 }
 
+Uint8List? _pendingCardTransparentBytes(dynamic media) {
+  try {
+    final value = media.pendingCardTransparentBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+
+  try {
+    if (media is Map) {
+      final value = media['pendingCardTransparentBytes'];
+      if (value is Uint8List && value.isNotEmpty) return value;
+    }
+  } catch (_) {}
+
+  return null;
+}
+
 Uint8List? _pendingThumbBytes(dynamic media) {
   try {
     final value = media.pendingThumbBytes;
@@ -1436,8 +1625,9 @@ Uint8List? _firstPendingBytes(List<Uint8List?> values) {
 
 Uint8List? _resolveImageBytes(
   MBAdvancedPreviewContext previewContext,
-  String binding,
-) {
+  String binding, {
+  MBAdvancedDesignNode? node,
+}) {
   dynamic primaryMedia;
 
   try {
@@ -1453,8 +1643,13 @@ Uint8List? _resolveImageBytes(
   final original = _pendingOriginalBytes(primaryMedia);
   final full = _pendingFullBytes(primaryMedia);
   final card = _pendingCardBytes(primaryMedia);
+  final cardTransparent = _pendingCardTransparentBytes(primaryMedia);
   final thumb = _pendingThumbBytes(primaryMedia);
   final tiny = _pendingTinyBytes(primaryMedia);
+
+  if (_isTransparentImageRequest(normalized, node: node)) {
+    return _firstPendingBytes(<Uint8List?>[cardTransparent]);
+  }
 
   switch (normalized) {
     case 'product.resolvedOriginalImageUrl':
@@ -1475,15 +1670,21 @@ Uint8List? _resolveImageBytes(
 }
 String _resolveImageUrl(
   MBAdvancedPreviewContext previewContext,
-  String binding,
-) {
+  String binding, {
+  MBAdvancedDesignNode? node,
+}) {
+  final normalized = binding.trim();
   final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
     previewContext,
-    binding,
+    normalized,
   );
 
   if (imageUrl.trim().isNotEmpty) {
     return imageUrl;
+  }
+
+  if (_isTransparentImageRequest(normalized, node: node)) {
+    return _resolveCardTransparentUrlFromProduct(previewContext.product);
   }
 
   return MBAdvancedBindingResolver.resolveImageUrl(

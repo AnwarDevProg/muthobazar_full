@@ -667,16 +667,23 @@ class _MediaNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _resolveImageUrl(previewContext, binding: node.binding);
-    final imageBytes = _resolveImageBytes(previewContext, binding: node.binding);
+    final isTransparentCutout = _mbIsTransparentMediaNode(node);
+    final imageUrl = isTransparentCutout
+        ? _mbTransparentImageUrlFromProduct(previewContext.product)
+        : _resolveImageUrl(previewContext, binding: node.binding);
+    final imageBytes = isTransparentCutout
+        ? _mbTransparentImageBytesFromProduct(previewContext.product)
+        : _resolveImageBytes(previewContext, binding: node.binding);
     final radius = node.readDouble('borderRadius', fallback: 24.0);
     final ringWidth = node.readDouble('ringWidth', fallback: 0.0).clamp(0.0, 32.0);
     final background = node.readColor('backgroundHex', fallback: Colors.white);
     final borderColor = node.readColor('borderHex', fallback: Colors.white);
-    final imageFit = _imageFitFromString(
-      node.readString('imageFit', fallback: 'cover'),
-      fallback: BoxFit.cover,
-    );
+    final imageFit = isTransparentCutout
+        ? BoxFit.contain
+        : _imageFitFromString(
+            node.readString('imageFit', fallback: 'cover'),
+            fallback: BoxFit.cover,
+          );
     final alignment = _imageAlignmentFromString(
       node.readString('imageAlignment', fallback: 'center'),
       fallback: Alignment.center,
@@ -690,19 +697,27 @@ class _MediaNode extends StatelessWidget {
         imageBytes,
         fit: imageFit,
         alignment: alignment,
+        gaplessPlayback: true,
         filterQuality: FilterQuality.high,
-        errorBuilder: (_, __, ___) => const _ImageFallback(),
+        errorBuilder: (_, __, ___) => isTransparentCutout
+            ? const SizedBox.shrink()
+            : const _ImageFallback(),
       );
     } else if (imageUrl.isNotEmpty) {
       imageChild = Image.network(
         imageUrl,
         fit: imageFit,
         alignment: alignment,
+        gaplessPlayback: true,
         filterQuality: FilterQuality.high,
-        errorBuilder: (_, __, ___) => const _ImageFallback(),
+        errorBuilder: (_, __, ___) => isTransparentCutout
+            ? const SizedBox.shrink()
+            : const _ImageFallback(),
       );
     } else {
-      imageChild = const _ImageFallback();
+      imageChild = isTransparentCutout
+          ? const SizedBox.shrink()
+          : const _ImageFallback();
     }
 
     if ((imageScale - 1.0).abs() > 0.001) {
@@ -710,6 +725,15 @@ class _MediaNode extends StatelessWidget {
         scale: imageScale,
         alignment: alignment,
         child: imageChild,
+      );
+    }
+
+    if (isTransparentCutout) {
+      return Opacity(
+        opacity: opacity,
+        child: ClipRect(
+          child: SizedBox.expand(child: imageChild),
+        ),
       );
     }
 
@@ -1217,10 +1241,108 @@ String _applyPrefixSuffix(String value, _V3DesignNode node) {
   return '$prefix$value$suffix';
 }
 
+
+const String _mbTransparentImageBinding = 'product.resolvedCardTransparentImageUrl';
+
+bool _mbIsTransparentBinding(String binding) {
+  return binding.trim() == _mbTransparentImageBinding;
+}
+
+bool _mbIsTransparentMediaNode(_V3DesignNode node) {
+  final variant = node.variantId.trim().toLowerCase();
+  final binding = node.binding.trim();
+  final sourceMode = node.readString('imageSourceMode').trim().toLowerCase();
+
+  return variant == 'media_transparent_cutout' ||
+      _mbIsTransparentBinding(binding) ||
+      sourceMode == 'transparent' ||
+      sourceMode == 'cardtransparent' ||
+      sourceMode == 'card_transparent';
+}
+
+String _mbCleanString(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty || text == 'null') return '';
+  return text;
+}
+
+String _mbTransparentImageUrlFromProduct(Object? product) {
+  if (product == null) return '';
+
+  try {
+    final value = _mbCleanString((product as dynamic).resolvedCardTransparentImageUrl);
+    if (value.isNotEmpty) return value;
+  } catch (_) {}
+
+  Object? primary;
+  try {
+    primary = (product as dynamic).primaryMediaItem;
+  } catch (_) {
+    primary = null;
+  }
+
+  if (primary != null) {
+    try {
+      final value = _mbCleanString((primary as dynamic).effectiveCardTransparentUrl);
+      if (value.isNotEmpty) return value;
+    } catch (_) {}
+
+    try {
+      final value = _mbCleanString((primary as dynamic).cardTransparentUrl);
+      if (value.isNotEmpty) return value;
+    } catch (_) {}
+  }
+
+  try {
+    final map = (product as dynamic).toMap();
+    if (map is Map) {
+      final direct = _mbCleanString(map['resolvedCardTransparentImageUrl']);
+      if (direct.isNotEmpty) return direct;
+
+      final mediaItems = map['mediaItems'];
+      if (mediaItems is List) {
+        for (final item in mediaItems) {
+          if (item is! Map) continue;
+          final enabled = item['isEnabled'];
+          if (enabled is bool && !enabled) continue;
+          final url = _mbCleanString(item['cardTransparentUrl']);
+          if (url.isNotEmpty) return url;
+        }
+      }
+    }
+  } catch (_) {}
+
+  return '';
+}
+
+Uint8List? _mbTransparentImageBytesFromProduct(Object? product) {
+  if (product == null) return null;
+
+  Object? primary;
+  try {
+    primary = (product as dynamic).primaryMediaItem;
+  } catch (_) {
+    primary = null;
+  }
+
+  if (primary == null) return null;
+
+  try {
+    final value = (primary as dynamic).pendingCardTransparentBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+
+  return null;
+}
+
 String _resolveImageUrl(
   MBAdvancedPreviewContext previewContext, {
   required String binding,
 }) {
+  if (_mbIsTransparentBinding(binding)) {
+    return _mbTransparentImageUrlFromProduct(previewContext.product);
+  }
+
   final direct = MBAdvancedBindingResolver.resolveImageUrl(
     previewContext,
     binding,
@@ -1238,6 +1360,10 @@ Uint8List? _resolveImageBytes(
   MBAdvancedPreviewContext previewContext, {
   required String binding,
 }) {
+  if (_mbIsTransparentBinding(binding)) {
+    return _mbTransparentImageBytesFromProduct(previewContext.product);
+  }
+
   final product = previewContext.product;
   if (product is! MBProduct) return null;
 

@@ -56,6 +56,45 @@ class MBCroppedImageResult {
   final double zoomScale;
 }
 
+
+class MBPreparedCardTransparentImage {
+  const MBPreparedCardTransparentImage({
+    required this.bytes,
+    required this.width,
+    required this.height,
+    required this.byteLength,
+    required this.originalFileName,
+    required this.baseName,
+    required this.mimeType,
+    required this.sourceWidth,
+    required this.sourceHeight,
+  });
+
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final int byteLength;
+  final String originalFileName;
+  final String baseName;
+  final String mimeType;
+  final int sourceWidth;
+  final int sourceHeight;
+}
+
+class MBUploadedCardTransparentImage {
+  const MBUploadedCardTransparentImage({
+    required this.url,
+    required this.path,
+    required this.width,
+    required this.height,
+  });
+
+  final String url;
+  final String path;
+  final int width;
+  final int height;
+}
+
 class MBPreparedImageSet {
   const MBPreparedImageSet({
     required this.originalBytes,
@@ -63,6 +102,7 @@ class MBPreparedImageSet {
     required this.cardBytes,
     required this.thumbBytes,
     required this.tinyBytes,
+    this.cardTransparentBytes,
     required this.originalWidth,
     required this.originalHeight,
     required this.fullWidth,
@@ -73,6 +113,8 @@ class MBPreparedImageSet {
     required this.thumbHeight,
     required this.tinyWidth,
     required this.tinyHeight,
+    this.cardTransparentWidth,
+    this.cardTransparentHeight,
     required this.originalFileName,
     required this.baseName,
     required this.mimeType,
@@ -81,6 +123,8 @@ class MBPreparedImageSet {
     required this.cardByteLength,
     required this.thumbByteLength,
     required this.tinyByteLength,
+    this.cardTransparentByteLength,
+    this.cardTransparentMimeType = 'image/png',
     required this.sourceWidth,
     required this.sourceHeight,
     required this.requestSquareCrop,
@@ -99,6 +143,7 @@ class MBPreparedImageSet {
   final Uint8List cardBytes;
   final Uint8List thumbBytes;
   final Uint8List tinyBytes;
+  final Uint8List? cardTransparentBytes;
 
   final int originalWidth;
   final int originalHeight;
@@ -110,6 +155,8 @@ class MBPreparedImageSet {
   final int thumbHeight;
   final int tinyWidth;
   final int tinyHeight;
+  final int? cardTransparentWidth;
+  final int? cardTransparentHeight;
 
   final String originalFileName;
   final String baseName;
@@ -120,6 +167,8 @@ class MBPreparedImageSet {
   final int cardByteLength;
   final int thumbByteLength;
   final int tinyByteLength;
+  final int? cardTransparentByteLength;
+  final String cardTransparentMimeType;
 
   final int sourceWidth;
   final int sourceHeight;
@@ -136,7 +185,71 @@ class MBPreparedImageSet {
   final String fitMode;
 
   Uint8List get previewBytes => fullBytes;
+
+  MBPreparedImageSet copyWith({
+    Uint8List? cardTransparentBytes,
+    bool clearCardTransparentBytes = false,
+    int? cardTransparentWidth,
+    bool clearCardTransparentWidth = false,
+    int? cardTransparentHeight,
+    bool clearCardTransparentHeight = false,
+    int? cardTransparentByteLength,
+    bool clearCardTransparentByteLength = false,
+    String? cardTransparentMimeType,
+  }) {
+    return MBPreparedImageSet(
+      originalBytes: originalBytes,
+      fullBytes: fullBytes,
+      cardBytes: cardBytes,
+      thumbBytes: thumbBytes,
+      tinyBytes: tinyBytes,
+      cardTransparentBytes: clearCardTransparentBytes
+          ? null
+          : (cardTransparentBytes ?? this.cardTransparentBytes),
+      originalWidth: originalWidth,
+      originalHeight: originalHeight,
+      fullWidth: fullWidth,
+      fullHeight: fullHeight,
+      cardWidth: cardWidth,
+      cardHeight: cardHeight,
+      thumbWidth: thumbWidth,
+      thumbHeight: thumbHeight,
+      tinyWidth: tinyWidth,
+      tinyHeight: tinyHeight,
+      cardTransparentWidth: clearCardTransparentWidth
+          ? null
+          : (cardTransparentWidth ?? this.cardTransparentWidth),
+      cardTransparentHeight: clearCardTransparentHeight
+          ? null
+          : (cardTransparentHeight ?? this.cardTransparentHeight),
+      originalFileName: originalFileName,
+      baseName: baseName,
+      mimeType: mimeType,
+      originalByteLength: originalByteLength,
+      fullByteLength: fullByteLength,
+      cardByteLength: cardByteLength,
+      thumbByteLength: thumbByteLength,
+      tinyByteLength: tinyByteLength,
+      cardTransparentByteLength: clearCardTransparentByteLength
+          ? null
+          : (cardTransparentByteLength ?? this.cardTransparentByteLength),
+      cardTransparentMimeType:
+          cardTransparentMimeType ?? this.cardTransparentMimeType,
+      sourceWidth: sourceWidth,
+      sourceHeight: sourceHeight,
+      requestSquareCrop: requestSquareCrop,
+      requestAspectCrop: requestAspectCrop,
+      cropAspectRatioX: cropAspectRatioX,
+      cropAspectRatioY: cropAspectRatioY,
+      croppedWidth: croppedWidth,
+      croppedHeight: croppedHeight,
+      croppedByteLength: croppedByteLength,
+      zoomScale: zoomScale,
+      fitMode: fitMode,
+    );
+  }
 }
+
 
 class MBUploadedImageSet {
   const MBUploadedImageSet({
@@ -152,12 +265,16 @@ class MBUploadedImageSet {
     this.originalPath = '',
     this.cardUrl = '',
     this.cardPath = '',
+    this.cardTransparentUrl = '',
+    this.cardTransparentPath = '',
     this.tinyUrl = '',
     this.tinyPath = '',
     this.originalWidth,
     this.originalHeight,
     this.cardWidth,
     this.cardHeight,
+    this.cardTransparentWidth,
+    this.cardTransparentHeight,
     this.tinyWidth,
     this.tinyHeight,
   });
@@ -165,12 +282,14 @@ class MBUploadedImageSet {
   final String originalUrl;
   final String fullUrl;
   final String cardUrl;
+  final String cardTransparentUrl;
   final String thumbUrl;
   final String tinyUrl;
 
   final String originalPath;
   final String fullPath;
   final String cardPath;
+  final String cardTransparentPath;
   final String thumbPath;
   final String tinyPath;
 
@@ -180,6 +299,8 @@ class MBUploadedImageSet {
   final int fullHeight;
   final int? cardWidth;
   final int? cardHeight;
+  final int? cardTransparentWidth;
+  final int? cardTransparentHeight;
   final int thumbWidth;
   final int thumbHeight;
   final int? tinyWidth;
@@ -212,7 +333,11 @@ class MBImagePipelineService {
     }
 
     final String originalName =
-        picked.name.trim().isEmpty ? 'image.jpg' : picked.name.trim();
+        picked.name.trim().isEmpty ? 'image' : picked.name.trim();
+    final String mimeType = _detectImageMimeType(
+      fileName: originalName,
+      providedMimeType: picked.mimeType,
+    );
 
     final String baseName = _sanitizeBaseName(
       p.basenameWithoutExtension(originalName),
@@ -224,7 +349,7 @@ class MBImagePipelineService {
       height: decoded.height,
       originalFileName: originalName,
       baseName: baseName,
-      mimeType: 'image/jpeg',
+      mimeType: mimeType,
       originalByteLength: pickedBytes.lengthInBytes,
     );
   }
@@ -443,6 +568,127 @@ class MBImagePipelineService {
     );
   }
 
+  Future<MBPreparedCardTransparentImage?> pickAndPrepareCardTransparentImage({
+    int targetWidth = 600,
+    int targetHeight = 750,
+  }) async {
+    final original = await pickOriginalImage();
+    if (original == null) return null;
+    return prepareCardTransparentImageFromOriginal(
+      original: original,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+    );
+  }
+
+  Future<MBPreparedCardTransparentImage> prepareCardTransparentImageFromOriginal({
+    required MBOriginalPickedImage original,
+    int targetWidth = 600,
+    int targetHeight = 750,
+  }) async {
+    return prepareCardTransparentImageFromBytes(
+      imageBytes: original.originalBytes,
+      originalFileName: original.originalFileName,
+      baseName: original.baseName,
+      sourceMimeType: original.mimeType,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+    );
+  }
+
+  Future<MBPreparedCardTransparentImage> prepareCardTransparentImageFromBytes({
+    required Uint8List imageBytes,
+    required String originalFileName,
+    required String baseName,
+    String sourceMimeType = 'image/png',
+    int targetWidth = 600,
+    int targetHeight = 750,
+  }) async {
+    if (targetWidth <= 0 || targetHeight <= 0) {
+      throw Exception('Transparent card image target size must be greater than zero.');
+    }
+    if (imageBytes.isEmpty) {
+      throw Exception('Transparent card image bytes are empty.');
+    }
+
+    final decoded = img.decodeImage(imageBytes);
+    if (decoded == null) {
+      throw Exception('Failed to decode transparent card image.');
+    }
+
+    final prepared = _resizeContainOnTransparentCanvas(
+      decoded,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+    );
+
+    final bytes = Uint8List.fromList(img.encodePng(prepared));
+    return MBPreparedCardTransparentImage(
+      bytes: bytes,
+      width: prepared.width,
+      height: prepared.height,
+      byteLength: bytes.lengthInBytes,
+      originalFileName: originalFileName.trim().isEmpty
+          ? 'card_transparent.png'
+          : originalFileName.trim(),
+      baseName: baseName.trim().isEmpty ? 'card_transparent' : baseName.trim(),
+      mimeType: 'image/png',
+      sourceWidth: decoded.width,
+      sourceHeight: decoded.height,
+    );
+  }
+
+  Future<MBUploadedCardTransparentImage> uploadCardTransparentImage({
+    required MBPreparedCardTransparentImage prepared,
+    required String storageFolder,
+    required String entityId,
+    String? fileStem,
+    Map<String, String>? customMetadata,
+  }) async {
+    final String safeFolder = _sanitizePathSegment(storageFolder);
+    final String safeEntityId = _sanitizePathSegment(entityId);
+    final String safeStem = _sanitizeBaseName(
+      (fileStem ?? prepared.baseName).trim().isEmpty
+          ? 'image'
+          : (fileStem ?? prepared.baseName).trim(),
+    );
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final path =
+        '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_card_transparent.png';
+    final ref = _storage.ref(path);
+
+    try {
+      await ref.putData(
+        prepared.bytes,
+        SettableMetadata(
+          contentType: prepared.mimeType,
+          customMetadata: <String, String>{
+            'variant': 'cardTransparent',
+            'entityId': safeEntityId,
+            'originalFileName': prepared.originalFileName,
+            'width': prepared.width.toString(),
+            'height': prepared.height.toString(),
+            'byteLength': prepared.byteLength.toString(),
+            'sourceWidth': prepared.sourceWidth.toString(),
+            'sourceHeight': prepared.sourceHeight.toString(),
+            'fitMode': 'transparentContain',
+            ...?customMetadata,
+          },
+        ),
+      );
+      final url = await ref.getDownloadURL();
+      return MBUploadedCardTransparentImage(
+        url: url,
+        path: path,
+        width: prepared.width,
+        height: prepared.height,
+      );
+    } catch (_) {
+      await deleteStoragePaths([path]);
+      rethrow;
+    }
+  }
+
   Future<void> deleteStoragePaths(Iterable<String> paths) async {
     for (final rawPath in paths) {
       final path = rawPath.trim();
@@ -490,9 +736,11 @@ class MBImagePipelineService {
 
     String originalPath = '';
     String cardPath = '';
+    String cardTransparentPath = '';
     String tinyPath = '';
     String originalUrl = '';
     String cardUrl = '';
+    String cardTransparentUrl = '';
     String tinyUrl = '';
     String thumbUrl = '';
 
@@ -506,9 +754,16 @@ class MBImagePipelineService {
             '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_card.jpg';
         tinyPath =
             '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_tiny.jpg';
+        if (prepared.cardTransparentBytes != null) {
+          cardTransparentPath =
+              '$safeFolder/$safeEntityId/${safeStem}_${timestamp}_card_transparent.png';
+        }
 
         final Reference originalRef = _storage.ref(originalPath);
         final Reference cardRef = _storage.ref(cardPath);
+        final Reference? cardTransparentRef = cardTransparentPath.isEmpty
+            ? null
+            : _storage.ref(cardTransparentPath);
         final Reference tinyRef = _storage.ref(tinyPath);
 
         await originalRef.putData(
@@ -539,6 +794,27 @@ class MBImagePipelineService {
         );
         uploadedPaths.add(cardPath);
 
+        if (cardTransparentRef != null &&
+            prepared.cardTransparentBytes != null &&
+            prepared.cardTransparentWidth != null &&
+            prepared.cardTransparentHeight != null &&
+            prepared.cardTransparentByteLength != null) {
+          await cardTransparentRef.putData(
+            prepared.cardTransparentBytes!,
+            _metadataForVariant(
+              prepared: prepared,
+              variant: 'cardTransparent',
+              entityId: safeEntityId,
+              width: prepared.cardTransparentWidth!,
+              height: prepared.cardTransparentHeight!,
+              byteLength: prepared.cardTransparentByteLength!,
+              customMetadata: customMetadata,
+              contentType: prepared.cardTransparentMimeType,
+            ),
+          );
+          uploadedPaths.add(cardTransparentPath);
+        }
+
         await tinyRef.putData(
           prepared.tinyBytes,
           _metadataForVariant(
@@ -555,6 +831,9 @@ class MBImagePipelineService {
 
         originalUrl = await originalRef.getDownloadURL();
         cardUrl = await cardRef.getDownloadURL();
+        if (cardTransparentRef != null && cardTransparentPath.isNotEmpty) {
+          cardTransparentUrl = await cardTransparentRef.getDownloadURL();
+        }
         tinyUrl = await tinyRef.getDownloadURL();
       }
 
@@ -595,11 +874,13 @@ class MBImagePipelineService {
         originalUrl: originalUrl,
         fullUrl: fullUrl,
         cardUrl: cardUrl,
+        cardTransparentUrl: cardTransparentUrl,
         thumbUrl: thumbUrl,
         tinyUrl: tinyUrl,
         originalPath: originalPath,
         fullPath: fullPath,
         cardPath: cardPath,
+        cardTransparentPath: cardTransparentPath,
         thumbPath: thumbPath,
         tinyPath: tinyPath,
         originalWidth: uploadOriginalCardTiny ? prepared.originalWidth : null,
@@ -608,6 +889,10 @@ class MBImagePipelineService {
         fullHeight: prepared.fullHeight,
         cardWidth: uploadOriginalCardTiny ? prepared.cardWidth : null,
         cardHeight: uploadOriginalCardTiny ? prepared.cardHeight : null,
+        cardTransparentWidth:
+            uploadOriginalCardTiny ? prepared.cardTransparentWidth : null,
+        cardTransparentHeight:
+            uploadOriginalCardTiny ? prepared.cardTransparentHeight : null,
         thumbWidth: uploadThumb ? prepared.thumbWidth : 0,
         thumbHeight: uploadThumb ? prepared.thumbHeight : 0,
         tinyWidth: uploadOriginalCardTiny ? prepared.tinyWidth : null,
@@ -747,9 +1032,10 @@ class MBImagePipelineService {
     required int height,
     required int byteLength,
     required Map<String, String>? customMetadata,
+    String? contentType,
   }) {
     return SettableMetadata(
-      contentType: prepared.mimeType,
+      contentType: contentType ?? prepared.mimeType,
       customMetadata: <String, String>{
         'variant': variant,
         'entityId': entityId,
@@ -877,6 +1163,31 @@ class MBImagePipelineService {
     return canvas;
   }
 
+  img.Image _resizeContainOnTransparentCanvas(
+    img.Image source, {
+    required int targetWidth,
+    required int targetHeight,
+  }) {
+    final img.Image canvas = img.Image(
+      width: targetWidth,
+      height: targetHeight,
+      numChannels: 4,
+    );
+    img.fill(canvas, color: img.ColorRgba8(0, 0, 0, 0));
+
+    final img.Image contained = _resizeContain(
+      source,
+      maxWidth: targetWidth,
+      maxHeight: targetHeight,
+    );
+
+    final int dstX = ((targetWidth - contained.width) / 2).round();
+    final int dstY = ((targetHeight - contained.height) / 2).round();
+
+    img.compositeImage(canvas, contained, dstX: dstX, dstY: dstY);
+    return canvas;
+  }
+
   img.Image _buildCenteredSquare(img.Image source) {
     final int squareSide = math.min(source.width, source.height);
     final int offsetX = ((source.width - squareSide) / 2).round();
@@ -920,6 +1231,33 @@ class MBImagePipelineService {
       width: cropWidth,
       height: cropHeight,
     );
+  }
+
+  String _detectImageMimeType({
+    required String fileName,
+    String? providedMimeType,
+  }) {
+    final provided = providedMimeType?.trim().toLowerCase();
+    if (provided != null && provided.startsWith('image/')) {
+      return provided;
+    }
+
+    switch (p.extension(fileName).trim().toLowerCase()) {
+      case '.png':
+        return 'image/png';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      case '.heic':
+        return 'image/heic';
+      case '.heif':
+        return 'image/heif';
+      case '.jpg':
+      case '.jpeg':
+      default:
+        return 'image/jpeg';
+    }
   }
 
   String _sanitizeBaseName(String input) {

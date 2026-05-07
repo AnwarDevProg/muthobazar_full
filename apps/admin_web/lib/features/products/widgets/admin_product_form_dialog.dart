@@ -462,6 +462,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
 
   final Map<String, MBPreparedImageSet> _pendingVariationImagesById =
       <String, MBPreparedImageSet>{};
+  final Map<String, MBPreparedCardTransparentImage>
+      _pendingVariationCardTransparentImagesById =
+      <String, MBPreparedCardTransparentImage>{};
   final Map<String, String> _pendingVariationImageFileStemsById =
       <String, String>{};
 
@@ -487,6 +490,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
   /// This lives beside the old cardConfig while the new design engine is
   /// being rolled out.
   String? _cardDesignJson;
+  bool _useCardTransparentImage = false;
 
   bool get _hasCardDesignJson {
     final value = _cardDesignJson;
@@ -1004,6 +1008,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final initialCardConfig = _source.effectiveCardConfig.normalized();
     _cardLayoutType = _normalizeAdminCardVariantId(initialCardConfig.variantId);
     _cardDesignJson = _source.cardDesignJson;
+    _useCardTransparentImage = _source.useCardTransparentImage;
     _cardConfigDraft = initialCardConfig;
 
     _trackInventory = _source.trackInventory;
@@ -3193,9 +3198,9 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     return lines;
   }
 
-  String _dataImageUrl(List<int>? bytes) {
+  String _dataImageUrl(List<int>? bytes, {String mimeType = 'image/jpeg'}) {
     if (bytes == null || bytes.isEmpty) return '';
-    return 'data:image/jpeg;base64,${base64Encode(bytes)}';
+    return 'data:$mimeType;base64,${base64Encode(bytes)}';
   }
 
   String _variationPreviewOriginalUrl(MBProductVariation variation) {
@@ -3224,7 +3229,30 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       final value = _dataImageUrl(pending.cardBytes ?? pending.fullBytes);
       if (value.isNotEmpty) return value;
     }
-    return variation.effectiveCardImageUrl.trim();
+    return variation.effectiveNormalCardImageUrl.trim();
+  }
+
+  String _variationPreviewCardTransparentUrl(MBProductVariation variation) {
+    final pendingTransparent =
+        _pendingVariationCardTransparentImagesById[variation.id];
+    if (pendingTransparent != null) {
+      final value = _dataImageUrl(
+        pendingTransparent.bytes,
+        mimeType: pendingTransparent.mimeType,
+      );
+      if (value.isNotEmpty) return value;
+    }
+
+    final pending = _pendingVariationImagesById[variation.id];
+    if (pending?.cardTransparentBytes != null) {
+      final value = _dataImageUrl(
+        pending!.cardTransparentBytes,
+        mimeType: pending.cardTransparentMimeType,
+      );
+      if (value.isNotEmpty) return value;
+    }
+
+    return variation.effectiveCardTransparentImageUrl.trim();
   }
 
   String _variationPreviewThumbUrl(MBProductVariation variation) {
@@ -3251,6 +3279,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     final base = _buildProductFromForm();
     final fullUrl = _variationPreviewFullUrl(variation).trim();
     final cardUrl = _variationPreviewCardUrl(variation).trim();
+    final cardTransparentUrl = _variationPreviewCardTransparentUrl(variation).trim();
     final thumbUrl = _variationPreviewThumbUrl(variation).trim();
     final tinyUrl = _variationPreviewTinyUrl(variation).trim();
     final originalUrl = _variationPreviewOriginalUrl(variation).trim();
@@ -3261,6 +3290,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       originalUrl: originalUrl,
       fullUrl: fullUrl,
       cardUrl: cardUrl,
+      cardTransparentUrl: cardTransparentUrl,
       thumbUrl: thumbUrl,
       tinyUrl: tinyUrl,
       type: 'image',
@@ -3331,6 +3361,7 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       isFlashSale: variation.isFlashSale,
       isNewArrival: variation.isNewArrival,
       isBestSeller: variation.isBestSeller,
+      useCardTransparentImage: variation.useCardTransparentImage,
       cardLayoutType: _normalizeCardLayoutTypeForSave(
         variation.cardLayoutType ?? base.cardLayoutType,
         cardDesignJson: resolvedCardDesignJson,
@@ -3346,9 +3377,15 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
     MBProductVariation item,
   ) {
     final pending = _pendingVariationImagesById[item.id];
-    final pendingBytes = pending?.cardBytes ?? pending?.fullBytes ?? pending?.thumbBytes;
-    final url = _variationPreviewCardUrl(item).trim().isNotEmpty
-        ? _variationPreviewCardUrl(item).trim()
+    final pendingTransparent = _pendingVariationCardTransparentImagesById[item.id];
+    final pendingBytes = item.useCardTransparentImage
+        ? (pendingTransparent?.bytes ?? pending?.cardTransparentBytes ?? pending?.cardBytes ?? pending?.fullBytes ?? pending?.thumbBytes)
+        : (pending?.cardBytes ?? pending?.fullBytes ?? pending?.thumbBytes);
+    final preferredCardUrl = item.useCardTransparentImage
+        ? _variationPreviewCardTransparentUrl(item).trim()
+        : _variationPreviewCardUrl(item).trim();
+    final url = preferredCardUrl.isNotEmpty
+        ? preferredCardUrl
         : _variationPreviewFullUrl(item).trim();
 
     Widget child;
@@ -4046,7 +4083,21 @@ class _AdminProductFormDialogState extends State<AdminProductFormDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-                    _buildCardDesignStudioBridgePanel(context),
+          if (!_isVariableProduct) ...[
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Use Transparent Card Image'),
+              subtitle: const Text(
+                'When enabled, product cards use cardTransparent first and fall back to the normal card image.',
+              ),
+              value: _useCardTransparentImage,
+              onChanged: (value) {
+                setState(() => _useCardTransparentImage = value);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+          _buildCardDesignStudioBridgePanel(context),
           const SizedBox(height: 12),
 Wrap(
             spacing: 8,
@@ -4360,6 +4411,7 @@ Wrap(
     // so only the full image is uploaded and persisted.
     final originalBytes = item.pendingOriginalBytes ?? fullBytes;
     final cardBytes = item.pendingCardBytes ?? fullBytes;
+    final cardTransparentBytes = item.pendingCardTransparentBytes;
     final thumbBytes = item.pendingThumbBytes ?? fullBytes;
     final tinyBytes = item.pendingTinyBytes ?? fullBytes;
 
@@ -4367,6 +4419,10 @@ Wrap(
     final fullHeight = item.fullHeight ?? item.height ?? item.originalHeight ?? 1;
     final cardWidth = item.cardWidth ?? fullWidth;
     final cardHeight = item.cardHeight ?? fullHeight;
+    final cardTransparentWidth =
+        item.cardTransparentWidth ?? (cardTransparentBytes == null ? null : cardWidth);
+    final cardTransparentHeight =
+        item.cardTransparentHeight ?? (cardTransparentBytes == null ? null : cardHeight);
     final thumbWidth = item.thumbWidth ?? cardWidth;
     final thumbHeight = item.thumbHeight ?? cardHeight;
     final tinyWidth = item.tinyWidth ?? thumbWidth;
@@ -4380,6 +4436,7 @@ Wrap(
       cardBytes: cardBytes,
       thumbBytes: thumbBytes,
       tinyBytes: tinyBytes,
+      cardTransparentBytes: cardTransparentBytes,
       originalWidth: originalWidth,
       originalHeight: originalHeight,
       fullWidth: fullWidth,
@@ -4387,6 +4444,8 @@ Wrap(
       cardWidth: cardWidth,
       cardHeight: cardHeight,
       thumbWidth: thumbWidth,
+      cardTransparentWidth: cardTransparentWidth,
+      cardTransparentHeight: cardTransparentHeight,
       thumbHeight: thumbHeight,
       tinyWidth: tinyWidth,
       tinyHeight: tinyHeight,
@@ -4404,6 +4463,8 @@ Wrap(
       cardByteLength: cardBytes.lengthInBytes,
       thumbByteLength: thumbBytes.lengthInBytes,
       tinyByteLength: tinyBytes.lengthInBytes,
+      cardTransparentByteLength: cardTransparentBytes?.lengthInBytes,
+      cardTransparentMimeType: 'image/png',
       sourceWidth: originalWidth,
       sourceHeight: originalHeight,
       requestSquareCrop: false,
@@ -4419,7 +4480,11 @@ Wrap(
   }
 
   Future<void> _uploadPendingProductMediaItems() async {
-    if (_mediaItems.every((item) => item.pendingFullBytes == null)) return;
+    if (_mediaItems.every((item) =>
+        item.pendingFullBytes == null &&
+        item.pendingCardTransparentBytes == null)) {
+      return;
+    }
 
     final uploadedPaths = <String>[];
     final originalMediaItems = [..._mediaItems];
@@ -4427,16 +4492,63 @@ Wrap(
     try {
       for (var i = 0; i < _mediaItems.length; i++) {
         final item = _mediaItems[i];
-        if (item.pendingFullBytes == null) continue;
+        final hasPendingFullImage = item.pendingFullBytes != null;
+        final hasPendingCardTransparentImage =
+            item.pendingCardTransparentBytes != null;
+        if (!hasPendingFullImage && !hasPendingCardTransparentImage) continue;
 
-        final prepared = _preparedImageSetFromPendingMedia(item);
         final mediaId = item.id.trim().isEmpty ? makeEditorId('media') : item.id.trim();
-
         final uploadFullImageSet = !_isVariableProduct &&
             (item.isPrimary || item.role.trim().toLowerCase() == 'thumbnail');
 
+        if (!hasPendingFullImage && hasPendingCardTransparentImage) {
+          if (!uploadFullImageSet) continue;
+          final transparent = MBPreparedCardTransparentImage(
+            bytes: item.pendingCardTransparentBytes!,
+            width: item.cardTransparentWidth ?? item.cardWidth ?? 600,
+            height: item.cardTransparentHeight ?? item.cardHeight ?? 750,
+            byteLength: item.pendingCardTransparentBytes!.lengthInBytes,
+            originalFileName: item.pendingOriginalFileName.trim().isEmpty
+                ? '${item.id}_card_transparent.png'
+                : item.pendingOriginalFileName.trim(),
+            baseName: item.pendingBaseName.trim().isEmpty
+                ? item.id.trim()
+                : item.pendingBaseName.trim(),
+            mimeType: 'image/png',
+            sourceWidth: item.cardTransparentWidth ?? item.cardWidth ?? 600,
+            sourceHeight: item.cardTransparentHeight ?? item.cardHeight ?? 750,
+          );
+          final uploadedTransparent =
+              await MBImagePipelineService.instance.uploadCardTransparentImage(
+            prepared: transparent,
+            storageFolder: 'products/media',
+            entityId: mediaId,
+            fileStem: _mediaFileStemFor(item),
+            customMetadata: <String, String>{
+              'mediaId': mediaId,
+              'role': 'thumbnail',
+              'type': item.type,
+              'fitMode': 'transparentContain',
+              'pipeline': 'muthobazar_card_transparent_manual_v1',
+            },
+          );
+          uploadedPaths.add(uploadedTransparent.path);
+          _mediaItems[i] = item.copyWith(
+            id: mediaId,
+            cardTransparentUrl: uploadedTransparent.url,
+            cardTransparentStoragePath: uploadedTransparent.path,
+            cardTransparentWidth: uploadedTransparent.width,
+            cardTransparentHeight: uploadedTransparent.height,
+            cardTransparentSizeBytes: transparent.byteLength,
+            clearPendingCardTransparentBytes: true,
+            updatedAt: DateTime.now(),
+          );
+          continue;
+        }
+
+        final prepared = _preparedImageSetFromPendingMedia(item);
         final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
-          prepared: prepared,
+          prepared: prepared!,
           storageFolder: 'products/media',
           entityId: mediaId,
           fileStem: _mediaFileStemFor(item),
@@ -4457,9 +4569,13 @@ Wrap(
           uploaded.originalPath,
           uploaded.fullPath,
           uploaded.cardPath,
+          uploaded.cardTransparentPath,
           uploaded.thumbPath,
           uploaded.tinyPath,
         ].where((path) => path.trim().isNotEmpty));
+
+        final hasUploadedCardTransparent =
+            uploaded.cardTransparentUrl.trim().isNotEmpty;
 
         _mediaItems[i] = item.copyWith(
           id: mediaId,
@@ -4471,6 +4587,12 @@ Wrap(
           fullStoragePath: uploaded.fullPath,
           cardUrl: uploadFullImageSet ? uploaded.cardUrl : '',
           cardStoragePath: uploadFullImageSet ? uploaded.cardPath : '',
+          cardTransparentUrl: hasUploadedCardTransparent
+              ? uploaded.cardTransparentUrl
+              : item.cardTransparentUrl,
+          cardTransparentStoragePath: hasUploadedCardTransparent
+              ? uploaded.cardTransparentPath
+              : item.cardTransparentStoragePath,
           thumbUrl: uploadFullImageSet ? uploaded.thumbUrl : '',
           thumbStoragePath: uploadFullImageSet ? uploaded.thumbPath : '',
           tinyUrl: uploadFullImageSet ? uploaded.tinyUrl : '',
@@ -4493,6 +4615,15 @@ Wrap(
           clearCardHeight: !uploadFullImageSet,
           cardSizeBytes: uploadFullImageSet ? prepared.cardByteLength : null,
           clearCardSizeBytes: !uploadFullImageSet,
+          cardTransparentWidth: hasUploadedCardTransparent
+              ? uploaded.cardTransparentWidth
+              : item.cardTransparentWidth,
+          cardTransparentHeight: hasUploadedCardTransparent
+              ? uploaded.cardTransparentHeight
+              : item.cardTransparentHeight,
+          cardTransparentSizeBytes: hasUploadedCardTransparent
+              ? prepared.cardTransparentByteLength
+              : item.cardTransparentSizeBytes,
           thumbWidth: uploadFullImageSet ? uploaded.thumbWidth : null,
           clearThumbWidth: !uploadFullImageSet,
           thumbHeight: uploadFullImageSet ? uploaded.thumbHeight : null,
@@ -4536,7 +4667,10 @@ Wrap(
   }
 
   Future<void> _uploadPendingVariationImages() async {
-    if (_pendingVariationImagesById.isEmpty) return;
+    if (_pendingVariationImagesById.isEmpty &&
+        _pendingVariationCardTransparentImagesById.isEmpty) {
+      return;
+    }
 
     final uploadedPaths = <String>[];
     final originalVariations = [..._variations];
@@ -4545,17 +4679,51 @@ Wrap(
       for (var i = 0; i < _variations.length; i++) {
         final variation = _variations[i];
         final prepared = _pendingVariationImagesById[variation.id];
-        if (prepared == null) continue;
+        final pendingTransparent =
+            _pendingVariationCardTransparentImagesById[variation.id];
+        if (prepared == null && pendingTransparent == null) continue;
 
         final variationId = variation.id.trim().isEmpty
             ? makeEditorId('variation')
             : variation.id.trim();
 
+        if (prepared == null && pendingTransparent != null) {
+          final uploadedTransparent =
+              await MBImagePipelineService.instance.uploadCardTransparentImage(
+            prepared: pendingTransparent,
+            storageFolder: 'products/variations',
+            entityId: variationId,
+            fileStem: pendingTransparent.baseName.trim().isNotEmpty
+                ? pendingTransparent.baseName.trim()
+                : (variation.titleEn.trim().isNotEmpty
+                    ? variation.titleEn.trim()
+                    : variation.id.trim()),
+            customMetadata: <String, String>{
+              'variationId': variationId,
+              'mediaOwner': 'variation',
+              'type': 'image',
+              'fitMode': 'transparentContain',
+              'pipeline': 'muthobazar_variation_card_transparent_manual_v1',
+            },
+          );
+          uploadedPaths.add(uploadedTransparent.path);
+          _variations[i] = _normalizeVariationForSave(variation.copyWith(
+            id: variationId,
+            cardTransparentImageUrl: uploadedTransparent.url,
+            cardTransparentImageStoragePath: uploadedTransparent.path,
+            cardTransparentImageWidth: uploadedTransparent.width,
+            cardTransparentImageHeight: uploadedTransparent.height,
+            cardTransparentImageSizeBytes: pendingTransparent.byteLength,
+            updatedAt: DateTime.now(),
+          ));
+          continue;
+        }
+
         final uploaded = await MBImagePipelineService.instance.uploadPreparedImageSet(
-          prepared: prepared,
+          prepared: prepared!,
           storageFolder: 'products/variations',
           entityId: variationId,
-          fileStem: _variationMediaFileStemFor(variation, prepared),
+          fileStem: _variationMediaFileStemFor(variation, prepared!),
           uploadOriginalCardTiny: true,
           uploadThumb: true,
           customMetadata: <String, String>{
@@ -4571,9 +4739,13 @@ Wrap(
           uploaded.originalPath,
           uploaded.fullPath,
           uploaded.cardPath,
+          uploaded.cardTransparentPath,
           uploaded.thumbPath,
           uploaded.tinyPath,
         ].where((path) => path.trim().isNotEmpty));
+
+        final hasUploadedCardTransparent =
+            uploaded.cardTransparentUrl.trim().isNotEmpty;
 
         _variations[i] = _normalizeVariationForSave(variation.copyWith(
           id: variationId,
@@ -4587,31 +4759,47 @@ Wrap(
           originalImageStoragePath: uploaded.originalPath,
           cardImageUrl: uploaded.cardUrl,
           cardImageStoragePath: uploaded.cardPath,
+          cardTransparentImageUrl: hasUploadedCardTransparent
+              ? uploaded.cardTransparentUrl
+              : variation.cardTransparentImageUrl,
+          cardTransparentImageStoragePath: hasUploadedCardTransparent
+              ? uploaded.cardTransparentPath
+              : variation.cardTransparentImageStoragePath,
           tinyImageUrl: uploaded.tinyUrl,
           tinyImageStoragePath: uploaded.tinyPath,
           imageWidth: uploaded.fullWidth,
           imageHeight: uploaded.fullHeight,
-          imageSizeBytes: prepared.fullByteLength,
+          imageSizeBytes: prepared!.fullByteLength,
           fullImageWidth: uploaded.fullWidth,
           fullImageHeight: uploaded.fullHeight,
-          fullImageSizeBytes: prepared.fullByteLength,
+          fullImageSizeBytes: prepared!.fullByteLength,
           thumbImageWidth: uploaded.thumbWidth,
           thumbImageHeight: uploaded.thumbHeight,
-          thumbImageSizeBytes: prepared.thumbByteLength,
+          thumbImageSizeBytes: prepared!.thumbByteLength,
           originalImageWidth: uploaded.originalWidth,
           originalImageHeight: uploaded.originalHeight,
-          originalImageSizeBytes: prepared.originalByteLength,
+          originalImageSizeBytes: prepared!.originalByteLength,
           cardImageWidth: uploaded.cardWidth,
           cardImageHeight: uploaded.cardHeight,
-          cardImageSizeBytes: prepared.cardByteLength,
+          cardImageSizeBytes: prepared!.cardByteLength,
+          cardTransparentImageWidth: hasUploadedCardTransparent
+              ? uploaded.cardTransparentWidth
+              : variation.cardTransparentImageWidth,
+          cardTransparentImageHeight: hasUploadedCardTransparent
+              ? uploaded.cardTransparentHeight
+              : variation.cardTransparentImageHeight,
+          cardTransparentImageSizeBytes: hasUploadedCardTransparent
+              ? prepared!.cardTransparentByteLength
+              : variation.cardTransparentImageSizeBytes,
           tinyImageWidth: uploaded.tinyWidth,
           tinyImageHeight: uploaded.tinyHeight,
-          tinyImageSizeBytes: prepared.tinyByteLength,
+          tinyImageSizeBytes: prepared!.tinyByteLength,
           updatedAt: DateTime.now(),
         ));
       }
 
       _pendingVariationImagesById.clear();
+      _pendingVariationCardTransparentImagesById.clear();
       _pendingVariationImageFileStemsById.clear();
       _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     } catch (_) {
@@ -4868,6 +5056,8 @@ Wrap(
                 originalStoragePath: '',
                 cardUrl: '',
                 cardStoragePath: '',
+                cardTransparentUrl: '',
+                cardTransparentStoragePath: '',
                 thumbUrl: '',
                 thumbStoragePath: '',
                 tinyUrl: '',
@@ -5027,6 +5217,7 @@ Wrap(
       cardConfig: selectedCardConfig,
       cardDesignJson: rootCardDesignJson,
       clearCardDesignJson: rootCardDesignJson == null || rootCardDesignJson.isEmpty,
+      useCardTransparentImage: !_isVariableProduct && _useCardTransparentImage,
       isFeatured: !_isVariableProduct && _isFeatured,
       isFlashSale: !_isVariableProduct && _isFlashSale,
       isEnabled: _isEnabled,
@@ -5455,6 +5646,11 @@ Wrap(
         _pendingVariationImagesById[variation.id] = result.pendingImage!;
         _pendingVariationImageFileStemsById[variation.id] = result.imageFileStem;
       }
+      if (result.pendingCardTransparentImage != null) {
+        _pendingVariationCardTransparentImagesById[variation.id] =
+            result.pendingCardTransparentImage!;
+        _pendingVariationImageFileStemsById[variation.id] = result.imageFileStem;
+      }
       _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     });
   }
@@ -5477,6 +5673,8 @@ Wrap(
         variationAttributes: variationAttributes,
         existingVariations: _variations,
         initialPendingImage: _pendingVariationImagesById[item.id],
+        initialPendingCardTransparentImage:
+            _pendingVariationCardTransparentImagesById[item.id],
         currentDefaultVariationId: _currentDefaultVariationId(
           excludingVariationId: item.id,
         ),
@@ -5500,11 +5698,17 @@ Wrap(
       if (index != -1) {
         if (item.id != variation.id) {
           _pendingVariationImagesById.remove(item.id);
+          _pendingVariationCardTransparentImagesById.remove(item.id);
           _pendingVariationImageFileStemsById.remove(item.id);
         }
         _variations[index] = variation;
         if (result.pendingImage != null) {
           _pendingVariationImagesById[variation.id] = result.pendingImage!;
+          _pendingVariationImageFileStemsById[variation.id] = result.imageFileStem;
+        }
+        if (result.pendingCardTransparentImage != null) {
+          _pendingVariationCardTransparentImagesById[variation.id] =
+              result.pendingCardTransparentImage!;
           _pendingVariationImageFileStemsById[variation.id] = result.imageFileStem;
         }
         _variations.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));

@@ -1,5 +1,8 @@
 
+import 'dart:async';
 import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +10,103 @@ import 'package:shared_models/shared_models.dart';
 import 'package:shared_core/shared_core.dart';
 
 // File: admin_product_form_support.dart
+
+const String kMuthoBazarLocalBackgroundRemoverUrl = String.fromEnvironment(
+  'MUTHOBAZAR_LOCAL_BG_REMOVER_URL',
+  defaultValue: 'http://127.0.0.1:8787/remove-background',
+);
+
+const String kMuthoBazarLocalBackgroundRemoverToken = String.fromEnvironment(
+  'MUTHOBAZAR_LOCAL_BG_REMOVER_TOKEN',
+  defaultValue: '',
+);
+
+Future<MBPreparedCardTransparentImage>
+    generateCardTransparentImageWithLocalBackgroundRemover({
+  required Uint8List sourceBytes,
+  required String originalFileName,
+  required String baseName,
+  String mimeType = 'image/jpeg',
+  int targetWidth = 600,
+  int targetHeight = 750,
+}) async {
+  if (sourceBytes.isEmpty) {
+    throw Exception('Source image bytes are empty.');
+  }
+
+  final headers = <String, String>{
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  if (kMuthoBazarLocalBackgroundRemoverToken.trim().isNotEmpty) {
+    headers['Authorization'] =
+        'Bearer ${kMuthoBazarLocalBackgroundRemoverToken.trim()}';
+  }
+
+  final payload = jsonEncode(<String, Object?>{
+    'imageBase64': base64Encode(sourceBytes),
+    'mimeType': mimeType.trim().isEmpty ? 'image/jpeg' : mimeType.trim(),
+    'originalFileName': originalFileName.trim().isEmpty
+        ? 'product-image'
+        : originalFileName.trim(),
+    'outputFormat': 'png',
+    'owner': 'muthobazar_admin_web_local',
+  });
+
+  html.HttpRequest response;
+  try {
+    response = await html.HttpRequest.request(
+      kMuthoBazarLocalBackgroundRemoverUrl,
+      method: 'POST',
+      requestHeaders: headers,
+      sendData: payload,
+    ).timeout(const Duration(seconds: 180));
+  } on TimeoutException catch (error) {
+    throw Exception(
+      'Local background remover timed out. Make sure the local service is running on 127.0.0.1:8787. $error',
+    );
+  } catch (error) {
+    throw Exception(
+      'Could not connect to local background remover. Start tools/background_remover_service/run_windows.ps1 first. $error',
+    );
+  }
+
+  final status = response.status ?? 0;
+  final responseText = response.responseText ?? '';
+  if (status < 200 || status >= 300) {
+    throw Exception(
+      'Local background remover failed with HTTP $status. $responseText',
+    );
+  }
+
+  final decoded = jsonDecode(responseText);
+  if (decoded is! Map) {
+    throw Exception('Local background remover returned an invalid response.');
+  }
+
+  final resultBase64 = (decoded['imageBase64'] ?? '').toString().trim();
+  if (resultBase64.isEmpty) {
+    throw Exception('Local background remover did not return imageBase64.');
+  }
+
+  final normalizedBase64 = resultBase64.contains(',')
+      ? resultBase64.split(',').last
+      : resultBase64;
+  final transparentBytes = Uint8List.fromList(base64Decode(normalizedBase64));
+
+  return MBImagePipelineService.instance.prepareCardTransparentImageFromBytes(
+    imageBytes: transparentBytes,
+    originalFileName: originalFileName.trim().isEmpty
+        ? 'card_transparent.png'
+        : originalFileName.trim(),
+    baseName: baseName.trim().isEmpty
+        ? 'card_transparent'
+        : '${baseName.trim()}_transparent',
+    sourceMimeType: (decoded['mimeType'] ?? 'image/png').toString(),
+    targetWidth: targetWidth,
+    targetHeight: targetHeight,
+  );
+}
 
 String? requiredValidator(String? value) {
   if ((value ?? '').trim().isEmpty) {
@@ -33,6 +133,91 @@ String asTextDouble(double value) {
 String asTextNullableDouble(double? value) {
   if (value == null) return '';
   return asTextDouble(value);
+}
+
+
+class MBTransparentPreviewSurface extends StatelessWidget {
+  const MBTransparentPreviewSurface({
+    super.key,
+    required this.child,
+    this.height = 220,
+    this.padding = const EdgeInsets.all(10),
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+    this.borderColor,
+  });
+
+  final Widget child;
+  final double height;
+  final EdgeInsetsGeometry padding;
+  final BorderRadiusGeometry borderRadius;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: borderColor ?? theme.dividerColor.withValues(alpha: 0.8),
+        ),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: CustomPaint(
+        painter: _MBTransparentCheckerboardPainter(
+          lightColor: Colors.white,
+          darkColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+        ),
+        child: Container(
+          alignment: Alignment.center,
+          padding: padding,
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _MBTransparentCheckerboardPainter extends CustomPainter {
+  const _MBTransparentCheckerboardPainter({
+    required this.lightColor,
+    required this.darkColor,
+    this.squareSize = 14,
+  });
+
+  final Color lightColor;
+  final Color darkColor;
+  final double squareSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final lightPaint = Paint()..color = lightColor;
+    final darkPaint = Paint()..color = darkColor;
+
+    canvas.drawRect(Offset.zero & size, lightPaint);
+
+    for (double y = 0; y < size.height; y += squareSize) {
+      for (double x = 0; x < size.width; x += squareSize) {
+        final xi = (x / squareSize).floor();
+        final yi = (y / squareSize).floor();
+        if ((xi + yi).isEven) {
+          canvas.drawRect(
+            Rect.fromLTWH(x, y, squareSize, squareSize),
+            darkPaint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MBTransparentCheckerboardPainter oldDelegate) {
+    return lightColor != oldDelegate.lightColor ||
+        darkColor != oldDelegate.darkColor ||
+        squareSize != oldDelegate.squareSize;
+  }
 }
 
 double parseDouble(String value, {double fallback = 0.0}) {
@@ -743,6 +928,93 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     }
   }
 
+
+  Future<void> _pickCardTransparentImage() async {
+    setState(() {
+      _isProcessing = true;
+      _errorText = null;
+    });
+
+    try {
+      final prepared = await MBImagePipelineService.instance
+          .pickAndPrepareCardTransparentImage(
+        targetWidth: _productCardWidth,
+        targetHeight: _productCardHeight,
+      );
+
+      if (prepared == null) {
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      setState(() {
+        _cardTransparentPreparedImage = prepared;
+        _type = 'image';
+        _role = _effectiveRole;
+        _isProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isProcessing = false;
+        _errorText = error.toString();
+      });
+    }
+  }
+
+  Future<void> _autoRemoveBackgroundForCardTransparentImage() async {
+    final sourceBytes = _pickedOriginalImage?.originalBytes ??
+        _preparedImage?.originalBytes ??
+        _preparedImage?.fullBytes;
+
+    if (sourceBytes == null || sourceBytes.isEmpty) {
+      setState(() {
+        _errorText =
+            'Pick or replace the normal product image first, then click Auto Remove Background.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+      _errorText = null;
+    });
+
+    try {
+      final prepared = await generateCardTransparentImageWithLocalBackgroundRemover(
+        sourceBytes: sourceBytes,
+        originalFileName: _pickedOriginalImage?.originalFileName ??
+            _preparedImage?.originalFileName ??
+            widget.initialValue.pendingOriginalFileName,
+        baseName: _pickedOriginalImage?.baseName ??
+            _preparedImage?.baseName ??
+            widget.initialValue.pendingBaseName,
+        mimeType: _pickedOriginalImage?.mimeType ??
+            _preparedImage?.mimeType ??
+            widget.initialValue.pendingMimeType,
+        targetWidth: _productCardWidth,
+        targetHeight: _productCardHeight,
+      );
+
+      setState(() {
+        _cardTransparentPreparedImage = prepared;
+        _type = 'image';
+        _role = _effectiveRole;
+        _isProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isProcessing = false;
+        _errorText = error.toString();
+      });
+    }
+  }
+
+  void _clearCardTransparentImage() {
+    setState(() {
+      _cardTransparentPreparedImage = null;
+    });
+  }
+
   String get _currentFullPreviewUrl {
     final uploadedFull = (_uploadedImage?.fullUrl ?? '').trim();
     if (uploadedFull.isNotEmpty) return uploadedFull;
@@ -774,6 +1046,17 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     if (current.isNotEmpty) return current;
 
     return _currentFullPreviewUrl;
+  }
+
+
+  String get _currentCardTransparentPreviewUrl {
+    final uploadedTransparent = (_uploadedImage?.cardTransparentUrl ?? '').trim();
+    if (uploadedTransparent.isNotEmpty) return uploadedTransparent;
+
+    final current = widget.initialValue.effectiveCardTransparentUrl.trim();
+    if (current.isNotEmpty) return current;
+
+    return '';
   }
 
   String get _currentThumbPreviewUrl {
@@ -858,61 +1141,98 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     String extra = '',
     double height = 220,
     BoxFit fit = BoxFit.contain,
+    bool transparentPreview = false,
   }) {
+    final hasRemoteImage = url.trim().isNotEmpty;
+    final hasMemoryImage = memoryBytes != null && memoryBytes.isNotEmpty;
+    final hasImage = hasMemoryImage || hasRemoteImage;
     final Widget child;
 
-    if (memoryBytes != null) {
+    if (hasMemoryImage) {
       child = Image.memory(
         memoryBytes,
         fit: fit,
         width: double.infinity,
         height: height,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.broken_image_outlined,
+          size: 42,
+        ),
       );
-    } else if (url.trim().isNotEmpty) {
+    } else if (hasRemoteImage) {
       child = Image.network(
         url.trim(),
         fit: fit,
         width: double.infinity,
         height: height,
-        errorBuilder: (_, __, ___) => Container(
-          height: height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).dividerColor),
-          ),
-          child: const Icon(Icons.broken_image_outlined, size: 42),
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.broken_image_outlined,
+          size: 42,
         ),
       );
     } else {
-      child = Container(
-        height: height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        child: const Icon(Icons.image_outlined, size: 42),
+      child = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            transparentPreview
+                ? Icons.layers_clear_outlined
+                : Icons.image_outlined,
+            size: 42,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
+          ),
+          if (transparentPreview) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No transparent image selected',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.62),
+                  ),
+            ),
+          ],
+        ],
       );
     }
+
+    final previewFrame = transparentPreview
+        ? MBTransparentPreviewSurface(
+            height: height,
+            padding: hasImage ? EdgeInsets.zero : const EdgeInsets.all(10),
+            borderColor: Theme.of(context).dividerColor,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: child,
+            ),
+          )
+        : Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: child,
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).dividerColor),
-          ),
-          clipBehavior: Clip.hardEdge,
-          child: child,
-        ),
+        previewFrame,
         _buildImageInfoCard(
           context,
-          status: memoryBytes != null ? status : (url.trim().isEmpty ? 'No image selected' : 'Existing remote image'),
+          status: hasMemoryImage
+              ? status
+              : (!hasRemoteImage ? 'No image selected' : 'Existing remote image'),
           width: width,
           height: heightPx,
           byteLength: byteLength,
@@ -997,9 +1317,28 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                 status: _cardCropPreparedImage == null
                     ? 'Local card contain-fit - pending upload'
                     : 'Local manual card crop - pending upload',
-                extra: 'Used in product card/grid',
+                extra: 'Normal product-card image',
                 height: 220,
                 fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPreviewTile(
+                context,
+                label: 'Transparent Card Preview',
+                url: _currentCardTransparentPreviewUrl,
+                memoryBytes: _cardTransparentPreparedImage?.bytes,
+                width: _cardTransparentPreparedImage?.width ?? widget.initialValue.effectiveCardTransparentWidth,
+                heightPx: _cardTransparentPreparedImage?.height ?? widget.initialValue.effectiveCardTransparentHeight,
+                byteLength: _cardTransparentPreparedImage?.byteLength ?? widget.initialValue.effectiveCardTransparentSizeBytes,
+                status: _cardTransparentPreparedImage == null
+                    ? 'Optional transparent product-card image'
+                    : 'Local transparent card image - pending upload',
+                extra: 'PNG/WebP alpha; used only when transparent card mode is enabled',
+                height: 220,
+                fit: BoxFit.contain,
+                transparentPreview: true,
               ),
             ),
             const SizedBox(width: 12),
@@ -1046,6 +1385,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
   MBUploadedImageSet? _uploadedImage;
   MBPreparedImageSet? _cardCropPreparedImage;
   MBUploadedImageSet? _cardCropUploadedImage;
+  MBPreparedCardTransparentImage? _cardTransparentPreparedImage;
 
   static const int _productOriginalMaxLongSide = 2048;
   static const int _productOriginalJpegQuality = 90;
@@ -1134,6 +1474,7 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
     final prepared = _preparedImage;
     final cardPrepared = _cardCropPreparedImage;
     final hasPendingImage = prepared != null;
+    final hasPendingCardTransparent = _cardTransparentPreparedImage != null;
     final fitMode = cardPrepared == null ? 'contain' : 'manualCrop';
 
     if (widget.galleryFullOnly) {
@@ -1154,6 +1495,8 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
         originalStoragePath: '',
         cardUrl: '',
         cardStoragePath: '',
+        cardTransparentUrl: '',
+        cardTransparentStoragePath: '',
         thumbUrl: '',
         thumbStoragePath: '',
         tinyUrl: '',
@@ -1185,6 +1528,12 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
         clearCardHeight: true,
         cardSizeBytes: null,
         clearCardSizeBytes: true,
+        cardTransparentWidth: null,
+        clearCardTransparentWidth: true,
+        cardTransparentHeight: null,
+        clearCardTransparentHeight: true,
+        cardTransparentSizeBytes: null,
+        clearCardTransparentSizeBytes: true,
         thumbWidth: null,
         clearThumbWidth: true,
         thumbHeight: null,
@@ -1207,12 +1556,13 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
         pendingOriginalBytes: null,
         pendingFullBytes: prepared?.fullBytes,
         pendingCardBytes: null,
+        pendingCardTransparentBytes: null,
         pendingThumbBytes: null,
         pendingTinyBytes: null,
         pendingOriginalFileName: prepared?.originalFileName,
         pendingBaseName: prepared?.baseName,
         pendingMimeType: prepared?.mimeType,
-        clearPendingUpload: !hasPendingImage,
+        clearPendingUpload: !hasPendingImage && !hasPendingCardTransparent,
         createdAt: existing.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -1234,6 +1584,10 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
       cardStoragePath: hasPendingImage
           ? existing.cardStoragePath
           : existing.cardStoragePath,
+      cardTransparentUrl: hasPendingCardTransparent
+          ? existing.cardTransparentUrl
+          : _currentCardTransparentPreviewUrl,
+      cardTransparentStoragePath: existing.cardTransparentStoragePath,
       thumbUrl: hasPendingImage ? existing.thumbUrl : _currentThumbPreviewUrl,
       thumbStoragePath: hasPendingImage
           ? existing.thumbStoragePath
@@ -1265,6 +1619,12 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
       cardHeight: cardPrepared?.cardHeight ?? prepared?.cardHeight ?? existing.cardHeight,
       cardSizeBytes:
           cardPrepared?.cardByteLength ?? prepared?.cardByteLength ?? existing.cardSizeBytes,
+      cardTransparentWidth:
+          _cardTransparentPreparedImage?.width ?? existing.cardTransparentWidth,
+      cardTransparentHeight:
+          _cardTransparentPreparedImage?.height ?? existing.cardTransparentHeight,
+      cardTransparentSizeBytes:
+          _cardTransparentPreparedImage?.byteLength ?? existing.cardTransparentSizeBytes,
       thumbWidth: prepared?.thumbWidth ?? existing.thumbWidth,
       thumbHeight: prepared?.thumbHeight ?? existing.thumbHeight,
       thumbSizeBytes: prepared?.thumbByteLength ?? existing.thumbSizeBytes,
@@ -1287,12 +1647,13 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
       pendingOriginalBytes: prepared?.originalBytes,
       pendingFullBytes: prepared?.fullBytes,
       pendingCardBytes: cardPrepared?.cardBytes ?? prepared?.cardBytes,
+      pendingCardTransparentBytes: _cardTransparentPreparedImage?.bytes,
       pendingThumbBytes: prepared?.thumbBytes,
       pendingTinyBytes: prepared?.tinyBytes,
       pendingOriginalFileName: prepared?.originalFileName,
       pendingBaseName: prepared?.baseName,
       pendingMimeType: prepared?.mimeType,
-      clearPendingUpload: !hasPendingImage,
+      clearPendingUpload: !hasPendingImage && !hasPendingCardTransparent,
       createdAt: existing.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -1391,10 +1752,47 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: (_isProcessing || !_hasCurrentSessionOriginal)
+                              ? null
+                              : _autoRemoveBackgroundForCardTransparentImage,
+                          icon: const Icon(Icons.auto_fix_high_outlined),
+                          label: const Text('Auto Remove Background'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isProcessing
+                              ? null
+                              : _pickCardTransparentImage,
+                          icon: const Icon(Icons.layers_clear_outlined),
+                          label: const Text('Select Transparent PNG/WebP'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: (_isProcessing ||
+                                _cardTransparentPreparedImage == null)
+                            ? null
+                            : _clearCardTransparentImage,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Clear'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     _hasCurrentSessionOriginal
-                        ? 'Optional card crop is available for this local image. Full/original image will stay unchanged.'
-                        : 'Pick or replace an image to enable optional card crop.',
+                        ? 'Optional card crop is available for this local image. Full/original image will stay unchanged. Transparent card image must already have a removed background and is uploaded only on Save Product.'
+                        : 'Pick or replace an image to enable optional card crop. You can still select a separate PNG/WebP cutout image for transparent card layouts.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -1480,6 +1878,12 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                     'Tiny Size',
                     _bytesText(_preparedImage!.tinyByteLength),
                   ),
+                  _buildInfoRow(
+                    'Transparent Card',
+                    _cardTransparentPreparedImage == null
+                        ? '-'
+                        : '${_cardTransparentPreparedImage!.width} x ${_cardTransparentPreparedImage!.height} | ${_bytesText(_cardTransparentPreparedImage!.byteLength)}',
+                  ),
                 ] else if (!widget.galleryFullOnly) ...[
                   _buildInfoRow('Original Pixels', '-'),
                   _buildInfoRow('Original Ratio', '-'),
@@ -1493,6 +1897,12 @@ class _MediaItemDialogState extends State<MediaItemDialog> {
                   _buildInfoRow('Thumb Size', '-'),
                   _buildInfoRow('Tiny Pixels', '-'),
                   _buildInfoRow('Tiny Size', '-'),
+                  _buildInfoRow(
+                    'Transparent Card',
+                    _cardTransparentPreparedImage == null
+                        ? '-'
+                        : '${_cardTransparentPreparedImage!.width} x ${_cardTransparentPreparedImage!.height} | ${_bytesText(_cardTransparentPreparedImage!.byteLength)}',
+                  ),
                 ],
 
                 const SizedBox(height: 16),

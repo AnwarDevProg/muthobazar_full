@@ -25,6 +25,7 @@ class ProductVariationDialog extends StatefulWidget {
     this.variationAttributes = const <MBProductAttribute>[],
     this.existingVariations = const <MBProductVariation>[],
     this.initialPendingImage,
+    this.initialPendingCardTransparentImage,
     this.currentDefaultVariationId,
   });
 
@@ -32,6 +33,7 @@ class ProductVariationDialog extends StatefulWidget {
   final List<MBProductAttribute> variationAttributes;
   final List<MBProductVariation> existingVariations;
   final MBPreparedImageSet? initialPendingImage;
+  final MBPreparedCardTransparentImage? initialPendingCardTransparentImage;
   final String? currentDefaultVariationId;
 
   @override
@@ -54,14 +56,17 @@ class ProductVariationDialogResult {
   const ProductVariationDialogResult({
     required this.variation,
     this.pendingImage,
+    this.pendingCardTransparentImage,
     this.imageFileStem = '',
   });
 
   final MBProductVariation variation;
   final MBPreparedImageSet? pendingImage;
+  final MBPreparedCardTransparentImage? pendingCardTransparentImage;
   final String imageFileStem;
 
   bool get hasPendingImage => pendingImage != null;
+  bool get hasPendingCardTransparentImage => pendingCardTransparentImage != null;
 }
 
 class _ProductVariationDialogState extends State<ProductVariationDialog> {
@@ -87,6 +92,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
   bool _isImageProcessing = false;
   String? _imageErrorText;
   MBPreparedImageSet? _preparedImage;
+  MBPreparedCardTransparentImage? _pendingCardTransparentImage;
 
   late final TextEditingController _idController;
   late final TextEditingController _skuController;
@@ -164,6 +170,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
   late bool _isFlashSale;
   late bool _isNewArrival;
   late bool _isBestSeller;
+  late bool _useCardTransparentImage;
 
   DateTime? _saleStartsAt;
   DateTime? _saleEndsAt;
@@ -217,6 +224,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     super.initState();
     final value = widget.initialValue;
     _preparedImage = widget.initialPendingImage;
+    _pendingCardTransparentImage = widget.initialPendingCardTransparentImage;
 
     _idController = TextEditingController(
       text: value.id.trim().isEmpty ? makeEditorId('variation') : value.id,
@@ -298,6 +306,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     _isFlashSale = value.isFlashSale;
     _isNewArrival = value.isNewArrival;
     _isBestSeller = value.isBestSeller;
+    _useCardTransparentImage = value.useCardTransparentImage;
     _isTaxIncluded = value.isTaxIncluded;
     _isDeleted = value.isDeleted;
     _deletedAt = value.deletedAt;
@@ -547,9 +556,9 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     return '${(value / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
-  String _dataImageUrl(List<int>? bytes) {
+  String _dataImageUrl(List<int>? bytes, {String mimeType = 'image/jpeg'}) {
     if (bytes == null || bytes.isEmpty) return '';
-    return 'data:image/jpeg;base64,${base64Encode(bytes)}';
+    return 'data:$mimeType;base64,${base64Encode(bytes)}';
   }
 
   String get _pendingVariationFullPreviewUrl =>
@@ -563,6 +572,14 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
 
   String get _pendingVariationCardPreviewUrl =>
       _dataImageUrl(_preparedImage?.cardBytes ?? _preparedImage?.fullBytes);
+
+  String get _pendingVariationCardTransparentPreviewUrl =>
+      _dataImageUrl(
+        _pendingCardTransparentImage?.bytes ?? _preparedImage?.cardTransparentBytes,
+        mimeType: _pendingCardTransparentImage?.mimeType ??
+            _preparedImage?.cardTransparentMimeType ??
+            'image/png',
+      );
 
   String get _pendingVariationTinyPreviewUrl =>
       _dataImageUrl(_preparedImage?.tinyBytes ?? _preparedImage?.thumbBytes);
@@ -604,6 +621,17 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     if (initialCard.isNotEmpty) return initialCard;
 
     return _currentVariationFullPreviewUrl;
+  }
+
+  String get _currentVariationCardTransparentPreviewUrl {
+    final pending = _pendingVariationCardTransparentPreviewUrl;
+    if (pending.isNotEmpty) return pending;
+
+    final initialTransparent =
+        widget.initialValue.effectiveCardTransparentImageUrl.trim();
+    if (initialTransparent.isNotEmpty) return initialTransparent;
+
+    return '';
   }
 
   String get _currentVariationTinyPreviewUrl {
@@ -653,6 +681,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     final fullUrl = _currentVariationFullPreviewUrl.trim();
     final originalUrl = _currentVariationOriginalPreviewUrl.trim();
     final cardUrl = _currentVariationCardPreviewUrl.trim();
+    final cardTransparentUrl = _currentVariationCardTransparentPreviewUrl.trim();
     final thumbUrl = _currentVariationThumbPreviewUrl.trim().isNotEmpty
         ? _currentVariationThumbPreviewUrl.trim()
         : fullUrl;
@@ -663,6 +692,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
       originalUrl: originalUrl,
       fullUrl: fullUrl,
       cardUrl: cardUrl,
+      cardTransparentUrl: cardTransparentUrl,
       thumbUrl: thumbUrl,
       tinyUrl: tinyUrl,
       type: 'image',
@@ -706,6 +736,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
       cardConfig: _currentVariationCardConfig,
       cardDesignJson: _currentVariationCardDesignJson,
       isEnabled: _isEnabled,
+      useCardTransparentImage: _useCardTransparentImage,
       quantityType: _quantityType,
       quantityValue: parseDouble(
         _quantityValueController.text,
@@ -814,6 +845,96 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     }
   }
 
+
+  Future<void> _pickVariationCardTransparentImage() async {
+    setState(() {
+      _isImageProcessing = true;
+      _imageErrorText = null;
+    });
+
+    try {
+      final prepared = await MBImagePipelineService.instance
+          .pickAndPrepareCardTransparentImage(
+        targetWidth: _variationCardWidth,
+        targetHeight: _variationCardHeight,
+      );
+      if (prepared == null) {
+        setState(() => _isImageProcessing = false);
+        return;
+      }
+
+      setState(() {
+        _pendingCardTransparentImage = prepared;
+        _preparedImage = _preparedImage?.copyWith(
+          cardTransparentBytes: prepared.bytes,
+          cardTransparentWidth: prepared.width,
+          cardTransparentHeight: prepared.height,
+          cardTransparentByteLength: prepared.byteLength,
+          cardTransparentMimeType: prepared.mimeType,
+        );
+        _isImageProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isImageProcessing = false;
+        _imageErrorText = error.toString();
+      });
+    }
+  }
+
+  Future<void> _autoRemoveBackgroundForVariationCardTransparentImage() async {
+    final sourceBytes = _preparedImage?.originalBytes ?? _preparedImage?.fullBytes;
+
+    if (sourceBytes == null || sourceBytes.isEmpty) {
+      setState(() {
+        _imageErrorText =
+            'Select the normal variation image first, then click Auto Remove Background.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isImageProcessing = true;
+      _imageErrorText = null;
+    });
+
+    try {
+      final prepared = await generateCardTransparentImageWithLocalBackgroundRemover(
+        sourceBytes: sourceBytes,
+        originalFileName: _preparedImage?.originalFileName ?? 'variation-image.jpg',
+        baseName: _preparedImage?.baseName ?? _idController.text.trim(),
+        mimeType: _preparedImage?.mimeType ?? 'image/jpeg',
+        targetWidth: _variationCardWidth,
+        targetHeight: _variationCardHeight,
+      );
+
+      setState(() {
+        _pendingCardTransparentImage = prepared;
+        _preparedImage = _preparedImage?.copyWith(
+          cardTransparentBytes: prepared.bytes,
+          cardTransparentWidth: prepared.width,
+          cardTransparentHeight: prepared.height,
+          cardTransparentByteLength: prepared.byteLength,
+          cardTransparentMimeType: prepared.mimeType,
+        );
+        _useCardTransparentImage = true;
+        _isImageProcessing = false;
+      });
+    } catch (error) {
+      setState(() {
+        _isImageProcessing = false;
+        _imageErrorText = error.toString();
+      });
+    }
+  }
+
+  void _clearVariationCardTransparentImage() {
+    setState(() {
+      _pendingCardTransparentImage = null;
+      _preparedImage = _preparedImage?.copyWith(clearCardTransparentBytes: true);
+    });
+  }
+
   Future<void> _openVariationCardDesignStudioV3Dialog(BuildContext context) async {
     final previewProduct = _buildVariationPreviewProduct();
     final result = await showDialog<String>(
@@ -882,6 +1003,9 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
       originalImageStoragePath: widget.initialValue.originalImageStoragePath,
       cardImageUrl: widget.initialValue.cardImageUrl,
       cardImageStoragePath: widget.initialValue.cardImageStoragePath,
+      cardTransparentImageUrl: widget.initialValue.cardTransparentImageUrl,
+      cardTransparentImageStoragePath:
+          widget.initialValue.cardTransparentImageStoragePath,
       tinyImageUrl: widget.initialValue.tinyImageUrl,
       tinyImageStoragePath: widget.initialValue.tinyImageStoragePath,
       fullImageStoragePath: widget.initialValue.fullImageStoragePath,
@@ -894,6 +1018,16 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
           _preparedImage?.fullByteLength ?? widget.initialValue.fullImageSizeBytes,
       thumbImageSizeBytes:
           _preparedImage?.thumbByteLength ?? widget.initialValue.thumbImageSizeBytes,
+      cardTransparentImageWidth: _pendingCardTransparentImage?.width ??
+          _preparedImage?.cardTransparentWidth ??
+          widget.initialValue.cardTransparentImageWidth,
+      cardTransparentImageHeight: _pendingCardTransparentImage?.height ??
+          _preparedImage?.cardTransparentHeight ??
+          widget.initialValue.cardTransparentImageHeight,
+      cardTransparentImageSizeBytes: _pendingCardTransparentImage?.byteLength ??
+          _preparedImage?.cardTransparentByteLength ??
+          widget.initialValue.cardTransparentImageSizeBytes,
+      useCardTransparentImage: _useCardTransparentImage,
       originalImageWidth:
           _preparedImage?.sourceWidth ?? widget.initialValue.originalImageWidth,
       originalImageHeight:
@@ -1053,6 +1187,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
       ProductVariationDialogResult(
         variation: _buildResultVariation(),
         pendingImage: _preparedImage,
+        pendingCardTransparentImage: _pendingCardTransparentImage,
         imageFileStem: _titleEnController.text.trim().isEmpty
             ? (_preparedImage?.baseName ?? 'variation')
             : _titleEnController.text.trim(),
@@ -2087,6 +2222,73 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
     );
   }
 
+
+  Widget _buildVariationTransparentCardImageSurface(BuildContext context) {
+    final url = _currentVariationCardTransparentPreviewUrl.trim();
+    final hasPendingImage = _pendingCardTransparentImage?.bytes != null &&
+        _pendingCardTransparentImage!.bytes.isNotEmpty;
+    final hasRemoteImage = url.isNotEmpty;
+    final hasImage = hasPendingImage || hasRemoteImage;
+    Widget child;
+
+    if (hasPendingImage) {
+      child = Image.memory(
+        _pendingCardTransparentImage!.bytes,
+        height: 320,
+        width: double.infinity,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.broken_image_outlined, size: 48),
+      );
+    } else if (hasRemoteImage) {
+      child = Image.network(
+        url,
+        height: 320,
+        width: double.infinity,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.broken_image_outlined, size: 48),
+      );
+    } else {
+      child = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.layers_clear_outlined,
+            size: 56,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No transparent image selected',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.62),
+                ),
+          ),
+        ],
+      );
+    }
+
+    return MBTransparentPreviewSurface(
+      height: 320,
+      padding: hasImage ? EdgeInsets.zero : const EdgeInsets.all(12),
+      borderRadius: BorderRadius.circular(16),
+      borderColor: Theme.of(context).dividerColor,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: child,
+      ),
+    );
+  }
+
   Widget _buildVariationRealCardPreviewSurface(BuildContext context) {
     final previewProduct = _buildVariationPreviewProduct();
     return Container(
@@ -2162,24 +2364,95 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
                   label: const Text('Select Image'),
                 ),
               );
+              final transparentBox = _buildVariationActionBox(
+                context,
+                title: 'Transparent Card Image',
+                subtitle: 'Optional sixth image. Auto-generate a cutout through the local PC service, or select a ready PNG/WebP manually.',
+                preview: _buildVariationTransparentCardImageSurface(context),
+                action: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: (_isImageProcessing || _preparedImage == null)
+                            ? null
+                            : _autoRemoveBackgroundForVariationCardTransparentImage,
+                        icon: const Icon(Icons.auto_fix_high_outlined),
+                        label: const Text('Auto Remove Background'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isImageProcessing
+                            ? null
+                            : _pickVariationCardTransparentImage,
+                        icon: const Icon(Icons.layers_clear_outlined),
+                        label: const Text('Select Transparent PNG/WebP'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: (_isImageProcessing ||
+                                _pendingCardTransparentImage == null)
+                            ? null
+                            : _clearVariationCardTransparentImage,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Clear Transparent'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
               final rightBox = _buildVariationActionBox(
                 context,
                 title: 'Card Preview',
                 subtitle: 'Uses the real card renderer path used by saved Studio V3 designs.',
                 preview: _buildVariationRealCardPreviewSurface(context),
-                action: FilledButton.icon(
-                  onPressed: () => _openVariationCardDesignStudioV3Dialog(context),
-                  icon: const Icon(Icons.auto_awesome_motion_rounded),
-                  label: const Text('Card Design'),
+                action: Column(
+                  children: [
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Use transparent card image'),
+                      subtitle: const Text(
+                        'Renderer tries the transparent cutout first, then normal card image.',
+                      ),
+                      value: _useCardTransparentImage,
+                      onChanged: (value) {
+                        setState(() => _useCardTransparentImage = value);
+                      },
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _openVariationCardDesignStudioV3Dialog(context),
+                        icon: const Icon(Icons.auto_awesome_motion_rounded),
+                        label: const Text('Card Design'),
+                      ),
+                    ),
+                  ],
                 ),
               );
               if (stack) {
-                return Column(children: [leftBox, const SizedBox(height: 12), rightBox]);
+                return Column(
+                  children: [
+                    leftBox,
+                    const SizedBox(height: 12),
+                    transparentBox,
+                    const SizedBox(height: 12),
+                    rightBox,
+                  ],
+                );
               }
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: leftBox),
+                  const SizedBox(width: 12),
+                  Expanded(child: transparentBox),
                   const SizedBox(width: 12),
                   Expanded(child: rightBox),
                 ],
@@ -2226,10 +2499,14 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
           Text('Full Size: -'),
           Text('Thumb Pixels: -'),
           Text('Thumb Size: -'),
+          Text('Transparent Card: -'),
         ],
       );
     }
     final p = _preparedImage!;
+    final transparentInfo = _pendingCardTransparentImage == null
+        ? '-'
+        : '${_pendingCardTransparentImage!.width} x ${_pendingCardTransparentImage!.height} | ${_bytesText(_pendingCardTransparentImage!.byteLength)}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2243,6 +2520,7 @@ class _ProductVariationDialogState extends State<ProductVariationDialog> {
         Text('Full Size: ${_bytesText(p.fullByteLength)}'),
         Text('Thumb Pixels: ${p.thumbWidth} x ${p.thumbHeight}'),
         Text('Thumb Size: ${_bytesText(p.thumbByteLength)}'),
+        Text('Transparent Card: $transparentInfo'),
       ],
     );
   }

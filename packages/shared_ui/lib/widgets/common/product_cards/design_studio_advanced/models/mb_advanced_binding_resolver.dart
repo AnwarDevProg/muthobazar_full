@@ -319,6 +319,10 @@ class MBAdvancedBindingResolver {
         return _resolveProductFullImageUrl(context.product, fallback: fallback);
       case MBAdvancedBindingKey.productResolvedCardImageUrl:
         return _resolveProductCardImageUrl(context.product, fallback: fallback);
+      case MBAdvancedBindingKey.productResolvedCardTransparentImageUrl:
+      case 'product.resolvedCardTransparentImageUrl':
+      case 'product.cardTransparentUrl':
+        return _resolveProductCardTransparentImageUrl(context.product, fallback: fallback);
       case MBAdvancedBindingKey.productResolvedThumbImageUrl:
         return _resolveProductThumbImageUrl(context.product, fallback: fallback);
       case MBAdvancedBindingKey.productResolvedTinyImageUrl:
@@ -569,6 +573,35 @@ class MBAdvancedBindingResolver {
 
     final first = _readFirstImageUrl(product);
     return first.isNotEmpty ? first : fallback;
+  }
+
+
+  static String _resolveProductCardTransparentImageUrl(
+    dynamic product, {
+    required String fallback,
+  }) {
+    final direct = _readAny(
+      product,
+      const <String>[
+        'resolvedCardTransparentImageUrl',
+        'cardTransparentUrl',
+        'effectiveCardTransparentUrl',
+      ],
+      '',
+    );
+    if (direct.isNotEmpty) return direct;
+
+    final media = _readFirstMediaUrl(
+      product,
+      const <String>[
+        'effectiveCardTransparentUrl',
+        'cardTransparentUrl',
+        'cardTransparentImageUrl',
+      ],
+    );
+    if (media.isNotEmpty) return media;
+
+    return fallback;
   }
 
   static String _resolveProductCardImageUrl(
@@ -852,6 +885,9 @@ class MBAdvancedBindingResolver {
         case 'resolvedCardImageUrl':
           value = source.resolvedCardImageUrl;
           break;
+        case 'resolvedCardTransparentImageUrl':
+          value = source.resolvedCardTransparentImageUrl;
+          break;
         case 'resolvedThumbImageUrl':
           value = source.resolvedThumbImageUrl;
           break;
@@ -870,6 +906,9 @@ class MBAdvancedBindingResolver {
         case 'cardUrl':
           value = source.cardUrl;
           break;
+        case 'cardTransparentUrl':
+          value = source.cardTransparentUrl;
+          break;
         case 'thumbUrl':
           value = source.thumbUrl;
           break;
@@ -884,6 +923,9 @@ class MBAdvancedBindingResolver {
           break;
         case 'effectiveCardUrl':
           value = source.effectiveCardUrl;
+          break;
+        case 'effectiveCardTransparentUrl':
+          value = source.effectiveCardTransparentUrl;
           break;
         case 'effectiveThumbUrl':
           value = source.effectiveThumbUrl;

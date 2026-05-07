@@ -101,6 +101,11 @@ class MBProduct {
   /// The old cardConfig remains untouched for legacy/variant fallback.
   final String? cardDesignJson;
 
+  // Product-card image preference for root/single-product cards.
+  // When true, renderers try cardTransparentUrl first and fall back to
+  // the normal card image. Variation-level preference is stored per variation.
+  final bool useCardTransparentImage;
+
   bool get hasCardDesignJson {
     final value = cardDesignJson;
     return value != null && value.trim().isNotEmpty;
@@ -209,6 +214,7 @@ class MBProduct {
     this.cardLayoutType = 'compact01',
     this.cardConfig = _defaultCardConfig,
     this.cardDesignJson,
+    this.useCardTransparentImage = false,
     this.isFeatured = false,
     this.isFlashSale = false,
     this.isEnabled = true,
@@ -483,7 +489,37 @@ class MBProduct {
     );
   }
 
+  String get resolvedCardTransparentImageUrl {
+    final mediaUrl = _firstEnabledMediaUrl(
+      (item) => item.effectiveCardTransparentUrl,
+    );
+    if (mediaUrl.isNotEmpty) return mediaUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveCardTransparentImageUrl,
+    );
+  }
+
+  String get resolvedNormalCardImageUrl {
+    final mediaUrl = _firstEnabledMediaUrl(
+      (item) => item.effectiveCardUrl,
+    );
+    if (mediaUrl.isNotEmpty) return mediaUrl;
+
+    final legacyUrl = _rootLegacyImageUrl();
+    if (legacyUrl.isNotEmpty) return legacyUrl;
+
+    return _firstVariationImageUrl(
+      (variation) => variation.effectiveNormalCardImageUrl,
+    );
+  }
+
   String get resolvedCardImageUrl {
+    if (useCardTransparentImage) {
+      final transparentUrl = resolvedCardTransparentImageUrl;
+      if (transparentUrl.isNotEmpty) return transparentUrl;
+    }
+
     final mediaUrl = _firstEnabledMediaUrl(
       (item) => item.effectiveCardUrl,
     );
@@ -636,6 +672,7 @@ class MBProduct {
     MBCardInstanceConfig? cardConfig,
     String? cardDesignJson,
     bool clearCardDesignJson = false,
+    bool? useCardTransparentImage,
     bool? isFeatured,
     bool? isFlashSale,
     bool? isEnabled,
@@ -779,6 +816,8 @@ class MBProduct {
       cardDesignJson: clearCardDesignJson
           ? null
           : (cardDesignJson ?? this.cardDesignJson),
+      useCardTransparentImage:
+          useCardTransparentImage ?? this.useCardTransparentImage,
       isFeatured: isFeatured ?? this.isFeatured,
       isFlashSale: isFlashSale ?? this.isFlashSale,
       isEnabled: isEnabled ?? this.isEnabled,
@@ -886,6 +925,7 @@ class MBProduct {
       'cardConfig': effectiveCardConfigMap,
       if (cardDesignJson?.trim().isNotEmpty ?? false)
         'cardDesignJson': cardDesignJson!.trim(),
+      'useCardTransparentImage': useCardTransparentImage,
       'isFeatured': isFeatured,
       'isFlashSale': isFlashSale,
       'isEnabled': isEnabled,
@@ -1017,6 +1057,8 @@ class MBProduct {
       cardDesignJson: _asNullableString(
         map['cardDesignJson'] ?? map['cardDesignJsonV1'],
       ),
+      useCardTransparentImage:
+          _asBool(map['useCardTransparentImage'], fallback: false),
       isFeatured: _asBool(map['isFeatured'], fallback: false),
       isFlashSale: _asBool(map['isFlashSale'], fallback: false),
       isEnabled: _asBool(map['isEnabled'], fallback: true),

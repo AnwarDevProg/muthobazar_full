@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -18,6 +21,8 @@ class AdminProductRepository {
     this.restoreCallableName = 'adminRestoreProduct',
     this.setEnabledCallableName = 'adminSetProductEnabled',
     this.hardDeleteCallableName = 'adminHardDeleteProduct',
+    this.generateTransparentImageCallableName =
+        'generateProductCardTransparentImage',
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _functions =
             functions ?? FirebaseFunctions.instanceFor(region: 'asia-south1'),
@@ -35,11 +40,64 @@ class AdminProductRepository {
   final String restoreCallableName;
   final String setEnabledCallableName;
   final String hardDeleteCallableName;
+  final String generateTransparentImageCallableName;
 
   CollectionReference<Map<String, dynamic>> get _productsRef =>
       _firestore.collection(productsCollectionPath);
 
   FirebaseStorage get storage => _storage;
+
+  Future<Uint8List> generateProductCardTransparentImage({
+    required Uint8List imageBytes,
+    required String mimeType,
+    String originalFileName = 'product-image',
+  }) async {
+    if (imageBytes.isEmpty) {
+      throw AdminProductRepositoryException(
+        message: 'Image bytes are required for background removal.',
+      );
+    }
+
+    try {
+      final callable = _functions.httpsCallable(
+        generateTransparentImageCallableName,
+        options: HttpsCallableOptions(
+          timeout: const Duration(seconds: 120),
+        ),
+      );
+
+      final response = await callable.call(<String, dynamic>{
+        'imageBase64': base64Encode(imageBytes),
+        'mimeType': mimeType.trim().isEmpty ? 'image/jpeg' : mimeType.trim(),
+        'originalFileName': originalFileName.trim().isEmpty
+            ? 'product-image'
+            : originalFileName.trim(),
+      });
+
+      final data = response.data;
+      if (data is! Map) {
+        throw const FormatException(
+          'Background remover response must be an object.',
+        );
+      }
+
+      final encoded = (data['imageBase64'] ?? '').toString().trim();
+      if (encoded.isEmpty) {
+        throw const FormatException(
+          'Background remover response did not include imageBase64.',
+        );
+      }
+
+      return Uint8List.fromList(base64Decode(encoded));
+    } catch (error, stackTrace) {
+      if (error is AdminProductRepositoryException) rethrow;
+      throw AdminProductRepositoryException(
+        message: 'Failed to generate transparent product-card image.',
+        cause: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   Future<List<MBProduct>> fetchProducts({
     String searchText = '',

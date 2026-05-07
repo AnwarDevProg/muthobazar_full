@@ -418,6 +418,7 @@ C.
 |   |   +---android
 |   |   |   +---.kotlin
 |   |   |   |   \---sessions
+|   |   |   |       \---kotlin-compiler-8822655669483259099.salive
 |   |   |   +---app
 |   |   |   |   +---src
 |   |   |   |   |   +---debug
@@ -1149,6 +1150,7 @@ C.
 |   |   |   |   +---update_banner_shared_clean.js
 |   |   |   |   \---update-banner.js
 |   |   |   +---brands
+|   |   |   |   +---brand-product-count.js
 |   |   |   |   +---create-brand.js
 |   |   |   |   +---delete-brand.js
 |   |   |   |   +---set-brand-active-state.js
@@ -1187,6 +1189,7 @@ C.
 |   |   |   |   +---set-banner-active-state.ts
 |   |   |   |   \---update-banner.ts
 |   |   |   +---brands
+|   |   |   |   +---brand-product-count.ts
 |   |   |   |   +---create-brand.ts
 |   |   |   |   +---delete-brand.ts
 |   |   |   |   +---set-brand-active-state.ts

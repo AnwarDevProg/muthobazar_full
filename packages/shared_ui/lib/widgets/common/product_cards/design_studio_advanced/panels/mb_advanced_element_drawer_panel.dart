@@ -1,6 +1,7 @@
 // MuthoBazar Advanced Product Card Design Studio
 // Patch 12.1 left element drawer.
 // Patch 12.4 adds preview-only contrast-safe text colors.
+// Patch 12.8 adds a dedicated transparent-product-image drawer item.
 //
 // Purpose:
 // - Uses the data-driven V12 element catalog.
@@ -137,8 +138,13 @@ List<MBAdvancedElementGroup> _buildVisibleGroups(
         ? group.variants
             .where((variant) =>
                 variant.binding != MBAdvancedBindingKey.variationAttributeSummary)
-            .toList(growable: false)
-        : group.variants;
+            .toList(growable: true)
+        : group.variants.toList(growable: true);
+
+    if (group.id == 'media' &&
+        !filteredVariants.any((variant) => variant.id == 'media_transparent_cutout')) {
+      filteredVariants.add(_transparentMediaVariant());
+    }
 
     visibleGroups.add(
       MBAdvancedElementGroup(
@@ -502,6 +508,33 @@ MBAdvancedElementVariant _variationAttributeVariant({
     defaultStyle: style,
   );
 }
+
+MBAdvancedElementVariant _transparentMediaVariant() {
+  return MBAdvancedElementVariant(
+    id: 'media_transparent_cutout',
+    groupId: 'media',
+    elementType: 'media',
+    title: 'Transparent image',
+    description: 'product.resolvedCardTransparentImageUrl',
+    binding: 'product.resolvedCardTransparentImageUrl',
+    defaultPosition: MBAdvancedDesignNodePosition(x: 0.50, y: 0.33, z: 32),
+    defaultSize: MBAdvancedDesignNodeSize(width: 150, height: 120),
+    defaultStyle: const <String, dynamic>{
+      'imageSourceMode': 'transparent',
+      'imageFit': 'contain',
+      'imageAlignment': 'center',
+      'imageScale': 1.0,
+      'backgroundHex': '#00000000',
+      'borderHex': '#00000000',
+      'ringWidth': 0.0,
+      'borderRadius': 0.0,
+      'shadowBlur': 0.0,
+      'shadowOffsetY': 0.0,
+      'opacity': 1.0,
+    },
+  );
+}
+
 
 Map<String, dynamic> _textStyle({
   required String textHex,
@@ -1066,6 +1099,14 @@ Uint8List? _drawerPendingCardBytes(dynamic media) {
   return null;
 }
 
+Uint8List? _drawerPendingCardTransparentBytes(dynamic media) {
+  try {
+    final value = media.pendingCardTransparentBytes;
+    if (value is Uint8List && value.isNotEmpty) return value;
+  } catch (_) {}
+  return null;
+}
+
 Uint8List? _drawerPendingThumbBytes(dynamic media) {
   try {
     final value = media.pendingThumbBytes;
@@ -1117,6 +1158,7 @@ Uint8List? _drawerResolveImageBytes(
   final original = _drawerPendingOriginalBytes(media);
   final full = _drawerPendingFullBytes(media);
   final card = _drawerPendingCardBytes(media);
+  final cardTransparent = _drawerPendingCardTransparentBytes(media);
   final thumb = _drawerPendingThumbBytes(media);
   final tiny = _drawerPendingTinyBytes(media);
 
@@ -1130,12 +1172,63 @@ Uint8List? _drawerResolveImageBytes(
       return _drawerFirstPendingBytes(<Uint8List?>[thumb, card, full, original, tiny]);
     case 'product.resolvedTinyImageUrl':
       return _drawerFirstPendingBytes(<Uint8List?>[tiny, thumb, card, full, original]);
+    case 'product.resolvedCardTransparentImageUrl':
+      return _drawerFirstPendingBytes(<Uint8List?>[cardTransparent, card, full, thumb, original, tiny]);
     case 'product.resolvedCardImageUrl':
     case 'product.imageUrl':
     case 'product.imageUrls.first':
     default:
       return _drawerFirstPendingBytes(<Uint8List?>[card, full, thumb, original, tiny]);
   }
+}
+
+
+String _drawerReadDynamicString(dynamic source, String key) {
+  if (source == null) return '';
+  try {
+    final value = switch (key) {
+      'cardTransparentUrl' => source.cardTransparentUrl,
+      'resolvedCardTransparentImageUrl' => source.resolvedCardTransparentImageUrl,
+      _ => null,
+    };
+    return value?.toString().trim() ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
+String _drawerResolveImageUrl(
+  MBAdvancedPreviewContext previewContext,
+  String binding,
+) {
+  final normalizedBinding = binding.trim();
+  if (normalizedBinding == 'product.resolvedCardTransparentImageUrl') {
+    final media = _drawerPrimaryMedia(previewContext);
+    final mediaUrl = _drawerReadDynamicString(media, 'cardTransparentUrl');
+    if (mediaUrl.isNotEmpty) return mediaUrl;
+
+    final productUrl = _drawerReadDynamicString(
+      previewContext.product,
+      'resolvedCardTransparentImageUrl',
+    );
+    if (productUrl.isNotEmpty) return productUrl;
+  }
+
+  return MBAdvancedBindingResolver.resolveImageUrl(
+    previewContext,
+    normalizedBinding,
+  );
+}
+
+bool _isTransparentMediaVariant(MBAdvancedElementVariant variant) {
+  final id = variant.id.trim().toLowerCase();
+  final binding = variant.binding.trim().toLowerCase();
+  final mode = variant.defaultStyle['imageSourceMode']?.toString().trim().toLowerCase() ?? '';
+  return id.contains('transparent') ||
+      binding.contains('transparent') ||
+      mode == 'transparent' ||
+      mode == 'cardtransparent' ||
+      mode == 'card_transparent';
 }
 
 class _PreviewMedia extends StatelessWidget {
@@ -1150,11 +1243,41 @@ class _PreviewMedia extends StatelessWidget {
       previewContext,
       variant.binding,
     );
-    final imageUrl = MBAdvancedBindingResolver.resolveImageUrl(
+    final imageUrl = _drawerResolveImageUrl(
       previewContext,
       variant.binding,
     );
-    final isCircle = _asDouble(variant.defaultStyle['borderRadius'], 0) >= 500;
+    final isTransparent = _isTransparentMediaVariant(variant);
+    final isCircle = !isTransparent && _asDouble(variant.defaultStyle['borderRadius'], 0) >= 500;
+    final previewFit = isTransparent ? BoxFit.contain : BoxFit.cover;
+
+    final mediaChild = imageBytes != null && imageBytes.isNotEmpty
+        ? Image.memory(
+            imageBytes,
+            fit: previewFit,
+            gaplessPlayback: true,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => const _ImageFallback(),
+          )
+        : imageUrl.isEmpty
+            ? const _ImageFallback()
+            : Image.network(
+                imageUrl,
+                fit: previewFit,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (_, __, ___) => const _ImageFallback(),
+              );
+
+    if (isTransparent) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 62,
+          height: 48,
+          child: mediaChild,
+        ),
+      );
+    }
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -1177,22 +1300,7 @@ class _PreviewMedia extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(isCircle ? 999 : 10),
-          child: imageBytes != null && imageBytes.isNotEmpty
-              ? Image.memory(
-                  imageBytes,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (_, __, ___) => const _ImageFallback(),
-                )
-              : imageUrl.isEmpty
-                  ? const _ImageFallback()
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                      errorBuilder: (_, __, ___) => const _ImageFallback(),
-                    ),
+          child: mediaChild,
         ),
       ),
     );

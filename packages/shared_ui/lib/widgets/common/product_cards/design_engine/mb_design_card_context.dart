@@ -58,6 +58,56 @@ class MBDesignCardContext {
         fallback: product.resolvedThumbImageUrl,
       );
 
+  String get transparentImageUrl {
+    try {
+      final value = _normalizeString(
+        (product as dynamic).resolvedCardTransparentImageUrl,
+      );
+      if (value.isNotEmpty) return value;
+    } catch (_) {}
+
+    Object? primary;
+    try {
+      primary = (product as dynamic).primaryMediaItem;
+    } catch (_) {
+      primary = null;
+    }
+
+    if (primary != null) {
+      try {
+        final value = _normalizeString(
+          (primary as dynamic).effectiveCardTransparentUrl,
+        );
+        if (value.isNotEmpty) return value;
+      } catch (_) {}
+
+      try {
+        final value = _normalizeString(
+          (primary as dynamic).cardTransparentUrl,
+        );
+        if (value.isNotEmpty) return value;
+      } catch (_) {}
+    }
+
+    try {
+      final map = (product as dynamic).toMap();
+      if (map is Map) {
+        final mediaItems = map['mediaItems'];
+        if (mediaItems is List) {
+          for (final item in mediaItems) {
+            if (item is! Map) continue;
+            final enabled = item['isEnabled'];
+            if (enabled is bool && !enabled) continue;
+            final value = _normalizeString(item['cardTransparentUrl']);
+            if (value.isNotEmpty) return value;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return '';
+  }
+
   String get brandName {
     final candidates = <String>[
       _normalizeString(product.brandNameEn),
@@ -153,6 +203,8 @@ class MBDesignCardContext {
         return title;
       case 'product.shortDescriptionEn':
         return subtitle;
+      case 'product.resolvedCardTransparentImageUrl':
+        return transparentImageUrl;
       case 'product.thumbnailUrl':
         return imageUrl;
       case 'product.brandNameEn':

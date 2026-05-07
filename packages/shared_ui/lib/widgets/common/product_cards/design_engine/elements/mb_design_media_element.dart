@@ -8,7 +8,8 @@ import '../mb_design_element_runtime_style.dart';
 // File: mb_design_media_element.dart
 //
 // Purpose:
-// Media/image element with support for circular hero media.
+// Media/image element with support for circular hero media and a dedicated
+// transparent product cutout node.
 
 class MBDesignMediaElement extends StatelessWidget {
   const MBDesignMediaElement({
@@ -30,18 +31,34 @@ class MBDesignMediaElement extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final transparentCutout = _isTransparentCutout;
     final shape = element?.stylePreset ?? 'media_circle';
     final isCircle = shape.contains('circle');
     final radius = runtimeStyle?.borderRadius ?? (isCircle ? size : 18.0);
     final borderWidth = runtimeStyle?.ringWidth ?? runtimeStyle?.borderWidth ?? 4;
 
     final content = imageUrl.trim().isEmpty
-        ? _placeholder()
+        ? transparentCutout
+            ? const SizedBox.shrink()
+            : _placeholder()
         : Image.network(
             imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholder(),
+            fit: transparentCutout ? BoxFit.contain : BoxFit.cover,
+            alignment: Alignment.center,
+            gaplessPlayback: true,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => transparentCutout
+                ? const SizedBox.shrink()
+                : _placeholder(),
           );
+
+    if (transparentCutout) {
+      return SizedBox(
+        width: size,
+        height: size,
+        child: content,
+      );
+    }
 
     return Container(
       width: size,
@@ -74,6 +91,16 @@ class MBDesignMediaElement extends StatelessWidget {
         child: content,
       ),
     );
+  }
+
+  bool get _isTransparentCutout {
+    final preset = (element?.stylePreset ?? '').trim().toLowerCase();
+    if (preset == 'media_transparent_cutout') return true;
+
+    final binding = (element?.binding?.source ?? '').trim();
+    if (binding == 'product.resolvedCardTransparentImageUrl') return true;
+
+    return false;
   }
 
   Widget _placeholder() {

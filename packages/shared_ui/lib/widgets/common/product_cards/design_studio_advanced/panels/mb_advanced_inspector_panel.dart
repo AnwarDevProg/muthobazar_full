@@ -15,7 +15,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../models/mb_advanced_card_design_document.dart';
+import '../models/mb_advanced_card_design_document.dart';
+
 import '../../system/mb_responsive_card_grid_resolver.dart';
 import '../../system/mb_responsive_card_grid_resolver.dart';class MBAdvancedInspectorPanel extends StatelessWidget {
   const MBAdvancedInspectorPanel({
@@ -697,15 +698,21 @@ class _NodeInspector extends StatelessWidget {
   }
 
   List<Widget> _buildMediaElementSections(Map<String, dynamic> style) {
+    final isTransparentCutout = node.variantId.trim() == 'media_transparent_cutout' ||
+        _styleString(style, 'imageSourceMode', '').trim() == 'transparent' ||
+        node.binding.trim() == 'product.resolvedCardTransparentImageUrl';
+
     return <Widget>[
       const SizedBox(height: 12),
       _SectionCard(
-        title: 'Media controls',
-        subtitle: 'Image binding, fit, alignment, ring, crop and shadow controls.',
+        title: isTransparentCutout ? 'Transparent image controls' : 'Media controls',
+        subtitle: isTransparentCutout
+            ? 'Cutout image controls. This node has no white media surface, ring or forced clipping.'
+            : 'Image binding, fit, alignment, ring, crop and shadow controls.',
         children: <Widget>[
           _TextInputRow(
             label: 'Image fit',
-            value: _styleString(style, 'imageFit', 'cover'),
+            value: _styleString(style, 'imageFit', isTransparentCutout ? 'contain' : 'cover'),
             hintText: 'cover / contain / fill / fitWidth / fitHeight',
             onSubmitted: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageFit': value})),
@@ -722,43 +729,55 @@ class _NodeInspector extends StatelessWidget {
           _NumberFieldRow(
             label: 'Image scale',
             value: _styleDouble(style, 'imageScale', 1),
-            min: 0.5,
-            max: 3,
+            min: 0.2,
+            max: 5,
             decimals: 2,
             onChanged: (value) => onUpdateNode(
               node.copyWith(style: _patchStyle(style, <String, dynamic>{'imageScale': value})),
             ),
           ),
           _NumberFieldRow(
-            label: 'Ring width',
-            value: _styleDouble(style, 'ringWidth', 0),
+            label: 'Opacity',
+            value: _styleDouble(style, 'opacity', 1),
             min: 0,
-            max: 28,
-            decimals: 1,
+            max: 1,
+            decimals: 2,
             onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
+              node.copyWith(style: _patchStyle(style, <String, dynamic>{'opacity': value})),
             ),
           ),
-          _NumberFieldRow(
-            label: 'Shadow blur',
-            value: _styleDouble(style, 'shadowBlur', 18),
-            min: 0,
-            max: 48,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowBlur': value})),
+          if (!isTransparentCutout) ...<Widget>[
+            _NumberFieldRow(
+              label: 'Ring width',
+              value: _styleDouble(style, 'ringWidth', 0),
+              min: 0,
+              max: 28,
+              decimals: 1,
+              onChanged: (value) => onUpdateNode(
+                node.copyWith(style: _patchStyle(style, <String, dynamic>{'ringWidth': value})),
+              ),
             ),
-          ),
-          _NumberFieldRow(
-            label: 'Shadow Y',
-            value: _styleDouble(style, 'shadowOffsetY', 10),
-            min: -12,
-            max: 32,
-            decimals: 0,
-            onChanged: (value) => onUpdateNode(
-              node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowOffsetY': value})),
+            _NumberFieldRow(
+              label: 'Shadow blur',
+              value: _styleDouble(style, 'shadowBlur', 18),
+              min: 0,
+              max: 48,
+              decimals: 0,
+              onChanged: (value) => onUpdateNode(
+                node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowBlur': value})),
+              ),
             ),
-          ),
+            _NumberFieldRow(
+              label: 'Shadow Y',
+              value: _styleDouble(style, 'shadowOffsetY', 10),
+              min: -12,
+              max: 32,
+              decimals: 0,
+              onChanged: (value) => onUpdateNode(
+                node.copyWith(style: _patchStyle(style, <String, dynamic>{'shadowOffsetY': value})),
+              ),
+            ),
+          ],
         ],
       ),
     ];

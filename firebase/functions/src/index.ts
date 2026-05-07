@@ -40,3 +40,4 @@ export { adminSetProductEnabled } from "./products/admin_set_product_enabled";
 export { adminHardDeleteProduct } from "./products/admin_hard_delete_product";
 
 export { logAdminAction } from "./admin/log-admin-action";
+export { generateProductCardTransparentImage } from "./products/generate-card-transparent-image";

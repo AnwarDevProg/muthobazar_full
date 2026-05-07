@@ -48,3 +48,5 @@ pubspec.lock
 
 # Melos (optional safety)
 .melos_tool/
+# Local background remover service
+tools/background_remover_service/

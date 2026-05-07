@@ -27,6 +27,8 @@ class MBProductMedia {
   final String fullStoragePath;
   final String cardUrl;
   final String cardStoragePath;
+  final String cardTransparentUrl;
+  final String cardTransparentStoragePath;
   final String thumbUrl;
   final String thumbStoragePath;
   final String tinyUrl;
@@ -70,6 +72,10 @@ class MBProductMedia {
   final int? cardHeight;
   final int? cardSizeBytes;
 
+  final int? cardTransparentWidth;
+  final int? cardTransparentHeight;
+  final int? cardTransparentSizeBytes;
+
   final int? thumbWidth;
   final int? thumbHeight;
   final int? thumbSizeBytes;
@@ -84,6 +90,7 @@ class MBProductMedia {
   final Uint8List? pendingOriginalBytes;
   final Uint8List? pendingFullBytes;
   final Uint8List? pendingCardBytes;
+  final Uint8List? pendingCardTransparentBytes;
   final Uint8List? pendingThumbBytes;
   final Uint8List? pendingTinyBytes;
   final String pendingOriginalFileName;
@@ -103,6 +110,8 @@ class MBProductMedia {
     this.fullStoragePath = '',
     this.cardUrl = '',
     this.cardStoragePath = '',
+    this.cardTransparentUrl = '',
+    this.cardTransparentStoragePath = '',
     this.thumbUrl = '',
     this.thumbStoragePath = '',
     this.tinyUrl = '',
@@ -137,6 +146,9 @@ class MBProductMedia {
     this.cardWidth,
     this.cardHeight,
     this.cardSizeBytes,
+    this.cardTransparentWidth,
+    this.cardTransparentHeight,
+    this.cardTransparentSizeBytes,
     this.thumbWidth,
     this.thumbHeight,
     this.thumbSizeBytes,
@@ -146,6 +158,7 @@ class MBProductMedia {
     this.pendingOriginalBytes,
     this.pendingFullBytes,
     this.pendingCardBytes,
+    this.pendingCardTransparentBytes,
     this.pendingThumbBytes,
     this.pendingTinyBytes,
     this.pendingOriginalFileName = '',
@@ -167,6 +180,8 @@ class MBProductMedia {
     String? fullStoragePath,
     String? cardUrl,
     String? cardStoragePath,
+    String? cardTransparentUrl,
+    String? cardTransparentStoragePath,
     String? thumbUrl,
     String? thumbStoragePath,
     String? tinyUrl,
@@ -221,6 +236,12 @@ class MBProductMedia {
     bool clearCardHeight = false,
     int? cardSizeBytes,
     bool clearCardSizeBytes = false,
+    int? cardTransparentWidth,
+    bool clearCardTransparentWidth = false,
+    int? cardTransparentHeight,
+    bool clearCardTransparentHeight = false,
+    int? cardTransparentSizeBytes,
+    bool clearCardTransparentSizeBytes = false,
     int? thumbWidth,
     bool clearThumbWidth = false,
     int? thumbHeight,
@@ -239,6 +260,8 @@ class MBProductMedia {
     bool clearPendingFullBytes = false,
     Uint8List? pendingCardBytes,
     bool clearPendingCardBytes = false,
+    Uint8List? pendingCardTransparentBytes,
+    bool clearPendingCardTransparentBytes = false,
     Uint8List? pendingThumbBytes,
     bool clearPendingThumbBytes = false,
     Uint8List? pendingTinyBytes,
@@ -262,6 +285,9 @@ class MBProductMedia {
       fullStoragePath: fullStoragePath ?? this.fullStoragePath,
       cardUrl: cardUrl ?? this.cardUrl,
       cardStoragePath: cardStoragePath ?? this.cardStoragePath,
+      cardTransparentUrl: cardTransparentUrl ?? this.cardTransparentUrl,
+      cardTransparentStoragePath:
+          cardTransparentStoragePath ?? this.cardTransparentStoragePath,
       thumbUrl: thumbUrl ?? this.thumbUrl,
       thumbStoragePath: thumbStoragePath ?? this.thumbStoragePath,
       tinyUrl: tinyUrl ?? this.tinyUrl,
@@ -308,6 +334,15 @@ class MBProductMedia {
       cardHeight: clearCardHeight ? null : (cardHeight ?? this.cardHeight),
       cardSizeBytes:
           clearCardSizeBytes ? null : (cardSizeBytes ?? this.cardSizeBytes),
+      cardTransparentWidth: clearCardTransparentWidth
+          ? null
+          : (cardTransparentWidth ?? this.cardTransparentWidth),
+      cardTransparentHeight: clearCardTransparentHeight
+          ? null
+          : (cardTransparentHeight ?? this.cardTransparentHeight),
+      cardTransparentSizeBytes: clearCardTransparentSizeBytes
+          ? null
+          : (cardTransparentSizeBytes ?? this.cardTransparentSizeBytes),
       thumbWidth: clearThumbWidth ? null : (thumbWidth ?? this.thumbWidth),
       thumbHeight: clearThumbHeight ? null : (thumbHeight ?? this.thumbHeight),
       thumbSizeBytes:
@@ -325,6 +360,10 @@ class MBProductMedia {
       pendingCardBytes: clearPendingUpload || clearPendingCardBytes
           ? null
           : (pendingCardBytes ?? this.pendingCardBytes),
+      pendingCardTransparentBytes:
+          clearPendingUpload || clearPendingCardTransparentBytes
+              ? null
+              : (pendingCardTransparentBytes ?? this.pendingCardTransparentBytes),
       pendingThumbBytes: clearPendingUpload || clearPendingThumbBytes
           ? null
           : (pendingThumbBytes ?? this.pendingThumbBytes),
@@ -364,6 +403,7 @@ class MBProductMedia {
       (pendingOriginalBytes?.lengthInBytes ?? 0) +
       (pendingFullBytes?.lengthInBytes ?? 0) +
       (pendingCardBytes?.lengthInBytes ?? 0) +
+      (pendingCardTransparentBytes?.lengthInBytes ?? 0) +
       (pendingThumbBytes?.lengthInBytes ?? 0) +
       (pendingTinyBytes?.lengthInBytes ?? 0);
 
@@ -384,6 +424,13 @@ class MBProductMedia {
   String get effectiveCardUrl {
     if (cardUrl.trim().isNotEmpty) return cardUrl.trim();
     return effectiveFullUrl;
+  }
+
+  String get effectiveCardTransparentUrl {
+    if (cardTransparentUrl.trim().isNotEmpty) {
+      return cardTransparentUrl.trim();
+    }
+    return '';
   }
 
   String get effectiveThumbUrl {
@@ -418,6 +465,13 @@ class MBProductMedia {
     return effectiveFullStoragePath;
   }
 
+  String get effectiveCardTransparentStoragePath {
+    if (cardTransparentStoragePath.trim().isNotEmpty) {
+      return cardTransparentStoragePath.trim();
+    }
+    return '';
+  }
+
   String get effectiveThumbStoragePath {
     if (thumbStoragePath.trim().isNotEmpty) return thumbStoragePath.trim();
     if (isThumbnail && storagePath.trim().isNotEmpty) return storagePath.trim();
@@ -443,6 +497,10 @@ class MBProductMedia {
   int? get effectiveCardHeight => cardHeight ?? effectiveFullHeight;
   int? get effectiveCardSizeBytes => cardSizeBytes ?? effectiveFullSizeBytes;
 
+  int? get effectiveCardTransparentWidth => cardTransparentWidth;
+  int? get effectiveCardTransparentHeight => cardTransparentHeight;
+  int? get effectiveCardTransparentSizeBytes => cardTransparentSizeBytes;
+
   int? get effectiveThumbWidth => thumbWidth ?? effectiveCardWidth;
   int? get effectiveThumbHeight => thumbHeight ?? effectiveCardHeight;
   int? get effectiveThumbSizeBytes => thumbSizeBytes ?? effectiveCardSizeBytes;
@@ -458,6 +516,7 @@ class MBProductMedia {
   bool get hasSeparateThumbnail =>
       thumbUrl.trim().isNotEmpty && effectiveThumbUrl != effectiveFullUrl;
   bool get hasCardImage => cardUrl.trim().isNotEmpty;
+  bool get hasCardTransparentImage => cardTransparentUrl.trim().isNotEmpty;
   bool get hasTinyImage => tinyUrl.trim().isNotEmpty;
   bool get hasOriginalSource => originalUrl.trim().isNotEmpty;
 
@@ -475,6 +534,11 @@ class MBProductMedia {
           fullStoragePath.isNotEmpty ? fullStoragePath : effectiveFullStoragePath,
       'cardUrl': cardUrl.isNotEmpty ? cardUrl : '',
       'cardStoragePath': cardStoragePath.isNotEmpty ? cardStoragePath : '',
+      'cardTransparentUrl':
+          cardTransparentUrl.isNotEmpty ? cardTransparentUrl : '',
+      'cardTransparentStoragePath': cardTransparentStoragePath.isNotEmpty
+          ? cardTransparentStoragePath
+          : '',
       'thumbUrl': thumbUrl.isNotEmpty ? thumbUrl : '',
       'thumbStoragePath': thumbStoragePath.isNotEmpty ? thumbStoragePath : '',
       'tinyUrl': tinyUrl.isNotEmpty ? tinyUrl : '',
@@ -509,6 +573,9 @@ class MBProductMedia {
       'cardWidth': cardWidth,
       'cardHeight': cardHeight,
       'cardSizeBytes': cardSizeBytes,
+      'cardTransparentWidth': cardTransparentWidth,
+      'cardTransparentHeight': cardTransparentHeight,
+      'cardTransparentSizeBytes': cardTransparentSizeBytes,
       'thumbWidth': thumbWidth,
       'thumbHeight': thumbHeight,
       'thumbSizeBytes': thumbSizeBytes,
@@ -528,11 +595,21 @@ class MBProductMedia {
     final parsedOriginalUrl = _asString(map['originalUrl']);
     final parsedFullUrl = _asString(map['fullUrl']);
     final parsedCardUrl = _asString(map['cardUrl']);
+    final parsedCardTransparentUrl = _asString(
+      map['cardTransparentUrl'] ??
+          map['transparentCardUrl'] ??
+          map['cardTransparentImageUrl'],
+    );
     final parsedThumbUrl = _asString(map['thumbUrl']);
     final parsedTinyUrl = _asString(map['tinyUrl']);
     final parsedOriginalStoragePath = _asString(map['originalStoragePath']);
     final parsedFullStoragePath = _asString(map['fullStoragePath']);
     final parsedCardStoragePath = _asString(map['cardStoragePath']);
+    final parsedCardTransparentStoragePath = _asString(
+      map['cardTransparentStoragePath'] ??
+          map['transparentCardStoragePath'] ??
+          map['cardTransparentImageStoragePath'],
+    );
     final parsedThumbStoragePath = _asString(map['thumbStoragePath']);
     final parsedTinyStoragePath = _asString(map['tinyStoragePath']);
 
@@ -550,6 +627,8 @@ class MBProductMedia {
           : legacyStoragePath,
       cardUrl: parsedCardUrl,
       cardStoragePath: parsedCardStoragePath,
+      cardTransparentUrl: parsedCardTransparentUrl,
+      cardTransparentStoragePath: parsedCardTransparentStoragePath,
       thumbUrl: parsedThumbUrl,
       thumbStoragePath: parsedThumbStoragePath,
       tinyUrl: parsedTinyUrl,
@@ -586,6 +665,10 @@ class MBProductMedia {
       cardWidth: _asNullableInt(map['cardWidth']),
       cardHeight: _asNullableInt(map['cardHeight']),
       cardSizeBytes: _asNullableInt(map['cardSizeBytes']),
+      cardTransparentWidth: _asNullableInt(map['cardTransparentWidth']),
+      cardTransparentHeight: _asNullableInt(map['cardTransparentHeight']),
+      cardTransparentSizeBytes:
+          _asNullableInt(map['cardTransparentSizeBytes']),
       thumbWidth: _asNullableInt(map['thumbWidth']),
       thumbHeight: _asNullableInt(map['thumbHeight']),
       thumbSizeBytes: _asNullableInt(map['thumbSizeBytes']),

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logAdminAction = exports.adminHardDeleteProduct = exports.adminSetProductEnabled = exports.adminRestoreProduct = exports.adminDeleteProduct = exports.adminUpdateProduct = exports.adminCreateProduct = exports.setBannerActiveState = exports.deleteBanner = exports.updateBanner = exports.createBanner = exports.setBrandActiveState = exports.deleteBrand = exports.updateBrand = exports.createBrand = exports.fixCategoryGroupSort = exports.reorderCategoryGroup = exports.setCategoryActiveState = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.onProductDeletedUpdateCategoryCount = exports.onProductUpdatedUpdateCategoryCount = exports.onProductCreatedUpdateCategoryCount = exports.checkPhoneAuthEligibility = void 0;
+exports.generateProductCardTransparentImage = exports.logAdminAction = exports.adminHardDeleteProduct = exports.adminSetProductEnabled = exports.adminRestoreProduct = exports.adminDeleteProduct = exports.adminUpdateProduct = exports.adminCreateProduct = exports.setBannerActiveState = exports.deleteBanner = exports.updateBanner = exports.createBanner = exports.setBrandActiveState = exports.deleteBrand = exports.updateBrand = exports.createBrand = exports.fixCategoryGroupSort = exports.reorderCategoryGroup = exports.setCategoryActiveState = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.onProductDeletedUpdateCategoryCount = exports.onProductUpdatedUpdateCategoryCount = exports.onProductCreatedUpdateCategoryCount = exports.checkPhoneAuthEligibility = void 0;
 const app_1 = require("firebase-admin/app");
 const options_1 = require("firebase-functions/v2/options");
 (0, app_1.initializeApp)();
@@ -55,3 +55,5 @@ var admin_hard_delete_product_1 = require("./products/admin_hard_delete_product"
 Object.defineProperty(exports, "adminHardDeleteProduct", { enumerable: true, get: function () { return admin_hard_delete_product_1.adminHardDeleteProduct; } });
 var log_admin_action_1 = require("./admin/log-admin-action");
 Object.defineProperty(exports, "logAdminAction", { enumerable: true, get: function () { return log_admin_action_1.logAdminAction; } });
+var generate_card_transparent_image_1 = require("./products/generate-card-transparent-image");
+Object.defineProperty(exports, "generateProductCardTransparentImage", { enumerable: true, get: function () { return generate_card_transparent_image_1.generateProductCardTransparentImage; } });

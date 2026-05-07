@@ -65,6 +65,7 @@ class MBAdvancedBindingKey {
   static const String productResolvedOriginalImageUrl = 'product.resolvedOriginalImageUrl';
   static const String productResolvedFullImageUrl = 'product.resolvedFullImageUrl';
   static const String productResolvedCardImageUrl = 'product.resolvedCardImageUrl';
+  static const String productResolvedCardTransparentImageUrl = 'product.resolvedCardTransparentImageUrl';
   static const String productResolvedThumbImageUrl = 'product.resolvedThumbImageUrl';
   static const String productResolvedTinyImageUrl = 'product.resolvedTinyImageUrl';
   static const String productFinalPrice = 'product.finalPrice';
@@ -216,6 +217,7 @@ class MBAdvancedBindingRegistry {
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productThumbnailUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Thumbnail URL (legacy)', valueType: MBAdvancedBindingValueType.imageUrl),
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productFirstImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'First image URL (legacy)', valueType: MBAdvancedBindingValueType.imageUrl),
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productResolvedCardImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Product card image URL', valueType: MBAdvancedBindingValueType.imageUrl),
+    MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productResolvedCardTransparentImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Product transparent card image URL', valueType: MBAdvancedBindingValueType.imageUrl),
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productResolvedFullImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Product full image URL', valueType: MBAdvancedBindingValueType.imageUrl),
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productResolvedThumbImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Product thumb image URL', valueType: MBAdvancedBindingValueType.imageUrl),
     MBAdvancedBindingDefinition(key: MBAdvancedBindingKey.productResolvedTinyImageUrl, groupId: MBAdvancedBindingGroupId.product, label: 'Product tiny image URL', valueType: MBAdvancedBindingValueType.imageUrl),

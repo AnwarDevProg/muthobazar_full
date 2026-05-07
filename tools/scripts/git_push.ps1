@@ -8,6 +8,8 @@ $RemoteName = "origin"
 $RemoteUrl = "https://github.com/AnwarDevProg/muthobazar_full.git"
 $BranchName = "main"
 
+$GitIgnoreEntry = "tools/background_remover_service/"
+
 function Write-Info($Message) {
     Write-Host "[INFO] $Message" -ForegroundColor Cyan
 }
@@ -22,6 +24,41 @@ function Write-Warn($Message) {
 
 function Write-Fail($Message) {
     Write-Host "[FAIL] $Message" -ForegroundColor Red
+}
+
+function Ensure-GitIgnoreEntry($Entry) {
+    $GitIgnorePath = Join-Path (Get-Location) ".gitignore"
+
+    if (-not (Test-Path $GitIgnorePath)) {
+        Write-Info ".gitignore not found. Creating..."
+        New-Item -ItemType File -Path $GitIgnorePath -Force | Out-Null
+    }
+
+    $ExistingLines = Get-Content $GitIgnorePath -ErrorAction SilentlyContinue
+    $AlreadyExists = $false
+
+    foreach ($Line in $ExistingLines) {
+        if ($Line.Trim() -eq $Entry) {
+            $AlreadyExists = $true
+            break
+        }
+    }
+
+    if ($AlreadyExists) {
+        Write-Info ".gitignore already contains: $Entry"
+        return
+    }
+
+    Write-Info "Adding to .gitignore: $Entry"
+
+    if ((Get-Item $GitIgnorePath).Length -gt 0) {
+        Add-Content -Path $GitIgnorePath -Value ""
+    }
+
+    Add-Content -Path $GitIgnorePath -Value "# Local background remover service"
+    Add-Content -Path $GitIgnorePath -Value $Entry
+
+    Write-Success ".gitignore updated."
 }
 
 try {
@@ -41,6 +78,8 @@ try {
     else {
         Write-Info "Git repository already initialized."
     }
+
+    Ensure-GitIgnoreEntry $GitIgnoreEntry
 
     $remoteExists = git remote | Select-String "^$RemoteName$"
 
@@ -121,4 +160,4 @@ catch {
 
 
 
-#powershell -ExecutionPolicy Bypass -File ".\tools\scripts\git_push.ps1" -CommitMessage "customer app ok, admin ongoing, sidebar has issue"
+# powershell -ExecutionPolicy Bypass -File ".\tools\scripts\git_push.ps1" -CommitMessage "customer app ok, admin ongoing, sidebar has issue"
