@@ -12292,6 +12292,10 @@ C.
 |   |   \---staff_feature.md
 |   \---README.md
 \---scripts
+    +---patching
+    |   +---mb_apply_patch.ps1
+    |   +---mb_collect_local_files.ps1
+    |   \---mb_patch_helpers.ps1
     +---analyze_all.sh
     +---bootstrap_all.sh
     +---deploy_all_functions.ps1

@@ -7,3 +7,4 @@ export 'models/mb_advanced_element_variant.dart';
 export 'panels/mb_advanced_canvas_panel.dart';
 export 'panels/mb_advanced_element_drawer_panel.dart';
 export 'panels/mb_advanced_inspector_panel.dart';
+export '../studio_v4/mb_card_studio_v4_exports.dart';

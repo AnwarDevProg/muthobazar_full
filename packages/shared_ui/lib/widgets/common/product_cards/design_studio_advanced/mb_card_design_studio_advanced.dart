@@ -26,6 +26,7 @@ import 'models/mb_advanced_element_variant.dart';
 import 'panels/mb_advanced_canvas_panel.dart';
 import 'panels/mb_advanced_element_drawer_panel.dart';
 import 'panels/mb_advanced_inspector_panel.dart';
+import '../studio_v4/mb_card_studio_v4_exports.dart';
 
 class MBCardDesignStudioAdvanced extends StatefulWidget {
   const MBCardDesignStudioAdvanced({
@@ -43,6 +44,8 @@ class MBCardDesignStudioAdvanced extends StatefulWidget {
     this.previewAttributeValue,
     this.previewAttributePreset,
     this.onSave,
+    this.onSaveResult,
+    this.onCloseResult,
   });
 
   final List<dynamic> products;
@@ -58,6 +61,8 @@ class MBCardDesignStudioAdvanced extends StatefulWidget {
   final dynamic previewAttributeValue;
   final dynamic previewAttributePreset;
   final ValueChanged<String>? onSave;
+  final ValueChanged<MBCardDesignStudioAdvancedResult>? onSaveResult;
+  final ValueChanged<MBCardDesignStudioAdvancedResult>? onCloseResult;
 
   @override
   State<MBCardDesignStudioAdvanced> createState() =>
@@ -71,6 +76,7 @@ class _MBCardDesignStudioAdvancedState
   bool _isDrawerCollapsed = false;
   bool _isInspectorCollapsed = false;
   bool _isFocusMode = false;
+  MBStudioV4DraftBridgeResult? _studioV4DraftResult;
 
   dynamic get _product {
     if (widget.products.isEmpty) {
@@ -117,8 +123,15 @@ class _MBCardDesignStudioAdvancedState
           onToggleInspector: _toggleInspector,
           onToggleFocusMode: _toggleFocusMode,
           onResetWorkspace: _resetWorkspace,
+          onOpenStudioV4Lab: _openStudioV4Lab,
           onClose: _closeStudio,
         ),
+        if (_studioV4DraftResult != null)
+          _StudioV4DraftStatus(
+            result: _studioV4DraftResult!,
+            onCopyJson: _copyStudioV4DraftJson,
+            onClear: _clearStudioV4Draft,
+          ),
         Expanded(
           child: Row(
             children: <Widget>[
@@ -385,15 +398,205 @@ class _MBCardDesignStudioAdvancedState
     );
   }
 
+  Future<void> _openStudioV4Lab() async {
+    final lockedDocument = _finalizedDocument();
+    if (!identical(lockedDocument, _document)) {
+      setState(() => _document = lockedDocument);
+    }
+
+    final controller = MBStudioV4Controller(
+      initialDocument: MBStudioV4DocumentAdapter.fromAdvancedDocument(
+        lockedDocument,
+        name: 'Studio V4 Lab - ${_productTitle(_product)}',
+      ),
+    );
+
+    if (!mounted) {
+      controller.dispose();
+      return;
+    }
+
+    final result = await showDialog<MBStudioV4DraftBridgeResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final size = MediaQuery.of(dialogContext).size;
+        return Dialog(
+          insetPadding: const EdgeInsets.all(18),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: SizedBox(
+            width: size.width * 0.94,
+            height: size.height * 0.90,
+            child: Column(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE6E8EF)),
+                    ),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3EA),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.science_rounded,
+                          color: Color(0xFFFF6500),
+                          size: 19,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              'Studio V4 Lab',
+                              style: TextStyle(
+                                color: Color(0xFF172033),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Preview only - use draft returns V4 JSON to V3 bridge, not product save.',
+                              style: TextStyle(
+                                color: Color(0xFF747B8A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: () {
+                          final json = controller.document.toPrettyJson();
+                          final draft = MBStudioV4DraftBridgeResult.fromJsonString(
+                            json,
+                            previewOnly: true,
+                            source: 'studio_v4_lab_result',
+                          );
+                          Navigator.of(dialogContext).pop(draft);
+                        },
+                        icon: const Icon(Icons.output_rounded, size: 18),
+                        label: const Text('Use V4 Draft'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF6500),
+                          foregroundColor: Colors.white,
+                          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        label: const Text('Close Lab'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF6500),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: MBCardStudioV4(
+                      controller: controller,
+                      title: 'Studio V4 Lab Preview',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).whenComplete(controller.dispose);
+
+    final returnedJson = result?.json.trim();
+    if (!mounted || returnedJson == null || returnedJson.isEmpty) return;
+
+    _rememberStudioV4Draft(returnedJson);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Studio V4 draft returned to V3 bridge. Not saved yet.'),
+      ),
+    );
+  }
+
+  void _rememberStudioV4Draft(String json) {
+    final result = MBStudioV4DraftBridgeResult.fromJsonString(
+      json,
+      source: 'studio_v4_lab',
+      previewOnly: true,
+    );
+
+    setState(() {
+      _studioV4DraftResult = result;
+    });
+  }
+
+  Future<void> _copyStudioV4DraftJson() async {
+    final json = _studioV4DraftResult?.json;
+    if (json == null || json.trim().isEmpty) return;
+
+    await Clipboard.setData(ClipboardData(text: json));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Returned Studio V4 JSON copied.')),
+    );
+  }
+
+  void _clearStudioV4Draft() {
+    setState(() {
+      _studioV4DraftResult = null;
+    });
+  }
+
+  MBCardDesignStudioAdvancedResult _buildResult(String designJson) {
+    return MBCardDesignStudioAdvancedResult(
+      designJson: designJson,
+      studioV4Draft: _studioV4DraftResult,
+    );
+  }
+
   void _saveDesign() {
     final lockedDocument = _finalizedDocument();
     if (!identical(lockedDocument, _document)) {
       setState(() => _document = lockedDocument);
     }
     final json = lockedDocument.toPrettyJson();
+    final result = _buildResult(json);
     widget.onSave?.call(json);
+    widget.onSaveResult?.call(result);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Advanced design JSON ready for saving with cardLayoutType')),
+      SnackBar(
+        content: Text(
+          result.hasStudioV4Draft
+              ? 'Advanced design ready. Studio V4 draft metadata is attached to the result.'
+              : 'Advanced design JSON ready for saving with cardLayoutType',
+        ),
+      ),
     );
   }
 
@@ -402,7 +605,123 @@ class _MBCardDesignStudioAdvancedState
     if (!identical(lockedDocument, _document)) {
       setState(() => _document = lockedDocument);
     }
+    widget.onCloseResult?.call(_buildResult(lockedDocument.toPrettyJson()));
     Navigator.of(context).maybePop();
+  }
+}
+
+class MBCardDesignStudioAdvancedResult {
+  const MBCardDesignStudioAdvancedResult({
+    required this.designJson,
+    this.studioV4Draft,
+  });
+
+  final String designJson;
+  final MBStudioV4DraftBridgeResult? studioV4Draft;
+
+  bool get hasStudioV4Draft => studioV4Draft?.hasJson ?? false;
+  String? get studioV4DraftJson => studioV4Draft?.json;
+  int? get studioV4SchemaVersion => studioV4Draft?.schemaVersion;
+  int get studioV4NodeCount => studioV4Draft?.nodeCount ?? 0;
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'designJson': designJson,
+      'hasStudioV4Draft': hasStudioV4Draft,
+      if (studioV4Draft != null) 'studioV4Draft': studioV4Draft!.toMap(),
+      if (studioV4DraftJson != null) 'studioV4DraftJson': studioV4DraftJson,
+    };
+  }
+}
+
+class _StudioV4DraftStatus extends StatelessWidget {
+  const _StudioV4DraftStatus({
+    required this.result,
+    required this.onCopyJson,
+    required this.onClear,
+  });
+
+  final MBStudioV4DraftBridgeResult result;
+  final VoidCallback onCopyJson;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final schemaText = result.schemaVersion == null
+        ? 'unknown'
+        : '${result.schemaVersion}';
+    final canvasText = result.hasValidCanvas
+        ? '${result.canvasWidth!.toStringAsFixed(0)}×${result.canvasHeight!.toStringAsFixed(0)}'
+        : 'unknown canvas';
+    final statusText = result.previewOnly
+        ? 'Preview only, not saved to product'
+        : 'Ready for product save bridge';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(
+            Icons.science_rounded,
+            color: Color(0xFFFF6500),
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'V4 draft attached to result · Schema: $schemaText · Nodes: ${result.nodeCount} · Canvas: $canvasText · Preview only',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF9A3412),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$statusText · Draft metadata bridge is ready for future product-form integration.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFC2410C),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: onCopyJson,
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text('Copy V4 JSON'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFFF6500),
+              visualDensity: VisualDensity.compact,
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Clear returned V4 draft status',
+            visualDensity: VisualDensity.compact,
+            onPressed: onClear,
+            icon: const Icon(Icons.close_rounded, size: 18),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -538,6 +857,7 @@ class _TopBar extends StatelessWidget {
     required this.onToggleInspector,
     required this.onToggleFocusMode,
     required this.onResetWorkspace,
+    required this.onOpenStudioV4Lab,
     required this.onClose,
   });
 
@@ -553,6 +873,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onToggleInspector;
   final VoidCallback onToggleFocusMode;
   final VoidCallback onResetWorkspace;
+  final VoidCallback onOpenStudioV4Lab;
   final VoidCallback onClose;
 
   @override
@@ -613,7 +934,7 @@ class _TopBar extends StatelessWidget {
             SizedBox(
               width: 190,
               child: DropdownButtonFormField<int>(
-                value: selectedProductIndex,
+                initialValue: selectedProductIndex,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
@@ -684,6 +1005,13 @@ class _TopBar extends StatelessWidget {
             label: 'Reset',
             tooltip: 'Reset workspace panels',
             onTap: onResetWorkspace,
+          ),
+          const SizedBox(width: 6),
+          _TopBarButton(
+            icon: Icons.science_rounded,
+            label: 'V4 Lab',
+            tooltip: 'Open Studio V4 Lab preview and return V4 JSON safely',
+            onTap: onOpenStudioV4Lab,
           ),
           const SizedBox(width: 8),
           TextButton.icon(

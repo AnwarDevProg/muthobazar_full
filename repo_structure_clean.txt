@@ -1371,19 +1371,21 @@ C.
 |   |   |   |   |   +---mb_card_variant.dart
 |   |   |   |   |   +---mb_card_variant_definition.dart
 |   |   |   |   |   \---product_card_config.dart
-|   |   |   |   \---design
-|   |   |   |       +---mb_card_design_config.dart
-|   |   |   |       +---mb_card_design_family.dart
-|   |   |   |       +---mb_card_design_models.dart
-|   |   |   |       +---mb_card_design_preset.dart
-|   |   |   |       +---mb_card_design_registry.dart
-|   |   |   |       +---mb_card_design_template.dart
-|   |   |   |       +---mb_card_element_binding.dart
-|   |   |   |       +---mb_card_element_config.dart
-|   |   |   |       +---mb_card_element_position.dart
-|   |   |   |       +---mb_card_element_size.dart
-|   |   |   |       +---mb_card_element_style.dart
-|   |   |   |       \---mb_card_element_type.dart
+|   |   |   |   +---design
+|   |   |   |   |   +---mb_card_design_config.dart
+|   |   |   |   |   +---mb_card_design_family.dart
+|   |   |   |   |   +---mb_card_design_models.dart
+|   |   |   |   |   +---mb_card_design_preset.dart
+|   |   |   |   |   +---mb_card_design_registry.dart
+|   |   |   |   |   +---mb_card_design_template.dart
+|   |   |   |   |   +---mb_card_element_binding.dart
+|   |   |   |   |   +---mb_card_element_config.dart
+|   |   |   |   |   +---mb_card_element_position.dart
+|   |   |   |   |   +---mb_card_element_size.dart
+|   |   |   |   |   +---mb_card_element_style.dart
+|   |   |   |   |   \---mb_card_element_type.dart
+|   |   |   |   \---design_v4
+|   |   |   |       \---mb_card_design_v4_models.dart
 |   |   |   +---referrals
 |   |   |   +---reviews
 |   |   |   |   +---mb_review.dart
@@ -1556,6 +1558,29 @@ C.
 |   |   |   |   |   |   |   |   \---mb_advanced_product_card_renderer.dart
 |   |   |   |   |   |   |   +---mb_card_design_studio_advanced.dart
 |   |   |   |   |   |   |   \---mb_card_design_studio_advanced_exports.dart
+|   |   |   |   |   |   +---studio_v4
+|   |   |   |   |   |   |   +---adapters
+|   |   |   |   |   |   |   |   \---mb_studio_v4_document_adapter.dart
+|   |   |   |   |   |   |   +---canvas
+|   |   |   |   |   |   |   |   \---mb_studio_v4_canvas_stage.dart
+|   |   |   |   |   |   |   +---commands
+|   |   |   |   |   |   |   |   \---mb_studio_v4_command.dart
+|   |   |   |   |   |   |   +---controllers
+|   |   |   |   |   |   |   |   +---mb_studio_v4_controller.dart
+|   |   |   |   |   |   |   |   \---mb_studio_v4_history_controller.dart
+|   |   |   |   |   |   |   +---models
+|   |   |   |   |   |   |   |   +---mb_studio_v4_draft_bridge_result.dart
+|   |   |   |   |   |   |   |   \---mb_studio_v4_editor_state.dart
+|   |   |   |   |   |   |   +---panels
+|   |   |   |   |   |   |   |   +---mb_studio_v4_element_library_panel.dart
+|   |   |   |   |   |   |   |   +---mb_studio_v4_inspector_panel.dart
+|   |   |   |   |   |   |   |   +---mb_studio_v4_json_panel.dart
+|   |   |   |   |   |   |   |   \---mb_studio_v4_layers_panel.dart
+|   |   |   |   |   |   |   +---rendering
+|   |   |   |   |   |   |   |   \---mb_studio_v4_runtime_preview_renderer.dart
+|   |   |   |   |   |   |   +---studio_shell
+|   |   |   |   |   |   |   |   \---mb_card_studio_v4.dart
+|   |   |   |   |   |   |   \---mb_card_studio_v4_exports.dart
 |   |   |   |   |   |   +---system
 |   |   |   |   |   |   |   +---mb_card_config_resolver.dart
 |   |   |   |   |   |   |   +---mb_card_variant_registry.dart
@@ -13942,6 +13967,10 @@ C.
 |   |   |   \---staff_feature.md
 |   |   \---README.md
 |   \---scripts
+|       +---patching
+|       |   +---mb_apply_patch.ps1
+|       |   +---mb_collect_local_files.ps1
+|       |   \---mb_patch_helpers.ps1
 |       +---analyze_all.sh
 |       +---bootstrap_all.sh
 |       +---deploy_all_functions.ps1
