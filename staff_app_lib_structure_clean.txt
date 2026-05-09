@@ -1,0 +1,61 @@
+Folder PATH listing
+Path: C:\Users\1\AndroidStudioProjects\MuthoBazar\apps\staff_app\lib
+C.
++---app
+|   +---bindings
+|   |   +---auth_binding.dart
+|   |   +---earnings_binding.dart
+|   |   +---notifications_binding.dart
+|   |   +---profile_binding.dart
+|   |   +---purchase_agent_binding.dart
+|   |   +---rider_binding.dart
+|   |   +---settlements_binding.dart
+|   |   +---staff_app_binding.dart
+|   |   +---support_staff_binding.dart
+|   |   \---technician_binding.dart
+|   +---middleware
+|   |   +---purchase_agent_only_middleware.dart
+|   |   +---rider_only_middleware.dart
+|   |   +---staff_auth_middleware.dart
+|   |   +---staff_guest_only_middleware.dart
+|   |   +---support_staff_only_middleware.dart
+|   |   \---technician_only_middleware.dart
+|   +---routes
+|   |   +---staff_app_pages.dart
+|   |   \---staff_app_routes.dart
+|   +---services
+|   |   +---staff_app_bootstrap_service.dart
+|   |   \---staff_app_session_service.dart
+|   +---shell
+|   |   +---staff_app_shell.dart
+|   |   \---staff_bottom_nav_shell.dart
+|   +---startup
+|   |   +---staff_launch_router_page.dart
+|   |   \---staff_startup_redirect_controller.dart
+|   +---widgets
+|   |   +---common
+|   |   +---state
+|   |   \---task_cards
+|   \---app.dart
++---features
+|   +---auth
+|   |   +---controllers
+|   |   +---pages
+|   |   \---widgets
+|   +---deliveries
+|   +---earnings
+|   +---notifications
+|   +---profile
+|   +---purchase_dashboard
+|   +---purchase_tasks
+|   +---rider_dashboard
+|   +---settlements
+|   +---support_dashboard
+|   +---support_tasks
+|   +---technician_dashboard
+|   \---technician_jobs
++---l10n
+|   +---app_bn.arb
+|   \---app_en.arb
++---firebase_options.dart
+\---main.dart

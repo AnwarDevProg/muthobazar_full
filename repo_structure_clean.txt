@@ -411,7 +411,6 @@ C.
 |   |   +---.metadata
 |   |   +---analysis_options.yaml
 |   |   +---firebase.json
-|   |   +---lib.zip
 |   |   +---pubspec.yaml
 |   |   \---README.md
 |   +---customer_app
@@ -14008,5 +14007,6 @@ C.
 +---README_PHASE3_ANALYZE_FIX.md
 +---repo_structure.txt
 +---repo_structure_clean.txt
++---staff_app_lib_structure_clean.txt
 +---tools_structure_clean.txt
 \---WORK_TO_DO.txt
