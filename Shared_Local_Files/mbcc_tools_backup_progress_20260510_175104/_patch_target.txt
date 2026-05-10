@@ -1,0 +1,27 @@
+﻿MuthoBazar shared local files package
+
+Patch name: mbcc_tools_backup_progress
+Session: mbcc_tools_backup_progress_20260510_175104
+Reason / target: Latest Control Center files for tools backup progress patch
+Handshake: MB-MBCC_TOOLS_BACKUP_PROGRESS-20260510_175104-9TFDX4
+Timestamp: 20260510_175104
+Repo: C:\Users\1\AndroidStudioProjects\MuthoBazar
+Local E-drive copy: E:\MuthoBazar\Local_Files\mbcc_tools_backup_progress_20260510_175104
+Temporary repo copy: C:\Users\1\AndroidStudioProjects\MuthoBazar\Shared_Local_Files\mbcc_tools_backup_progress_20260510_175104
+Temporary Git branch: shared-local/mbcc_tools_backup_progress_20260510_175104
+Git remote: origin
+Commit message: mbcc_tools_backup_progress_20260510_175104
+File count: 2
+Supports absolute external files: yes
+
+After successful Git sync, the local repo folder below is deleted to keep the repo clean:
+C:\Users\1\AndroidStudioProjects\MuthoBazar\Shared_Local_Files\mbcc_tools_backup_progress_20260510_175104
+
+The E-drive copy remains available. If GitHub access fails, upload this folder manually:
+E:\MuthoBazar\Local_Files\mbcc_tools_backup_progress_20260510_175104
+
+Files:
+- external__muthobazar_control_center.ps1 <= C:\Users\1\Desktop\New folder (6)\muthobazar_control_center.ps1
+  External source: C:\Users\1\Desktop\New folder (6)\muthobazar_control_center.ps1
+- external__PS.bat <= C:\Users\1\Desktop\New folder (6)\PS.bat
+  External source: C:\Users\1\Desktop\New folder (6)\PS.bat
