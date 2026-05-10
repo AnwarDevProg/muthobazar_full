@@ -1,0 +1,21 @@
+﻿Patch source collection: mbcc_tools_backup_progress
+Session: mbcc_tools_backup_progress_20260510_173351
+Handshake: MB-MBCC_TOOLS_BACKUP_PROGRESS-20260510_173351-VA5DHJ
+Collected from: C:\Users\1\AndroidStudioProjects\MuthoBazar
+Collected at: 2026-05-10 17:33:51
+Local output: E:\MuthoBazar\Local_Files\mbcc_tools_backup_progress_20260510_173351
+Shared repo output: C:\Users\1\AndroidStudioProjects\MuthoBazar\Shared_Local_Files\mbcc_tools_backup_progress_20260510_173351
+Shared repo relative path: Shared_Local_Files/mbcc_tools_backup_progress_20260510_173351
+
+Flatten rule: copied files are stored in this single folder using safe names.
+Supported source paths: repo-relative paths and absolute file paths outside the repo.
+
+Files:
+external__muthobazar_control_center.ps1 <= C:\Users\1\Desktop\New folder (6)\muthobazar_control_center.ps1
+    Source: C:\Users\1\Desktop\New folder (6)\muthobazar_control_center.ps1
+    Original input: C:\Users\1\Desktop\New folder (6)\muthobazar_control_center.ps1
+    External file: True
+external__PS.bat <= C:\Users\1\Desktop\New folder (6)\PS.bat
+    Source: C:\Users\1\Desktop\New folder (6)\PS.bat
+    Original input: C:\Users\1\Desktop\New folder (6)\PS.bat
+    External file: True
