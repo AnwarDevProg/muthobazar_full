@@ -1,0 +1,85 @@
+﻿Patch source collection: mb_v4_previewbridge_v1
+Session: mb_v4_previewbridge_v1_20260510_211842
+Handshake: MB-MB_V4_PREVIEWBRIDGE_V1-20260510_211842-DHJS3W
+Collected from: C:\Users\1\AndroidStudioProjects\MuthoBazar
+Collected at: 2026-05-10 21:18:43
+Local output: E:\MuthoBazar\Local_Files\mb_v4_previewbridge_v1_20260510_211842
+Shared repo output: C:\Users\1\AndroidStudioProjects\MuthoBazar\Shared_Local_Files\mb_v4_previewbridge_v1_20260510_211842
+Shared repo relative path: Shared_Local_Files/mb_v4_previewbridge_v1_20260510_211842
+
+Flatten rule: copied files are stored in this single folder using safe names.
+Supported source paths: repo-relative paths and absolute file paths outside the repo.
+
+Files:
+packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__mb_card_design_studio_advanced.dart <= packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__mb_card_design_studio_advanced_exports.dart <= packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced_exports.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced_exports.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\mb_card_design_studio_advanced_exports.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__design_studio_advanced__models__mb_advanced_card_design_document.dart <= packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_card_design_document.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_card_design_document.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\design_studio_advanced\models\mb_advanced_card_design_document.dart
+    External file: False
+packages__shared_models__lib__shared_models.dart <= packages\shared_models\lib\shared_models.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_models\lib\shared_models.dart
+    Original input: packages\shared_models\lib\shared_models.dart
+    External file: False
+packages__shared_models__lib__product_cards__design_v4__mb_card_design_v4_models.dart <= packages\shared_models\lib\product_cards\design_v4\mb_card_design_v4_models.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_models\lib\product_cards\design_v4\mb_card_design_v4_models.dart
+    Original input: packages\shared_models\lib\product_cards\design_v4\mb_card_design_v4_models.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__mb_card_studio_v4_exports.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\mb_card_studio_v4_exports.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\mb_card_studio_v4_exports.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\mb_card_studio_v4_exports.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__models__mb_studio_v4_editor_state.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\models\mb_studio_v4_editor_state.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\models\mb_studio_v4_editor_state.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\models\mb_studio_v4_editor_state.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__commands__mb_studio_v4_command.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\commands\mb_studio_v4_command.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\commands\mb_studio_v4_command.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\commands\mb_studio_v4_command.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__controllers__mb_studio_v4_controller.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_controller.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_controller.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_controller.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__controllers__mb_studio_v4_history_controller.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_history_controller.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_history_controller.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\controllers\mb_studio_v4_history_controller.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__adapters__mb_studio_v4_document_adapter.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\adapters\mb_studio_v4_document_adapter.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\adapters\mb_studio_v4_document_adapter.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\adapters\mb_studio_v4_document_adapter.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__panels__mb_studio_v4_element_library_panel.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_element_library_panel.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_element_library_panel.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_element_library_panel.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__panels__mb_studio_v4_layers_panel.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_layers_panel.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_layers_panel.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_layers_panel.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__panels__mb_studio_v4_inspector_panel.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_inspector_panel.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_inspector_panel.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_inspector_panel.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__panels__mb_studio_v4_json_panel.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_json_panel.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_json_panel.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\panels\mb_studio_v4_json_panel.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__canvas__mb_studio_v4_canvas_stage.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\canvas\mb_studio_v4_canvas_stage.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\canvas\mb_studio_v4_canvas_stage.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\canvas\mb_studio_v4_canvas_stage.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__rendering__mb_studio_v4_runtime_preview_renderer.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\rendering\mb_studio_v4_runtime_preview_renderer.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\rendering\mb_studio_v4_runtime_preview_renderer.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\rendering\mb_studio_v4_runtime_preview_renderer.dart
+    External file: False
+packages__shared_ui__lib__widgets__common__product_cards__studio_v4__studio_shell__mb_card_studio_v4.dart <= packages\shared_ui\lib\widgets\common\product_cards\studio_v4\studio_shell\mb_card_studio_v4.dart
+    Source: C:\Users\1\AndroidStudioProjects\MuthoBazar\packages\shared_ui\lib\widgets\common\product_cards\studio_v4\studio_shell\mb_card_studio_v4.dart
+    Original input: packages\shared_ui\lib\widgets\common\product_cards\studio_v4\studio_shell\mb_card_studio_v4.dart
+    External file: False
